@@ -4,6 +4,8 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
+  <Project Path="Aria2NET.Core/Aria2NET.Core.csproj" />
+  <Project Path="Aria2NET.Tests/Aria2NET.Tests.csproj" />
   <Project Path="Aria2NET/Aria2NET.csproj">
     <Platform Solution="*|ARM64" Project="ARM64" />
     <Platform Solution="*|x64" Project="x64" />

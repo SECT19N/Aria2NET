@@ -14,6 +14,58 @@
     </Window.SystemBackdrop>
 
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
 
+        <TitleBar x:Name="AppTitleBar" Grid.Row="0" Title="Aria2NET" />
+
+        <InfoBar Grid.Row="1"
+                 Severity="Error"
+                 Title="aria2 engine problem"
+                 Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
+                 IsOpen="{x:Bind ViewModel.ShowError, Mode=OneWay}"
+                 IsClosable="False"
+                 Margin="12,0,12,8">
+            <InfoBar.ActionButton>
+                <Button Content="Restart engine" Command="{x:Bind ViewModel.RestartEngineCommand}" />
+            </InfoBar.ActionButton>
+        </InfoBar>
+
+        <NavigationView x:Name="Nav"
+                        Grid.Row="2"
+                        IsBackButtonVisible="Collapsed"
+                        IsSettingsVisible="True"
+                        PaneDisplayMode="Left"
+                        OpenPaneLength="200"
+                        SelectionChanged="Nav_SelectionChanged">
+            <NavigationView.MenuItems>
+                <NavigationViewItem Content="Downloads" Tag="downloads">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE896;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.MenuItems>
+            <NavigationView.FooterMenuItems>
+                <NavigationViewItem Content="About" Tag="about">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE946;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.FooterMenuItems>
+            <Frame x:Name="ContentFrame" />
+        </NavigationView>
+
+        <Grid Grid.Row="3" Padding="16,6" ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Ellipse Width="10" Height="10" VerticalAlignment="Center" Fill="{x:Bind ViewModel.StatusBrush, Mode=OneWay}" />
+            <TextBlock Grid.Column="1" Style="{StaticResource CaptionTextBlockStyle}" Text="{x:Bind ViewModel.StatusText, Mode=OneWay}" />
+        </Grid>
     </Grid>
 </Window>

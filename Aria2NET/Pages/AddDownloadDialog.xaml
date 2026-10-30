@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentDialog
+    x:Class="Aria2NET.Pages.AddDownloadDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Add downloads"
+    PrimaryButtonText="Download"
+    CloseButtonText="Cancel"
+    DefaultButton="Primary"
+    IsPrimaryButtonEnabled="False">
+
+    <StackPanel Spacing="12" MinWidth="460">
+        <TextBox x:Name="UrlsBox" Header="Links (one per line)" AcceptsReturn="True" TextWrapping="NoWrap"
+                 Height="130" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                 PlaceholderText="https://example.com/file.zip" TextChanged="UrlsBox_TextChanged" />
+        <TextBlock x:Name="ValidationText" Opacity="0.8" TextWrapping="Wrap" />
+
+        <Grid ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="FolderBox" Header="Save to" TextChanged="FolderBox_TextChanged" />
+            <Button Grid.Column="1" Content="Browse…" VerticalAlignment="Bottom" Click="Browse_Click" />
+        </Grid>
+
+        <TextBox x:Name="FileNameBox" Header="File name (optional, single link only)" PlaceholderText="Use the name from the server" />
+    </StackPanel>
+</ContentDialog>

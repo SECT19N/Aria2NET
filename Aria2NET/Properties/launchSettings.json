@@ -1,9 +1,6 @@
 {
   "profiles": {
-    "Aria2NET (Package)": {
-      "commandName": "MsixPackage"
-    },
-    "Aria2NET (Unpackaged)": {
+    "Aria2NET": {
       "commandName": "Project"
     }
   }

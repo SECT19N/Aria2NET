@@ -361,3 +361,5 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+# aria2 binary (fetched by tools/get-aria2.ps1)
+tools/aria2/

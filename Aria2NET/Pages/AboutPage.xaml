@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Aria2NET.Pages.AboutPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <StackPanel Padding="24" Spacing="8">
+        <TextBlock Text="About" Style="{StaticResource TitleTextBlockStyle}" />
+        <TextBlock Text="Aria2NET" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,8,0,0" />
+        <TextBlock Text="{x:Bind ViewModel.AppVersionText}" />
+        <TextBlock Text="{x:Bind ViewModel.Aria2VersionText}" />
+        <TextBlock Text="{x:Bind ViewModel.License}" TextWrapping="Wrap" MaxWidth="560" Opacity="0.8" Margin="0,12,0,0" />
+    </StackPanel>
+</Page>
