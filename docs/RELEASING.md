@@ -1,30 +1,26 @@
 # Releasing
 
-Releases are driven by git tags. Pushing a tag builds, tests, packages and publishes a GitHub Release; nobody edits version numbers inside CI.
+Releases are started by hand. When you decide master is good enough, you run the **release** workflow on GitHub and give it a version. You stay in control of the number and the timing; nothing releases on its own.
 
 ## Versioning
 - [SemVer](https://semver.org): `MAJOR.MINOR.PATCH`, optional pre-release suffix (`-beta.1`, `-rc.1`).
 - The one place the number lives is `<Version>` in `Directory.Build.props`. The build stamps it into the exe (file properties, About page, log line "Aria2NET x.y.z starting").
-- The git tag is that number with a `v` in front: `v0.3.0`, `v1.0.0-rc.1`.
-- Below 1.0 every release is marked **pre-release** on GitHub (anything can still change). From 1.0 on only tags with a suffix are pre-releases.
-- Roadmap versions map to tags: roadmap 0.3 → `v0.3.0`; fixes after that → `v0.3.1`.
+- The git tag is that number with a `v` in front: `v0.4.0`, `v1.0.0-rc.1`. The release workflow creates it; `Directory.Build.props` keeps only `MAJOR.MINOR.PATCH`.
+- Below 1.0 every release is marked **pre-release** on GitHub (anything can still change). From 1.0 on only versions with a suffix are pre-releases.
+- Roadmap versions map to releases: roadmap 0.4 -> `0.4.0`; fixes after that -> `0.4.1`.
 
 ## Cutting a release
 1. Make sure `master` is green on GitHub (the `build` workflow).
-2. Set `<Version>` in `Directory.Build.props` (e.g. `0.3.0`) and commit it.
-3. Tag and push:
-   ```
-   git tag v0.3.0
-   git push origin master v0.3.0
-   ```
-4. The `release` workflow then:
-   - **verify**: the tag must look like `vX.Y.Z[-suffix]` and `X.Y.Z` must equal `<Version>` (`tools/check-release-tag.ps1`), then build + test.
+2. GitHub -> **Actions** -> **release** -> **Run workflow** on `master`. Enter the version without `v` (`0.4.0`). Tick **dry run** to only build and package: the zips are attached to the run and nothing is committed, tagged or published.
+3. The workflow then:
+   - **verify**: the version must look like `X.Y.Z[-suffix]`, not be lower than the current `<Version>` and not already have a tag. It writes the version into `Directory.Build.props` on the runner, then builds and tests.
    - **package**: `tools/package.ps1` for `win-x64` and `win-arm64`. Each zip is self-contained (no .NET or Windows App SDK install needed) and bundles `aria2c.exe`.
-   - **release**: creates the GitHub Release with generated notes, both zips and a `.sha256` file for each.
-5. Edit the generated release notes if you want (they come from commit/PR titles since the previous tag).
+   - **release**: only now does anything reach the repo. It commits the version bump to `master` (if the number changed; message `Release v0.4.0`), pushes that commit and the tag together, and creates the GitHub Release with generated notes, both zips and a `.sha256` file for each.
+4. Pull `master` to get the bump. Edit the generated release notes if you want (they come from commit/PR titles since the previous tag).
 
-A wrong tag (version mismatch, typo) fails in step *verify* before anything is published. If a release was created by mistake, delete the release and the tag (`git push origin :refs/tags/v0.3.0`) and start again.
+If any build, test or package step fails, nothing is pushed. If `master` moved while the workflow ran, the push is refused (the branch and tag are pushed atomically) and you just run it again. If a release was created by mistake, delete the release and the tag (`git push origin :refs/tags/v0.4.0`); the bump commit can stay.
 
+The workflow pushes to `master` with the built-in token, so it fails if branch protection requires PRs for `master`. In that case allow GitHub Actions to bypass the rule, or tell me and the bump can move into a PR.
 ## Building a package locally
 ```
 pwsh -ExecutionPolicy Bypass -File tools/package.ps1 -Rid win-x64 -Version 0.3.0

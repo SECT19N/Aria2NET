@@ -22,11 +22,12 @@ public class DownloadIntegrationTests {
 	}
 
 	internal static HttpListener StartServer(out string prefix, Func<HttpListenerContext, Task> handle) {
-		var listener = new HttpListener();
+		HttpListener listener;
 		while (true) {
 			var port = Random.Shared.Next(20000, 60000);
 			prefix = $"http://127.0.0.1:{port}/";
-			listener.Prefixes.Clear();
+			// A listener whose Start() failed is disposed, so every attempt needs a fresh one.
+			listener = new HttpListener();
 			listener.Prefixes.Add(prefix);
 			try {
 				listener.Start();
@@ -34,6 +35,7 @@ public class DownloadIntegrationTests {
 			}
 			catch (HttpListenerException) {
 				// Port taken; try another.
+				listener.Close();
 			}
 		}
 		_ = Task.Run(async () => {
