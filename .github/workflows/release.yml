@@ -57,7 +57,7 @@ jobs:
           VERSION: ${{ needs.verify.outputs.version }}
         run: ./tools/package.ps1 -Rid ${{ matrix.rid }} -Version $env:VERSION
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: package-${{ matrix.rid }}
           path: artifacts/*.zip*
