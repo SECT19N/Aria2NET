@@ -21,7 +21,9 @@ public sealed record DownloadItem(
 	long SpeedBytesPerSec,
 	string? ErrorMessage,
 	string? Dir,
-	string? FirstUri) {
+	string? FirstUri,
+	string? Path = null,
+	int? ErrorCode = null) {
 
 	/// <summary>0 to 100; 0 while the size is still unknown.</summary>
 	public double Progress => TotalBytes > 0 ? Math.Min(100.0, CompletedBytes * 100.0 / TotalBytes) : 0;
@@ -63,7 +65,8 @@ public sealed record DownloadItem(
 		return new DownloadItem(
 			gid, name, status,
 			Num(e, "totalLength"), Num(e, "completedLength"), Num(e, "downloadSpeed"),
-			Str(e, "errorMessage"), Str(e, "dir"), firstUri);
+			Str(e, "errorMessage"), Str(e, "dir"), firstUri,
+			string.IsNullOrWhiteSpace(path) ? null : path, int.TryParse(Str(e, "errorCode"), NumberStyles.None, CultureInfo.InvariantCulture, out var code) ? code : null);
 	}
 
 	private static string? NameFromPath(string? path) {

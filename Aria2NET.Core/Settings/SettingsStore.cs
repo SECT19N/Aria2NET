@@ -5,16 +5,10 @@ using Microsoft.Extensions.Logging;
 namespace Aria2NET.Core.Settings;
 
 /// <summary>JSON settings file with atomic writes and recovery from a corrupt file.</summary>
-public sealed class SettingsStore<T> where T : class, new() {
-	private readonly string _path;
-	private readonly JsonTypeInfo<T> _typeInfo;
-	private readonly ILogger? _logger;
-
-	public SettingsStore(string path, JsonTypeInfo<T> typeInfo, ILogger? logger = null) {
-		_path = path;
-		_typeInfo = typeInfo;
-		_logger = logger;
-	}
+public sealed class SettingsStore<T>(string path, JsonTypeInfo<T> typeInfo, ILogger? logger = null) where T : class, new() {
+	private readonly string _path = path;
+	private readonly JsonTypeInfo<T> _typeInfo = typeInfo;
+	private readonly ILogger? _logger = logger;
 
 	public T Load() {
 		if (!File.Exists(_path)) {

@@ -81,6 +81,7 @@ A WinUI 3 download manager (IDM-style) on top of aria2c. aria2 does the transfer
 - Row context menu skeleton (filled out in 0.3).
 
 ### 0.3 Control
+**Status: implemented.** Deviations: rename and change-folder are only offered for queued/paused downloads that have **no data yet** (changing them later would orphan the partial file); "added/finished" in Properties exists only for downloads this app run saw being added or finishing (real history comes with SQLite in 0.4); "final URL after redirect" is not shown because aria2 only reports the original URL (verified with a real 302); "Force start" moves the item to the top and raises `max-concurrent-downloads` by one until it finishes (aria2 has no real bypass); Move up/down is disabled while a column sort is active. Remove (keep file) is deferred 5 s so it can be undone; a removal still pending when the window closes is made final. Verified by 78 automated tests (26 new unit tests, 10 new real-aria2c tests for pause/resume, remove, delete, retry, queue moves, rename/folder/speed limit, force start) and by driving the real window through Windows UI Automation: add dialog, pause/resume, selection surviving a row move, remove + undo + finalize, delete confirmation, delete-file, clear completed, context menu, Properties, sort headers, filter tabs, Rename and Speed limit dialogs, Space/Del/Ctrl+A. **Not yet exercised in the live window:** Change folder, the "Don't ask again" box and the Settings switch, Shift+Del, Enter/double-click to open a file, and force start / queue moves from the menu (the operations behind them are covered by the automated tests). Looks (spacing, colors in light theme) were only judged from a few screenshots.
 - Pause, resume, pause all, resume all.
 - Remove (keep file) and Remove + delete file.
 - Retry failed download.
@@ -198,7 +199,8 @@ Nothing new except stabilization. MVP definition: **you can install it, paste li
 - Test on slow disks, network drops, sleep/resume, airplane mode, VPN toggle, full disk, read-only target folder, path > 260 chars, non-ASCII filenames.
 - Verify clean uninstall (leaves user data unless asked) and upgrade-in-place keeps settings.
 - Security review of the RPC secret handling, file path handling, and anything that runs external programs.
-- Code signing decision (self-signed vs certificate vs SignPath for OSS).
+- Code signing: apply to the free SignPath Foundation OSS program (GPL-3.0 qualifies); no paid certificate, no self-signed. Until approved, ship unsigned with SHA-256 checksums and note the SmartScreen warning in the README.
+- Publish to winget (free; unsigned open-source apps are accepted) via a manifest PR to `microsoft/winget-pkgs`, automated from the release workflow where possible.
 - Release checklist and changelog format (`CHANGELOG.md`).
 - Issue templates and a "Report a bug" button that attaches diagnostics.
 

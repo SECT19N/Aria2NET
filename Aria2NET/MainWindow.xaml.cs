@@ -16,6 +16,7 @@ public sealed partial class MainWindow : Window {
 	private readonly IAria2Engine _engine = App.Services.GetRequiredService<IAria2Engine>();
 	private readonly DownloadMonitor _monitor = App.Services.GetRequiredService<DownloadMonitor>();
 	private readonly ILogger<MainWindow> _logger = App.Services.GetRequiredService<ILogger<MainWindow>>();
+	private readonly DownloadsViewModel _downloads;
 	private bool _closeApproved;
 
 	public ShellViewModel ViewModel { get; } = App.Services.GetRequiredService<ShellViewModel>();
@@ -31,7 +32,7 @@ public sealed partial class MainWindow : Window {
 		Nav.SelectedItem = Nav.MenuItems[0];
 
 		// Resolved here so the view model is created on the UI thread and is subscribed before the first poll.
-		_ = App.Services.GetRequiredService<DownloadsViewModel>();
+		_downloads = App.Services.GetRequiredService<DownloadsViewModel>();
 		_monitor.Start();
 	}
 
@@ -73,6 +74,7 @@ public sealed partial class MainWindow : Window {
 		}
 		args.Cancel = true;
 		try {
+			await _downloads.FinalizePendingAsync(); // a removal still inside its undo window becomes final
 			await _monitor.StopAsync();
 			await _engine.StopAsync();
 		}

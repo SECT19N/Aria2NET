@@ -1,16 +1,22 @@
-using System.Diagnostics;
 using Aria2NET.Core.Downloads;
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using Windows.ApplicationModel.DataTransfer;
+using Microsoft.UI;
+using Microsoft.UI.Xaml.Media;
 
 namespace Aria2NET.ViewModels;
 
 /// <summary>One row of the downloads list. Updated in place from poll snapshots.</summary>
 public sealed partial class DownloadRowViewModel : ObservableObject {
+	private static readonly Brush ActiveBrush = new SolidColorBrush(new Windows.UI.ViewManagement.UISettings().GetColorValue(Windows.UI.ViewManagement.UIColorType.Accent));
+	private static readonly Brush PausedBrush = new SolidColorBrush(ColorHelper.FromArgb(0xFF, 0x8A, 0x8A, 0x8A));
+	private static readonly Brush CompleteBrush = new SolidColorBrush(ColorHelper.FromArgb(0xFF, 0x2E, 0x9E, 0x4F));
+	private static readonly Brush ErrorBrush = new SolidColorBrush(ColorHelper.FromArgb(0xFF, 0xD1, 0x34, 0x38));
+
 	private DownloadItem _item;
 
 	public string Gid { get; }
+
+	public DownloadItem Item => _item;
 
 	[ObservableProperty]
 	public partial string Name { get; private set; } = "";
@@ -24,6 +30,10 @@ public sealed partial class DownloadRowViewModel : ObservableObject {
 	[ObservableProperty]
 	public partial bool IsIndeterminate { get; private set; }
 
+	/// <summary>Blue while downloading, gray paused, green complete, red failed.</summary>
+	[ObservableProperty]
+	public partial Brush ProgressBrush { get; private set; } = ActiveBrush;
+
 	[ObservableProperty]
 	public partial string SpeedText { get; private set; } = "";
 
@@ -36,6 +46,10 @@ public sealed partial class DownloadRowViewModel : ObservableObject {
 	/// <summary>Error details for the status tooltip; empty when there is none.</summary>
 	[ObservableProperty]
 	public partial string StatusTip { get; private set; } = "";
+
+	/// <summary>Name read out by screen readers: color is never the only carrier of the state.</summary>
+	[ObservableProperty]
+	public partial string AccessibleName { get; private set; } = "";
 
 	public DownloadRowViewModel(DownloadItem item) {
 		Gid = item.Gid;
@@ -55,6 +69,12 @@ public sealed partial class DownloadRowViewModel : ObservableObject {
 		Name = item.Name;
 		Progress = item.Progress;
 		IsIndeterminate = item.Status == DownloadStatus.Active && item.TotalBytes == 0;
+		ProgressBrush = item.Status switch {
+			DownloadStatus.Paused => PausedBrush,
+			DownloadStatus.Complete => CompleteBrush,
+			DownloadStatus.Error or DownloadStatus.Removed => ErrorBrush,
+			_ => ActiveBrush,
+		};
 		SizeText = item.TotalBytes > 0
 			? item.Status == DownloadStatus.Complete ? ByteFormat.Size(item.TotalBytes) : $"{ByteFormat.Size(item.CompletedBytes)} / {ByteFormat.Size(item.TotalBytes)}"
 			: item.CompletedBytes > 0 ? ByteFormat.Size(item.CompletedBytes) : "—";
@@ -69,26 +89,14 @@ public sealed partial class DownloadRowViewModel : ObservableObject {
 			DownloadStatus.Complete => "Complete",
 			_ => "Removed",
 		};
-		StatusTip = item.Status == DownloadStatus.Error ? item.ErrorMessage ?? "" : "";
+		StatusTip = item.Status == DownloadStatus.Error ? ErrorTip(item) : "";
+		AccessibleName = $"{item.Name}, {StatusText}, {item.Progress:0} percent";
 	}
 
-	[RelayCommand]
-	private void OpenFolder() {
-		if (string.IsNullOrEmpty(_item.Dir)) {
-			return;
-		}
-		var file = Path.Combine(_item.Dir, _item.Name);
-		var args = File.Exists(file) ? $"/select,\"{file}\"" : $"\"{_item.Dir}\"";
-		Process.Start(new ProcessStartInfo("explorer.exe", args) { UseShellExecute = true });
-	}
-
-	[RelayCommand]
-	private void CopyUrl() {
-		if (string.IsNullOrEmpty(_item.FirstUri)) {
-			return;
-		}
-		var package = new DataPackage();
-		package.SetText(_item.FirstUri);
-		Clipboard.SetContent(package);
+	private static string ErrorTip(DownloadItem item) {
+		var friendly = Aria2Errors.Describe(item.ErrorCode, item.ErrorMessage);
+		return !string.IsNullOrWhiteSpace(item.ErrorMessage) && !string.Equals(friendly, item.ErrorMessage, StringComparison.Ordinal)
+			? $"{friendly}\n({item.ErrorMessage})"
+			: friendly;
 	}
 }

@@ -9,7 +9,7 @@ namespace Aria2NET.Tests;
 /// <summary>Downloads from a local HttpListener with the real aria2c.</summary>
 [Collection(RealAria2Collection.Name)]
 public class DownloadIntegrationTests {
-	private static async Task<DownloadItem> WaitForAsync(Aria2RpcClient rpc, string gid, Func<DownloadItem, bool> done) {
+	internal static async Task<DownloadItem> WaitForAsync(Aria2RpcClient rpc, string gid, Func<DownloadItem, bool> done) {
 		var deadline = DateTime.UtcNow.AddSeconds(30);
 		while (DateTime.UtcNow < deadline) {
 			var item = await rpc.TellStatusAsync(gid);
@@ -21,7 +21,7 @@ public class DownloadIntegrationTests {
 		throw new TimeoutException($"Download {gid} did not finish in time");
 	}
 
-	private static HttpListener StartServer(out string prefix, Func<HttpListenerContext, Task> handle) {
+	internal static HttpListener StartServer(out string prefix, Func<HttpListenerContext, Task> handle) {
 		var listener = new HttpListener();
 		while (true) {
 			var port = Random.Shared.Next(20000, 60000);
@@ -58,7 +58,7 @@ public class DownloadIntegrationTests {
 		return listener;
 	}
 
-	private static async Task<(Aria2Engine Engine, TempDir Temp)> StartEngineAsync() {
+	internal static async Task<(Aria2Engine Engine, TempDir Temp)> StartEngineAsync() {
 		var temp = new TempDir();
 		var paths = new AppPaths(Path.Combine(temp.Path, "data"), RequiresAria2Fact.FindAria2Dir()!);
 		var engine = new Aria2Engine(paths, Path.Combine(temp.Path, "dl"), NullLogger<Aria2Engine>.Instance);

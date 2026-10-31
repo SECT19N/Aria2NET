@@ -5,25 +5,19 @@ using Microsoft.Extensions.Logging;
 namespace Aria2NET.Core.Aria2;
 
 /// <summary>Owns a hidden aria2c child process and the RPC connection to it.</summary>
-public sealed class Aria2Engine : IAria2Engine {
+public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria2Engine> logger) : IAria2Engine {
 	private const int MaxStartAttempts = 3;
 	private static readonly TimeSpan ReadyTimeout = TimeSpan.FromSeconds(10);
 	private static readonly TimeSpan ExitTimeout = TimeSpan.FromSeconds(5);
 
-	private readonly AppPaths _paths;
-	private readonly string _downloadDir;
-	private readonly ILogger<Aria2Engine> _logger;
+	private readonly AppPaths _paths = paths;
+	private readonly string _downloadDir = downloadDir;
+	private readonly ILogger<Aria2Engine> _logger = logger;
 	private readonly SemaphoreSlim _gate = new(1, 1);
 	private readonly HttpClient _http = new(new SocketsHttpHandler { UseProxy = false }) { Timeout = TimeSpan.FromSeconds(5) };
 
 	private Process? _process;
 	private bool _stopping;
-
-	public Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria2Engine> logger) {
-		_paths = paths;
-		_downloadDir = downloadDir;
-		_logger = logger;
-	}
 
 	public EngineState State { get; private set; } = EngineState.Stopped;
 	public string? LastError { get; private set; }

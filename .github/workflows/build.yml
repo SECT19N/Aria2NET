@@ -5,6 +5,14 @@ on:
     branches: [master]
   pull_request:
 
+permissions:
+  contents: read
+
+# A newer push to the same branch/PR makes the older run pointless.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: windows-latest
@@ -15,6 +23,12 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Build.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+
       - name: Fetch aria2
         shell: pwsh
         run: ./tools/get-aria2.ps1
@@ -23,4 +37,32 @@ jobs:
         run: dotnet build Aria2NET.slnx -p:Platform=x64 --configuration Release
 
       - name: Test
-        run: dotnet test Aria2NET.Tests --configuration Release
+        run: dotnet test Aria2NET.Tests --configuration Release --logger "trx;LogFileName=test-results.trx" --results-directory TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults/*.trx
+          if-no-files-found: ignore
+
+  # Publishing has its own failure modes (it once left out the compiled XAML), so make sure it keeps working on every change.
+  package:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Build.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Package win-x64
+        shell: pwsh
+        run: ./tools/package.ps1 -Rid win-x64 -Version 0.0.0-ci

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentDialog
+    x:Class="Aria2NET.Pages.PropertiesDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Properties"
+    CloseButtonText="Close"
+    DefaultButton="Close">
+
+    <ScrollViewer MaxHeight="460" MinWidth="480">
+        <StackPanel x:Name="Fields" Spacing="10" />
+    </ScrollViewer>
+</ContentDialog>

@@ -1,18 +1,13 @@
 namespace Aria2NET.Core;
 
 /// <summary>Single place that knows where app data, logs and the bundled tools live.</summary>
-public sealed class AppPaths {
-	public AppPaths(string dataRoot, string toolsDir) {
-		DataRoot = dataRoot;
-		ToolsDir = toolsDir;
-	}
-
+public sealed class AppPaths(string dataRoot, string toolsDir) {
 	public static AppPaths CreateDefault() => new(
 		Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Aria2NET"),
 		Path.Combine(AppContext.BaseDirectory, "tools", "aria2"));
 
-	public string DataRoot { get; }
-	public string ToolsDir { get; }
+	public string DataRoot { get; } = dataRoot;
+	public string ToolsDir { get; } = toolsDir;
 
 	public string LogsDir => Path.Combine(DataRoot, "logs");
 	public string EngineDir => Path.Combine(DataRoot, "engine");

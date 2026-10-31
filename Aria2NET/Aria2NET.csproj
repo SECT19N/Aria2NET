@@ -48,6 +48,14 @@
     <ProjectReference Include="..\Aria2NET.Core\Aria2NET.Core.csproj" />
   </ItemGroup>
 
+  <!-- Unpackaged WinUI: dotnet publish skips the compiled XAML (.xbf) and the app's resource index (.pri), so the window could not load. -->
+  <Target Name="IncludeXamlInPublish" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <_XamlOutput Include="$(OutDir)**\*.xbf;$(OutDir)$(AssemblyName).pri" />
+      <ResolvedFileToPublish Include="@(_XamlOutput)" RelativePath="%(RecursiveDir)%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+
   <!-- Publish Properties -->
   <PropertyGroup>
     <PublishReadyToRun Condition="'$(Configuration)' == 'Debug'">False</PublishReadyToRun>

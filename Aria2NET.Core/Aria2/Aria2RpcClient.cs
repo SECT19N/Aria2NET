@@ -12,23 +12,17 @@ public sealed class Aria2RpcException(int code, string message) : Exception(mess
 }
 
 /// <summary>aria2 JSON-RPC client (HTTP).</summary>
-public sealed class Aria2RpcClient {
+public sealed class Aria2RpcClient(HttpClient http, Uri endpoint, string secret) {
 	/// <summary>Only the fields we show; keeps each poll response small.</summary>
 	private static readonly string[] StatusKeys = [
 		"gid", "status", "totalLength", "completedLength", "downloadSpeed", "files", "dir", "errorCode", "errorMessage", "bittorrent",
 	];
 	private const int MaxListed = 1000;
 
-	private readonly HttpClient _http;
-	private readonly Uri _endpoint;
-	private readonly string _secret;
+	private readonly HttpClient _http = http;
+	private readonly Uri _endpoint = endpoint;
+	private readonly string _secret = secret;
 	private int _nextId;
-
-	public Aria2RpcClient(HttpClient http, Uri endpoint, string secret) {
-		_http = http;
-		_endpoint = endpoint;
-		_secret = secret;
-	}
 
 	public async Task<Aria2Version> GetVersionAsync(CancellationToken ct = default) {
 		using var result = await CallAsync("aria2.getVersion", ct);
@@ -64,6 +58,88 @@ public sealed class Aria2RpcClient {
 	public async Task<GlobalStats> GetGlobalStatAsync(CancellationToken ct = default) {
 		using var result = await CallAsync("aria2.getGlobalStat", ct);
 		return GlobalStats.FromJson(result.RootElement);
+	}
+
+	/// <summary>Every field aria2 knows about one download (for the Properties dialog). Caller disposes.</summary>
+	public Task<JsonDocument> TellStatusFullAsync(string gid, CancellationToken ct = default) =>
+		CallAsync("aria2.tellStatus", ct, gid);
+
+	/// <summary>Per-download options as aria2 reports them (all values are strings).</summary>
+	public async Task<IReadOnlyDictionary<string, string>> GetOptionAsync(string gid, CancellationToken ct = default) {
+		using var result = await CallAsync("aria2.getOption", ct, gid);
+		return ReadStringMap(result.RootElement);
+	}
+
+	public async Task<IReadOnlyDictionary<string, string>> GetGlobalOptionAsync(CancellationToken ct = default) {
+		using var result = await CallAsync("aria2.getGlobalOption", ct);
+		return ReadStringMap(result.RootElement);
+	}
+
+	public async Task ChangeOptionAsync(string gid, IReadOnlyDictionary<string, string> options, CancellationToken ct = default) {
+		using var _ = await CallAsync("aria2.changeOption", ct, gid, options);
+	}
+
+	public async Task ChangeGlobalOptionAsync(IReadOnlyDictionary<string, string> options, CancellationToken ct = default) {
+		using var _ = await CallAsync("aria2.changeGlobalOption", ct, options);
+	}
+
+	/// <summary>Moves a waiting/paused download in the queue. <paramref name="how"/> is POS_SET, POS_CUR or POS_END.</summary>
+	public async Task<int> ChangePositionAsync(string gid, int position, string how, CancellationToken ct = default) {
+		using var result = await CallAsync("aria2.changePosition", ct, gid, position, how);
+		return result.RootElement.GetInt32();
+	}
+
+	public async Task PauseAllAsync(CancellationToken ct = default) {
+		using var _ = await CallAsync("aria2.forcePauseAll", ct);
+	}
+
+	public async Task UnpauseAllAsync(CancellationToken ct = default) {
+		using var _ = await CallAsync("aria2.unpauseAll", ct);
+	}
+
+	/// <summary>Pauses (immediately, without waiting for peers to finish) the given downloads. Returns the failures, one per GID that failed.</summary>
+	public Task<IReadOnlyList<string>> PauseAsync(IEnumerable<string> gids, CancellationToken ct = default) => BatchAsync("aria2.forcePause", gids, ct);
+
+	public Task<IReadOnlyList<string>> UnpauseAsync(IEnumerable<string> gids, CancellationToken ct = default) => BatchAsync("aria2.unpause", gids, ct);
+
+	/// <summary>Stops and removes running/queued downloads (aria2 keeps a "removed" entry until <see cref="RemoveResultAsync"/>).</summary>
+	public Task<IReadOnlyList<string>> RemoveAsync(IEnumerable<string> gids, CancellationToken ct = default) => BatchAsync("aria2.forceRemove", gids, ct);
+
+	/// <summary>Forgets finished (complete/error/removed) downloads.</summary>
+	public Task<IReadOnlyList<string>> RemoveResultAsync(IEnumerable<string> gids, CancellationToken ct = default) => BatchAsync("aria2.removeDownloadResult", gids, ct);
+
+	/// <summary>Calls <paramref name="method"/> once per GID in a single request. Returns one message per call that failed.</summary>
+	private async Task<IReadOnlyList<string>> BatchAsync(string method, IEnumerable<string> gids, CancellationToken ct) {
+		var list = gids.ToList();
+		if (list.Count == 0) {
+			return [];
+		}
+		using var result = await SendAsync("system.multicall", ct, w => {
+			w.WriteStartArray();
+			foreach (var gid in list) {
+				WriteMulticallEntry(w, method, gid);
+			}
+			w.WriteEndArray();
+		});
+		var failures = new List<string>();
+		foreach (var entry in result.RootElement.EnumerateArray()) {
+			if (entry.ValueKind == JsonValueKind.Object) {
+				failures.Add(entry.TryGetProperty("message", out var m) ? m.GetString() ?? "" : "Unknown error");
+			}
+		}
+		return failures;
+	}
+
+	private static Dictionary<string, string> ReadStringMap(JsonElement e) {
+		var map = new Dictionary<string, string>();
+		if (e.ValueKind == JsonValueKind.Object) {
+			foreach (var p in e.EnumerateObject()) {
+				if (p.Value.ValueKind == JsonValueKind.String) {
+					map[p.Name] = p.Value.GetString() ?? "";
+				}
+			}
+		}
+		return map;
 	}
 
 	/// <summary>Active, waiting and stopped downloads plus global stats in a single HTTP request.</summary>

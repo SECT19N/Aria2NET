@@ -8,6 +8,11 @@ public sealed class AppSettings {
 	public string? DefaultDownloadFolder { get; set; }
 	/// <summary>Folder picked in the last Add dialog.</summary>
 	public string? LastUsedFolder { get; set; }
+	/// <summary>Ask before "Remove and delete file". Cleared by the "Don't ask again" box.</summary>
+	public bool ConfirmDeleteFiles { get; set; } = true;
+	public string StatusFilter { get; set; } = "All";
+	public string SortColumn { get; set; } = "None";
+	public bool SortDescending { get; set; }
 }
 
 [JsonSourceGenerationOptions(WriteIndented = true)]

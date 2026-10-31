@@ -11,7 +11,10 @@ public sealed partial class SettingsPage : Page {
 
 	public SettingsPage() {
 		InitializeComponent();
+		ConfirmDeleteBox.IsChecked = ViewModel.ConfirmDeleteFiles;
 	}
+
+	private void ConfirmDelete_Click(object sender, RoutedEventArgs e) => ViewModel.ConfirmDeleteFiles = ConfirmDeleteBox.IsChecked == true;
 
 	private async void OpenData_Click(object sender, RoutedEventArgs e) => await Launcher.LaunchFolderPathAsync(ViewModel.DataFolder);
 

@@ -52,6 +52,8 @@ public partial class App : Application {
 
 		services.AddSingleton<DownloadMonitor>(sp => new DownloadMonitor(
 			sp.GetRequiredService<IAria2Engine>(), sp.GetRequiredService<ILogger<DownloadMonitor>>()));
+		services.AddSingleton<DownloadOperations>(sp => new DownloadOperations(
+			sp.GetRequiredService<IAria2Engine>(), sp.GetRequiredService<ILogger<DownloadOperations>>()));
 		services.AddSingleton<ShellViewModel>();
 		services.AddSingleton<DownloadsViewModel>();
 		services.AddTransient<AboutViewModel>();

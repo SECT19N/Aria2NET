@@ -26,6 +26,14 @@ The app owns a hidden `aria2c.exe` child process.
 - Adding: `UrlParser` validates pasted text, then `AddUriAsync` is called per URL with `dir` (and `out` for a single URL).
 - Gotcha: passing a `string[]` as the only argument to a `params object?[]` method binds the array to `params` itself. Cast to `object` (see `tellActive`).
 
+## Controlling downloads (0.3)
+- **Where the rules live (Core, no UI):** `DownloadCapabilities` decides which action is allowed for a status (menus, command bar and shortcuts all read it), `Aria2Errors` maps aria2 error codes to text, `DownloadView` does filter + sort on plain `DownloadItem`s, and `DownloadOperations` is the one service that talks to aria2 for pause/resume/remove/retry/move/rename/limit. All of it is tested without WinUI; `DownloadOperations` is also tested against a real aria2c.
+- **Batches:** acting on several rows sends one `system.multicall` (token inside each call). A fault in one entry is reported but does not stop the others.
+- **Remove:** live downloads get `forceRemove`, then every removed GID gets `removeDownloadResult` so aria2 forgets it. "Remove from list" hides the rows immediately and only sends the RPC after 5 s (`Undo`); closing the window finalizes it first. "Remove and delete file" sends finished files to the Recycle Bin and deletes partial files (and their `.aria2` control file) outright.
+- **List pipeline:** `Apply(snapshot)` → keep one `DownloadRowViewModel` per GID → `DownloadView.Apply` (filter, sort) → `SyncRows` moves/inserts/removes rows in place. Moving a row makes WinUI's ListView forget its selection (and it reports that *during* the move), so the view model captures the selection first, ignores selection events while syncing, and the page re-selects afterwards (`SelectionRestoreNeeded` / `FinishRestore`).
+- **Force start:** aria2 cannot bypass `max-concurrent-downloads`; the item is moved to the front and the limit is raised by one until it leaves Active/Waiting (`DownloadOperations.OnSnapshot` puts it back).
+- **Gotchas found by real aria2:** a resumed download sends `Range: bytes=N-M` (M present), a test server that only understands `bytes=N-` answers 200 and aria2 fails with "No URI available" (error 8). aria2 reports only the original URL after a redirect, and an existing complete file with the same name makes a new download "complete" at once (`continue=true`).
+
 ## Single instance
 `Program.cs` (custom `Main`, `DISABLE_XAML_GENERATED_MAIN`) registers an `AppInstance` key. A second launch redirects to the first, which brings its window to the front.
 
