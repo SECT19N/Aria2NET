@@ -34,5 +34,5 @@ Output goes to `artifacts/` (git-ignored). `win-arm64` builds on an x64 machine 
 
 ## Other automation
 - `build.yml`: build + test on every push to `master` and every pull request, plus a packaging smoke test.
-- `.github/dependabot.yml`: weekly NuGet update PRs (grouped), monthly GitHub Actions updates.
+- `.github/dependabot.yml`: one grouped NuGet PR and one grouped Actions PR per month, at most one open of each. Dependabot PRs are not built automatically; to check one, Actions -> build -> Run workflow on its branch.
 - aria2 itself is pinned (version and SHA-256) in `tools/get-aria2.ps1`; update it by hand so the checksum stays a real check.

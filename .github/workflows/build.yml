@@ -4,6 +4,7 @@ on:
   push:
     branches: [master]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,6 +16,8 @@ concurrency:
 
 jobs:
   build:
+    # Dependabot PRs are not built automatically (they queued up ahead of real work); run this workflow by hand on its branch.
+    if: github.actor != 'dependabot[bot]'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
@@ -49,6 +52,7 @@ jobs:
 
   # Publishing has its own failure modes (it once left out the compiled XAML), so make sure it keeps working on every change.
   package:
+    if: github.actor != 'dependabot[bot]'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
