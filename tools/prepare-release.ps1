@@ -30,7 +30,10 @@ if ([version]$m.Groups['core'].Value -lt [version]($declared -replace '-.*$', ''
 
 $tag = "v$Version"
 git rev-parse -q --verify "refs/tags/$tag" 2>$null | Out-Null
-if ($LASTEXITCODE -eq 0) { throw "Tag $tag already exists" }
+$tagExists = $LASTEXITCODE -eq 0
+# "No such tag" is the expected answer and leaves exit code 1 behind; GitHub's pwsh wrapper would end the step with it.
+$global:LASTEXITCODE = 0
+if ($tagExists) { throw "Tag $tag already exists" }
 
 # The suffix is only for the tag/release; Directory.Build.props keeps the plain MAJOR.MINOR.PATCH.
 $core = $m.Groups['core'].Value
