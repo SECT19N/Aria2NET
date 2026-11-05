@@ -10,7 +10,7 @@ Releases are started by hand. When you decide master is good enough, you run the
 - Roadmap versions map to releases: roadmap 0.4 -> `0.4.0`; fixes after that -> `0.4.1`.
 
 ## Cutting a release
-1. Make sure `master` is green on GitHub (the `build` workflow).
+1. Make sure `master` is green on GitHub (the `build` workflow). Run the packaged zip from a dry run before the real release, on a hybrid-GPU laptop with an external monitor if you can: the app ships its own WinUI runtime, and a runtime bug (2.6.4) once garbled all text in a release while every automated check passed.
 2. GitHub -> **Actions** -> **release** -> **Run workflow** on `master`. Enter the version without `v` (`0.4.0`). Tick **dry run** to only build and package: the zips are attached to the run and nothing is committed, tagged or published.
 3. The workflow then:
    - **verify**: the version must look like `X.Y.Z[-suffix]`, not be lower than the current `<Version>` and not already have a tag. It writes the version into `Directory.Build.props` on the runner, then builds and tests.
