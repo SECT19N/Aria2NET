@@ -2,7 +2,7 @@
 
 A Windows download manager in the style of Internet Download Manager, built with WinUI 3 on top of [aria2](https://aria2.github.io/). aria2 does the transfers; Aria2NET is the interface around it.
 
-> **Status: early development (0.3).** Usable for pasted links, but there is no history yet (downloads in progress are lost when the app closes), no torrents and no tray icon. See the [roadmap](docs/ROADMAP.md).
+> **Status: early development (0.4).** Usable for pasted links: unfinished downloads and a searchable history survive restarts and crashes. No torrents and no tray icon yet. See the [roadmap](docs/ROADMAP.md).
 
 ## What works today
 - Paste one or many links and download them with multiple connections (aria2c runs as a hidden child process).
@@ -11,7 +11,10 @@ A Windows download manager in the style of Internet Download Manager, built with
 - Multi-select with keyboard shortcuts (Del, Shift+Del, Space, Enter, Ctrl+A), filter tabs, sortable columns and a right-click menu.
 - Per-download speed limit, rename, change folder, queue order and "start now".
 - Plain-language messages for aria2 errors.
-
+- Unfinished downloads resume after a restart; if aria2 crashes it is restarted automatically.
+- A History page (search, filters by status/type/site/date, sorting, export to CSV or JSON, download again, "file missing" marker) with a retention setting.
+- Backups of the history database and of aria2's session list, and a repair if the session file is damaged.
+- The window reopens where you left it.
 ## Install
 Releases are on the [Releases page](../../releases): `Aria2NET-<version>-win-x64.zip` or `win-arm64.zip`. Unzip anywhere and run `Aria2NET.exe`. No .NET or Windows App SDK install is needed, and there is no installer yet.
 

@@ -13,6 +13,9 @@ public sealed class AppSettings {
 	public string StatusFilter { get; set; } = "All";
 	public string SortColumn { get; set; } = "None";
 	public bool SortDescending { get; set; }
+	/// <summary>How long finished downloads stay in History: 0 keeps them forever, otherwise a number of days (30, 90, 365).</summary>
+	public int HistoryRetentionDays { get; set; }
+	public WindowPlacement? Window { get; set; }
 }
 
 [JsonSourceGenerationOptions(WriteIndented = true)]

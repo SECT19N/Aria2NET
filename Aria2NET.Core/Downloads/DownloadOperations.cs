@@ -119,6 +119,17 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 		return gid;
 	}
 
+	/// <summary>
+	/// Downloads an address again as a new copy. <c>continue=false</c> makes aria2 pick a new file name (name.1.ext) instead of
+	/// treating an existing finished file as "already complete". Returns the new GID.
+	/// </summary>
+	public Task<string> DownloadAgainAsync(string uri, string dir, CancellationToken ct = default) =>
+		Rpc.AddUriAsync([uri], new Dictionary<string, string> { ["dir"] = dir, ["continue"] = "false" }, ct);
+
+	/// <summary>Picks up a partial download whose data file and <c>.aria2</c> control file are still in <paramref name="dir"/>. Returns the new GID.</summary>
+	public Task<string> ResumeLeftoverAsync(string uri, string dir, string fileName, CancellationToken ct = default) =>
+		Rpc.AddUriAsync([uri], new Dictionary<string, string> { ["dir"] = dir, ["out"] = fileName, ["continue"] = "true" }, ct);
+
 	/// <summary>Forgets finished entries (complete, failed). Files stay.</summary>
 	public Task ClearAsync(IEnumerable<DownloadItem> items, CancellationToken ct = default) =>
 		Check(Rpc.RemoveResultAsync(items.Where(i => !DownloadCapabilities.IsLive(i)).Select(i => i.Gid), ct));
