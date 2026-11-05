@@ -15,7 +15,7 @@ Releases are started by hand. When you decide master is good enough, you run the
 3. The workflow then:
    - **verify**: the version must look like `X.Y.Z[-suffix]`, not be lower than the current `<Version>` and not already have a tag. It writes the version into `Directory.Build.props` on the runner, then builds and tests.
    - **package**: `tools/package.ps1` for `win-x64` and `win-arm64`. Each zip is self-contained (no .NET or Windows App SDK install needed) and bundles `aria2c.exe`.
-   - **release**: only now does anything reach the repo. It commits the version bump to `master` (if the number changed; message `Release v0.4.0`), pushes that commit and the tag together, and creates the GitHub Release with generated notes, both zips and a `.sha256` file for each.
+   - **release**: only now does anything reach the repo. It commits the version bump to `master` (if the number changed; message `Release v0.4.0`), pushes that commit and the tag together, and creates the GitHub Release with generated notes, both zips (GitHub shows each asset's SHA-256 on the release page).
 4. Pull `master` to get the bump. Edit the generated release notes if you want (they come from commit/PR titles since the previous tag).
 
 If any build, test or package step fails, nothing is pushed. If `master` moved while the workflow ran, the push is refused (the branch and tag are pushed atomically) and you just run it again. If a release was created by mistake, delete the release and the tag (`git push origin :refs/tags/v0.4.0`); the bump commit can stay.
@@ -29,7 +29,7 @@ Output goes to `artifacts/` (git-ignored). `win-arm64` builds on an x64 machine 
 
 ## What the zips contain / known limits
 - `Aria2NET.exe` plus runtime files, and `tools\aria2\aria2c.exe`. The arm64 zip ships the **x64** aria2 build (there is no official arm64 build); Windows runs it under emulation.
-- The exe is **not code signed**, so Windows SmartScreen may warn on first run. Verify downloads against the `.sha256` file. Free signing through the SignPath Foundation OSS program and a winget manifest are planned for 0.9 (see `ROADMAP.md`).
+- The exe is **not code signed**, so Windows SmartScreen may warn on first run. The SHA-256 shown next to each asset on the release page can be compared with `Get-FileHash`. Free signing through the SignPath Foundation OSS program and a winget manifest are planned for 0.9 (see `ROADMAP.md`).
 - `dotnet publish` skips the compiled XAML and the app's resource index for unpackaged WinUI apps; `Aria2NET.csproj` has a target that adds them and `package.ps1` fails if they are missing. The `package` job in `build.yml` runs it on every push so this cannot silently regress.
 
 ## Other automation

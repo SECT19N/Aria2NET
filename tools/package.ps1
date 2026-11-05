@@ -1,7 +1,7 @@
-# Builds a self-contained, unpackaged release and zips it, with a SHA-256 file next to the zip.
+# Builds a self-contained, unpackaged release and zips it.
 # Used by the release workflow and runnable locally:
 #   pwsh -ExecutionPolicy Bypass -File tools/package.ps1 -Rid win-x64 -Version 0.3.0
-# Output: artifacts/Aria2NET-<Version>-<Rid>.zip and .zip.sha256
+# Output: artifacts/Aria2NET-<Version>-<Rid>.zip (GitHub shows the SHA-256 of each release asset itself)
 param(
     [ValidateSet('win-x64', 'win-arm64')]
     [string]$Rid = 'win-x64',
@@ -41,7 +41,4 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 [System.IO.Compression.ZipFile]::CreateFromDirectory($stage, $zip, [System.IO.Compression.CompressionLevel]::Optimal, $true)
 Remove-Item $stage -Recurse -Force
 
-$hash = (Get-FileHash -Algorithm SHA256 -Path $zip).Hash.ToLowerInvariant()
-Set-Content -Path "$zip.sha256" -Value "$hash *$name.zip" -Encoding ascii
 Write-Host "Created $zip"
-Write-Host "SHA-256 $hash"

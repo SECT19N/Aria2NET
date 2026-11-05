@@ -15,7 +15,7 @@ A Windows download manager in the style of Internet Download Manager, built with
 ## Install
 Releases are on the [Releases page](../../releases): `Aria2NET-<version>-win-x64.zip` or `win-arm64.zip`. Unzip anywhere and run `Aria2NET.exe`. No .NET or Windows App SDK install is needed, and there is no installer yet.
 
-The exe is **not code signed** yet, so Windows SmartScreen may warn on first run. Compare the zip with the `.sha256` file next to it. Signing is planned (see the roadmap).
+The exe is **not code signed** yet, so Windows SmartScreen may warn on first run. GitHub shows a SHA-256 for each download on the release page; compare it with `Get-FileHash` if you want to check the zip. Signing is planned (see the roadmap).
 
 Requires Windows 10 1809 or later (x64 or ARM64). The ARM64 build runs the x64 `aria2c.exe` under emulation.
 

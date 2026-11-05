@@ -199,7 +199,7 @@ Nothing new except stabilization. MVP definition: **you can install it, paste li
 - Test on slow disks, network drops, sleep/resume, airplane mode, VPN toggle, full disk, read-only target folder, path > 260 chars, non-ASCII filenames.
 - Verify clean uninstall (leaves user data unless asked) and upgrade-in-place keeps settings.
 - Security review of the RPC secret handling, file path handling, and anything that runs external programs.
-- Code signing: apply to the free SignPath Foundation OSS program (GPL-3.0 qualifies); no paid certificate, no self-signed. Until approved, ship unsigned with SHA-256 checksums and note the SmartScreen warning in the README.
+- Code signing: apply to the free SignPath Foundation OSS program (GPL-3.0 qualifies); no paid certificate, no self-signed. Until approved, ship unsigned and note the SmartScreen warning in the README.
 - Publish to winget (free; unsigned open-source apps are accepted) via a manifest PR to `microsoft/winget-pkgs`, automated from the release workflow where possible.
 - Release checklist and changelog format (`CHANGELOG.md`).
 - Issue templates and a "Report a bug" button that attaches diagnostics.
