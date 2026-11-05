@@ -25,6 +25,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 	public Aria2RpcClient? Rpc { get; private set; }
 
 	public event EventHandler? StateChanged;
+	public event EventHandler<EngineNotice>? NoticeRaised;
 
 	public async Task StartAsync(CancellationToken ct = default) {
 		await _gate.WaitAsync(ct);
@@ -81,9 +82,11 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 		try {
 			_paths.EnsureDirectories();
 			Directory.CreateDirectory(_downloadDir);
-			// aria2 warns about a missing --input-file, so make sure one exists.
-			if (!File.Exists(_paths.Aria2SessionFile)) {
-				File.WriteAllBytes(_paths.Aria2SessionFile, []);
+			var session = SessionFile.PrepareForStart(_paths, _logger);
+			if (session.Repaired) {
+				NoticeRaised?.Invoke(this, new EngineNotice(EngineNoticeKind.SessionRepaired, session.RestoredFrom is null
+					? "The list of unfinished downloads was damaged and could not be recovered, so it starts empty."
+					: "The list of unfinished downloads was damaged and was restored from a backup. The newest changes may be missing."));
 			}
 		}
 		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {

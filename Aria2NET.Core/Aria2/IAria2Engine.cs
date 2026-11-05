@@ -12,6 +12,14 @@ public enum EngineState {
 	Failed,
 }
 
+public enum EngineNoticeKind {
+	/// <summary>aria2's session file was damaged and had to be replaced.</summary>
+	SessionRepaired,
+}
+
+/// <summary>Something that happened during a start that the user should hear about.</summary>
+public sealed record EngineNotice(EngineNoticeKind Kind, string Message);
+
 public interface IAria2Engine : IAsyncDisposable {
 	EngineState State { get; }
 	/// <summary>Human-readable reason for <see cref="EngineState.Failed"/> / <see cref="EngineState.Crashed"/>.</summary>
@@ -22,6 +30,8 @@ public interface IAria2Engine : IAsyncDisposable {
 	Aria2RpcClient? Rpc { get; }
 
 	event EventHandler? StateChanged;
+	/// <summary>Raised on whichever thread starts the engine.</summary>
+	event EventHandler<EngineNotice>? NoticeRaised;
 
 	Task StartAsync(CancellationToken ct = default);
 	Task StopAsync(CancellationToken ct = default);

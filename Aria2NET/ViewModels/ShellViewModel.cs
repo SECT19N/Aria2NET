@@ -16,6 +16,7 @@ public sealed partial class ShellViewModel : ObservableObject {
 	private static readonly Brush Idle = new SolidColorBrush(Colors.Gray);
 
 	private readonly IAria2Engine _engine;
+	private readonly EngineSupervisor _supervisor;
 	private readonly ILogger<ShellViewModel> _logger;
 	private readonly DispatcherQueue _dispatcher = DispatcherQueue.GetForCurrentThread();
 
@@ -31,10 +32,12 @@ public sealed partial class ShellViewModel : ObservableObject {
 	[ObservableProperty]
 	public partial string ErrorMessage { get; private set; } = "";
 
-	public ShellViewModel(IAria2Engine engine, ILogger<ShellViewModel> logger) {
+	public ShellViewModel(IAria2Engine engine, EngineSupervisor supervisor, ILogger<ShellViewModel> logger) {
 		_engine = engine;
+		_supervisor = supervisor;
 		_logger = logger;
 		_engine.StateChanged += (_, _) => _dispatcher.TryEnqueue(Refresh);
+		_supervisor.GaveUp += (_, _) => _dispatcher.TryEnqueue(Refresh);
 		Refresh();
 	}
 
@@ -49,16 +52,18 @@ public sealed partial class ShellViewModel : ObservableObject {
 	}
 
 	private void Refresh() {
+		var recovering = _engine.State == EngineState.Crashed && _supervisor.IsRecovering;
 		(StatusText, StatusBrush) = _engine.State switch {
 			EngineState.Running => ($"aria2 {_engine.Version?.Version} · Running", Good),
 			EngineState.Starting => ("Engine: starting…", Busy),
 			EngineState.Restarting => ("Engine: restarting…", Busy),
 			EngineState.Stopping => ("Engine: stopping…", Busy),
 			EngineState.Stopped => ("Engine: stopped", Idle),
-			EngineState.Crashed => ("Engine: crashed", Bad),
+			EngineState.Crashed => recovering ? ("Engine: restarting after a crash…", Busy) : ("Engine: crashed", Bad),
 			_ => ("Engine: failed to start", Bad),
 		};
-		ShowError = _engine.State is EngineState.Failed or EngineState.Crashed;
+		// A crash the supervisor is already dealing with is not worth an error banner; if it gives up, the banner appears.
+		ShowError = _engine.State == EngineState.Failed || (_engine.State == EngineState.Crashed && !recovering);
 		ErrorMessage = _engine.LastError ?? "";
 	}
 }

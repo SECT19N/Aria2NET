@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using Aria2NET.Core.Aria2;
 using Aria2NET.Core.Downloads;
+using Aria2NET.Core.History;
 using Aria2NET.Core.Settings;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.Logging;
@@ -17,6 +18,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 	private readonly IAria2Engine _engine;
 	private readonly DownloadOperations _ops;
 	private readonly SettingsStore<AppSettings> _settings;
+	private readonly HistoryService _history;
 	private readonly ILogger<DownloadsViewModel> _logger;
 	private readonly DispatcherQueue _dispatcher = DispatcherQueue.GetForCurrentThread();
 	private readonly DispatcherQueueTimer _undoTimer;
@@ -164,10 +166,11 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 
 	public bool ConfirmDeleteFiles => _settings.Load().ConfirmDeleteFiles;
 
-	public DownloadsViewModel(IAria2Engine engine, DownloadMonitor monitor, DownloadOperations ops, SettingsStore<AppSettings> settings, ILogger<DownloadsViewModel> logger) {
+	public DownloadsViewModel(IAria2Engine engine, DownloadMonitor monitor, DownloadOperations ops, SettingsStore<AppSettings> settings, HistoryService history, ILogger<DownloadsViewModel> logger) {
 		_engine = engine;
 		_ops = ops;
 		_settings = settings;
+		_history = history;
 		_logger = logger;
 
 		var saved = settings.Load();
@@ -347,9 +350,18 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		}
 	}
 
-	/// <summary>When this app saw the download being added or finishing; null for downloads that were already there at launch.</summary>
-	public (DateTimeOffset? Added, DateTimeOffset? Finished) Times(string gid) =>
-		(_added.TryGetValue(gid, out var a) ? a : null, _finished.TryGetValue(gid, out var f) ? f : null);
+	/// <summary>When the download was added and when it finished: from history, or from what this run saw if history is off.</summary>
+	public (DateTimeOffset? Added, DateTimeOffset? Finished) Times(string gid) {
+		try {
+			if (_history.Store?.Get(gid) is { } entry) {
+				return (new DateTimeOffset(entry.AddedUtc), entry.FinishedUtc is { } f ? new DateTimeOffset(f) : null);
+			}
+		}
+		catch (Exception ex) {
+			_logger.LogWarning(ex, "Could not read history for {Gid}", gid);
+		}
+		return (_added.TryGetValue(gid, out var a) ? a : null, _finished.TryGetValue(gid, out var fin) ? fin : null);
+	}
 
 	public void OpenFile() {
 		if (SingleSelected() is { Path: { } path } item && DownloadCapabilities.CanOpenFile(item)) {
