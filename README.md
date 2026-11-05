@@ -19,6 +19,9 @@ The exe is **not code signed** yet, so Windows SmartScreen may warn on first run
 
 Requires Windows 10 1809 or later (x64 or ARM64). The ARM64 build runs the x64 `aria2c.exe` under emulation.
 
+## Known issues
+- **Garbled or missing text** (labels showing as "AIAIAI", blank buttons, getting worse with use) on laptops with two GPUs (typically gaming laptops) when an external monitor is connected. This was a rendering bug in Windows App SDK 2.6.4, which `0.3.0-beta` shipped; it is fixed by updating to 2.6.5 in `0.3.1`. If you still see it, set `Aria2NET.exe` to the integrated GPU under Settings > System > Display > Graphics ("Power saving"), or keep the window on the primary display.
+
 ## Build from source
 Needs the .NET 10 SDK and the Windows App SDK workload for Visual Studio 2022+ (or just the SDK for the command line).
 
