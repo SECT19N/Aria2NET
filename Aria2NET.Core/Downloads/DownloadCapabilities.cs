@@ -2,11 +2,11 @@ namespace Aria2NET.Core.Downloads;
 
 /// <summary>Which actions make sense for a download in a given state. One place, so menus, buttons and shortcuts agree.</summary>
 public static class DownloadCapabilities {
-	public static bool CanPause(DownloadItem i) => i.Status is DownloadStatus.Active or DownloadStatus.Waiting;
+	public static bool CanPause(DownloadItem i) => i.Status is DownloadStatus.Active or DownloadStatus.Seeding or DownloadStatus.Waiting;
 
 	public static bool CanResume(DownloadItem i) => i.Status == DownloadStatus.Paused;
 
-	/// <summary>Retry needs the original address; magnet links and torrents come with 0.5.</summary>
+	/// <summary>Retry needs the original address; a torrent has none (aria2 does not report it), so it cannot be retried this way.</summary>
 	public static bool CanRetry(DownloadItem i) =>
 		i.Status is DownloadStatus.Error or DownloadStatus.Removed
 		&& !string.IsNullOrEmpty(i.FirstUri)
@@ -23,12 +23,18 @@ public static class DownloadCapabilities {
 
 	public static bool CanChangeFolder(DownloadItem i) => CanRename(i);
 
-	public static bool CanSetSpeedLimit(DownloadItem i) => i.Status is DownloadStatus.Active or DownloadStatus.Waiting or DownloadStatus.Paused;
+	public static bool CanSetSpeedLimit(DownloadItem i) => IsLive(i);
 
 	public static bool CanOpenFile(DownloadItem i) =>
-		i.Status == DownloadStatus.Complete && !string.IsNullOrEmpty(i.Path) && File.Exists(i.Path);
+		i.Status is DownloadStatus.Complete or DownloadStatus.Seeding && !string.IsNullOrEmpty(i.Path) && !(i.IsTorrent && i.FileCount > 1) && File.Exists(i.Path);
 
 	public static bool CanOpenFolder(DownloadItem i) => !string.IsNullOrEmpty(i.Dir);
 
-	public static bool IsLive(DownloadItem i) => i.Status is DownloadStatus.Active or DownloadStatus.Waiting or DownloadStatus.Paused;
+	public static bool IsLive(DownloadItem i) => i.Status is DownloadStatus.Active or DownloadStatus.Seeding or DownloadStatus.Waiting or DownloadStatus.Paused;
+
+	/// <summary>Verify the files against the torrent and repair them. Not for a magnet that has no files yet.</summary>
+	public static bool CanRecheck(DownloadItem i) => i.IsTorrent && !i.IsMetadata && IsLive(i);
+
+	/// <summary>Seeding rules apply to a torrent that is still running (finished-and-gone ones have nothing to change).</summary>
+	public static bool CanChangeSeeding(DownloadItem i) => CanRecheck(i);
 }

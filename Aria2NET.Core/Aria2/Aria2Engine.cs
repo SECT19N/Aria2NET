@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using Aria2NET.Core.Torrents;
 using Microsoft.Extensions.Logging;
 
 namespace Aria2NET.Core.Aria2;
@@ -98,7 +99,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 
 		for (var attempt = 1; attempt <= MaxStartAttempts; attempt++) {
 			ct.ThrowIfCancellationRequested();
-			var config = Aria2Config.CreateRandom(_downloadDir, Environment.ProcessId);
+			var config = Aria2Config.CreateRandom(_downloadDir, Environment.ProcessId, TrackerListService.ReadCache(_paths));
 			File.WriteAllText(_paths.Aria2ConfFile, config.Render(_paths));
 
 			Process process;

@@ -9,9 +9,9 @@ namespace Aria2NET.Core.Aria2;
 /// Settings for one aria2c launch. Written to a conf file instead of the command line so the
 /// RPC secret is not visible in the process list.
 /// </summary>
-public sealed record Aria2Config(int Port, string Secret, int ParentPid, string DownloadDir) {
-	public static Aria2Config CreateRandom(string downloadDir, int parentPid) =>
-		new(FindFreeLoopbackPort(), GenerateSecret(), parentPid, downloadDir);
+public sealed record Aria2Config(int Port, string Secret, int ParentPid, string DownloadDir, IReadOnlyList<string>? Trackers = null) {
+	public static Aria2Config CreateRandom(string downloadDir, int parentPid, IReadOnlyList<string>? trackers = null) =>
+		new(FindFreeLoopbackPort(), GenerateSecret(), parentPid, downloadDir, trackers);
 
 	public static string GenerateSecret() =>
 		Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
@@ -26,6 +26,9 @@ public sealed record Aria2Config(int Port, string Secret, int ParentPid, string 
 			listener.Stop();
 		}
 	}
+
+	/// <summary>The value of <c>bt-tracker</c>: addresses joined by commas.</summary>
+	public static string TrackerOptionValue(IEnumerable<string> trackers) => string.Join(",", trackers);
 
 	public string Render(AppPaths paths) {
 		var sb = new StringBuilder();
@@ -43,6 +46,19 @@ public sealed record Aria2Config(int Port, string Secret, int ParentPid, string 
 		sb.AppendLine("console-log-level=warn");
 		sb.AppendLine($"log={paths.Aria2LogFile}");
 		sb.AppendLine("log-level=notice");
+		// BitTorrent. aria2 writes <infohash>.torrent into the download folder (only if it exists) and reuses it when the same magnet is added again.
+		sb.AppendLine("bt-save-metadata=true");
+		sb.AppendLine("bt-load-saved-metadata=true");
+		sb.AppendLine("enable-dht=true");
+		sb.AppendLine("enable-dht6=true");
+		sb.AppendLine("bt-enable-lpd=true");
+		sb.AppendLine($"dht-file-path={Path.Combine(paths.EngineDir, "dht.dat")}");
+		sb.AppendLine($"dht-file-path6={Path.Combine(paths.EngineDir, "dht6.dat")}");
+		sb.AppendLine("seed-ratio=1.0");
+		sb.AppendLine("file-allocation=falloc");
+		if (Trackers is { Count: > 0 }) {
+			sb.AppendLine($"bt-tracker={TrackerOptionValue(Trackers)}");
+		}
 		return sb.ToString();
 	}
 }

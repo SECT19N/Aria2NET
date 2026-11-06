@@ -15,6 +15,8 @@ public sealed class AppSettings {
 	public bool SortDescending { get; set; }
 	/// <summary>How long finished downloads stay in History: 0 keeps them forever, otherwise a number of days (30, 90, 365).</summary>
 	public int HistoryRetentionDays { get; set; }
+	/// <summary>The one-time offer to open .torrent files and magnet links with Aria2NET has been shown.</summary>
+	public bool TorrentAssociationPrompted { get; set; }
 	public WindowPlacement? Window { get; set; }
 }
 
