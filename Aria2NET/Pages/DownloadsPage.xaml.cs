@@ -71,6 +71,10 @@ public sealed partial class DownloadsPage : Page {
 		for (var i = 0; i < 75 && !ViewModel.IsEngineUp; i++) {
 			await Task.Delay(200);
 		}
+		// Another dialog (the first-run offer, a file picker) may be open; wait instead of losing the link.
+		while (_dialogOpen) {
+			await Task.Delay(200);
+		}
 		await ShowAddDialogAsync(text);
 	}
 
