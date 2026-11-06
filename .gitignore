@@ -363,3 +363,5 @@ MigrationBackup/
 FodyWeavers.xsd
 # aria2 binary (fetched by tools/get-aria2.ps1)
 tools/aria2/
+# GeoIP database (fetched by tools/get-geoip.ps1)
+tools/geoip/

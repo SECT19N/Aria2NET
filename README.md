@@ -2,7 +2,7 @@
 
 A Windows download manager in the style of Internet Download Manager, built with WinUI 3 on top of [aria2](https://aria2.github.io/). aria2 does the transfers; Aria2NET is the interface around it.
 
-> **Status: early development (0.4).** Usable for pasted links: unfinished downloads and a searchable history survive restarts and crashes. No torrents and no tray icon yet. See the [roadmap](docs/ROADMAP.md).
+> **Status: early development (0.5).** Usable for pasted links, `.torrent` files, magnet links and metalinks: unfinished downloads and a searchable history survive restarts and crashes. No tray icon yet. See the [roadmap](docs/ROADMAP.md).
 
 ## What works today
 - Paste one or many links and download them with multiple connections (aria2c runs as a hidden child process).
@@ -14,6 +14,7 @@ A Windows download manager in the style of Internet Download Manager, built with
 - Unfinished downloads resume after a restart; if aria2 crashes it is restarted automatically.
 - A History page (search, filters by status/type/site/date, sorting, export to CSV or JSON, download again, "file missing" marker) with a retention setting.
 - Backups of the history database and of aria2's session list, and a repair if the session file is damaged.
+- Torrents: open a `.torrent` file or paste a magnet link, choose which files to download, and see seeding, peers, trackers and pieces in a details window. Metalink files work too. Optionally open `.torrent` files and magnet links with Aria2NET from Explorer and the browser (Settings > Torrents).
 - The window reopens where you left it.
 ## Install
 Releases are on the [Releases page](../../releases): `Aria2NET-<version>-win-x64.zip` or `win-arm64.zip`. Unzip anywhere and run `Aria2NET.exe`. No .NET or Windows App SDK install is needed, and there is no installer yet.
@@ -30,6 +31,7 @@ Needs the .NET 10 SDK and the Windows App SDK workload for Visual Studio 2022+ (
 
 ```
 pwsh -ExecutionPolicy Bypass -File tools/get-aria2.ps1   # downloads aria2c (pinned version, SHA-256 checked)
+pwsh -ExecutionPolicy Bypass -File tools/get-geoip.ps1   # optional: country codes for torrent peers (DB-IP Lite, CC BY 4.0)
 dotnet build Aria2NET.slnx -p:Platform=x64
 dotnet test Aria2NET.Tests
 dotnet run --project Aria2NET -p:Platform=x64

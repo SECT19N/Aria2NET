@@ -7,7 +7,7 @@ Releases are started by hand. When you decide master is good enough, you run the
 - The one place the number lives is `<Version>` in `Directory.Build.props`. The build stamps it into the exe (file properties, About page, log line "Aria2NET x.y.z starting").
 - The git tag is that number with a `v` in front: `v0.4.0`, `v1.0.0-rc.1`. The release workflow creates it; `Directory.Build.props` keeps only `MAJOR.MINOR.PATCH`.
 - Below 1.0 every release is marked **pre-release** on GitHub (anything can still change). From 1.0 on only versions with a suffix are pre-releases.
-- Roadmap versions map to releases: roadmap 0.4 -> `0.4.0`; fixes after that -> `0.4.1`.
+- Roadmap versions map to releases: roadmap 0.5 -> `0.5.0`; fixes after that -> `0.5.1`.
 
 ## Cutting a release
 1. Make sure `master` is green on GitHub (the `build` workflow). Run the packaged zip from a dry run before the real release, on a hybrid-GPU laptop with an external monitor if you can: the app ships its own WinUI runtime, and a runtime bug (2.6.4) once garbled all text in a release while every automated check passed.
