@@ -4,6 +4,8 @@ using Aria2NET.Core.Aria2;
 using Aria2NET.Core.Downloads;
 using Aria2NET.Core.History;
 using Aria2NET.Core.Settings;
+using Aria2NET.Core.Torrents;
+using Aria2NET.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.Logging;
 using Microsoft.UI.Dispatching;
@@ -80,6 +82,21 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 
 	[ObservableProperty]
 	public partial string FailedLabel { get; private set; } = "Failed";
+
+	[ObservableProperty]
+	public partial string SeedingLabel { get; private set; } = "Seeding";
+
+	[ObservableProperty]
+	public partial string TorrentsLabel { get; private set; } = "Torrents";
+
+	[ObservableProperty]
+	public partial bool CanRecheck { get; private set; }
+
+	[ObservableProperty]
+	public partial bool CanChangeSeeding { get; private set; }
+
+	[ObservableProperty]
+	public partial bool CanShowTorrentDetails { get; private set; }
 
 	[ObservableProperty]
 	public partial string NameHeader { get; private set; } = "Name";
@@ -166,7 +183,9 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 
 	public bool ConfirmDeleteFiles => _settings.Load().ConfirmDeleteFiles;
 
-	public DownloadsViewModel(IAria2Engine engine, DownloadMonitor monitor, DownloadOperations ops, SettingsStore<AppSettings> settings, HistoryService history, ILogger<DownloadsViewModel> logger) {
+	public DownloadsViewModel(IAria2Engine engine, DownloadMonitor monitor, DownloadOperations ops, TorrentOperations torrents, NoticeCenter notices, SettingsStore<AppSettings> settings, HistoryService history, ILogger<DownloadsViewModel> logger) {
+		_torrents = torrents;
+		_notices = notices;
 		_engine = engine;
 		_ops = ops;
 		_settings = settings;
@@ -202,7 +221,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
 	}
 
-	/// <summary>Adds each URL as its own download. Returns an error message, or null when everything was accepted.</summary>
+	/// <summary>Adds each link or file as its own download. Returns an error message, or null when everything was accepted.</summary>
 	public async Task<string?> AddAsync(IReadOnlyList<string> urls, string folder, string? fileName) {
 		var rpc = _engine.Rpc;
 		if (rpc is null) {
@@ -210,22 +229,41 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		}
 
 		var failures = new List<string>();
+		var accepted = 0;
 		foreach (var url in urls) {
-			var options = new Dictionary<string, string> { ["dir"] = folder };
-			if (urls.Count == 1 && !string.IsNullOrWhiteSpace(fileName)) {
-				options["out"] = fileName.Trim();
-			}
 			try {
+				switch (UrlParser.Classify(url)) {
+					case LinkKind.TorrentFile:
+						if (await AddTorrentFileAsync(url, folder)) {
+							accepted++;
+						}
+						continue;
+					case LinkKind.MetalinkFile:
+						await AddMetalinkFileAsync(url, folder);
+						accepted++;
+						continue;
+					case LinkKind.Magnet:
+						if (await AddMagnetAsync(url, folder)) {
+							accepted++;
+						}
+						continue;
+				}
+
+				var options = new Dictionary<string, string> { ["dir"] = folder };
+				if (urls.Count == 1 && !string.IsNullOrWhiteSpace(fileName)) {
+					options["out"] = fileName.Trim();
+				}
 				var gid = await rpc.AddUriAsync([url], options);
 				_added[gid] = DateTimeOffset.Now;
+				accepted++;
 			}
 			catch (Exception ex) {
-				_logger.LogWarning(ex, "addUri failed for {Url}", url);
+				_logger.LogWarning(ex, "Adding {Url} failed", url);
 				failures.Add($"{url}: {ex.Message}");
 			}
 		}
 
-		if (failures.Count < urls.Count) {
+		if (accepted > 0) {
 			SaveSettings(s => s.LastUsedFolder = folder);
 		}
 		return failures.Count == 0 ? null : string.Join("\n", failures);
@@ -273,9 +311,12 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		CanOpenFolder = single is not null && DownloadCapabilities.CanOpenFolder(single);
 		CanCopyUrl = items.Any(i => !string.IsNullOrEmpty(i.FirstUri));
 		CanShowProperties = single is not null;
+		CanRecheck = items.Count > 0 && items.All(DownloadCapabilities.CanRecheck);
+		CanChangeSeeding = items.Count > 0 && items.All(DownloadCapabilities.CanChangeSeeding);
+		CanShowTorrentDetails = single is { IsTorrent: true, IsMetadata: false };
 
 		var visible = _items.Where(i => !_hidden.Contains(i.Gid)).ToList();
-		CanPauseAll = IsEngineUp && visible.Any(i => i.Status is DownloadStatus.Active or DownloadStatus.Waiting);
+		CanPauseAll = IsEngineUp && visible.Any(i => i.Status is DownloadStatus.Active or DownloadStatus.Seeding or DownloadStatus.Waiting);
 		CanResumeAll = IsEngineUp && visible.Any(i => i.Status == DownloadStatus.Paused);
 		CanClearCompleted = visible.Any(i => i.Status == DownloadStatus.Complete);
 		CanClearFailed = visible.Any(i => i.Status is DownloadStatus.Error or DownloadStatus.Removed);
@@ -527,8 +568,9 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		}
 
 		TrackTimes(snapshot.Items);
-		_items = snapshot.Items.ToList();
+		_items = snapshot.Items.Where(i => !DownloadView.IsSuperseded(i)).ToList();
 		_hidden.RemoveWhere(gid => !snapshot.Items.Any(i => i.Gid == gid));
+		CheckDiskSpace(_items);
 
 		var stats = snapshot.Stats;
 		StatsText = $"↓ {ByteFormat.Speed(stats.DownloadSpeed)}  ·  {stats.NumActive} active  ·  {stats.NumWaiting} waiting";
@@ -602,6 +644,8 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		PausedLabel = Label("Paused", StatusFilter.Paused, visible);
 		CompletedLabel = Label("Completed", StatusFilter.Completed, visible);
 		FailedLabel = Label("Failed", StatusFilter.Failed, visible);
+		SeedingLabel = Label("Seeding", StatusFilter.Seeding, visible);
+		TorrentsLabel = Label("Torrents", StatusFilter.Torrents, visible);
 		RefreshCapabilities();
 	}
 

@@ -10,10 +10,17 @@
     IsPrimaryButtonEnabled="False">
 
     <StackPanel Spacing="12" MinWidth="460">
-        <TextBox x:Name="UrlsBox" Header="Links (one per line)" AcceptsReturn="True" TextWrapping="NoWrap"
+        <TextBox x:Name="UrlsBox" Header="Links and files (one per line)" AcceptsReturn="True" TextWrapping="NoWrap"
                  Height="130" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                 PlaceholderText="https://example.com/file.zip" TextChanged="UrlsBox_TextChanged" />
-        <TextBlock x:Name="ValidationText" Opacity="0.8" TextWrapping="Wrap" />
+                 PlaceholderText="https://example.com/file.zip, magnet:?xt=..., or the path of a .torrent file" TextChanged="UrlsBox_TextChanged" />
+        <Grid ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Name="ValidationText" Opacity="0.8" TextWrapping="Wrap" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="Add .torrent / .metalink…" Click="BrowseFiles_Click" />
+        </Grid>
 
         <Grid ColumnSpacing="8">
             <Grid.ColumnDefinitions>

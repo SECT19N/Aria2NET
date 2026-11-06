@@ -29,12 +29,12 @@ public sealed partial class AddDownloadDialog : ContentDialog {
 		var invalid = _parsed.Invalid.Count;
 		ValidationText.Text = (valid, invalid) switch {
 			(0, 0) => "",
-			(0, _) => $"No supported links. Use http, https, ftp, sftp or magnet. Not recognized: {invalid}",
+			(0, _) => $"Nothing usable. Use http, https, ftp, sftp, a magnet link or a .torrent/.metalink file. Not recognized: {invalid}",
 			(_, 0) => $"{valid} link{(valid == 1 ? "" : "s")} ready",
 			_ => $"{valid} link{(valid == 1 ? "" : "s")} ready; {invalid} not recognized and will be skipped",
 		};
-		FileNameBox.IsEnabled = valid == 1;
-		if (valid != 1) {
+		FileNameBox.IsEnabled = valid == 1 && UrlParser.Classify(_parsed.Valid[0]) == LinkKind.Uri;
+		if (!FileNameBox.IsEnabled) {
 			FileNameBox.Text = "";
 		}
 		IsPrimaryButtonEnabled = valid > 0 && Folder.Length > 0 && Path.IsPathFullyQualified(Folder);
@@ -48,5 +48,19 @@ public sealed partial class AddDownloadDialog : ContentDialog {
 		if (folder is not null) {
 			FolderBox.Text = folder.Path;
 		}
+	}
+
+	private async void BrowseFiles_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e) {
+		var picker = new FileOpenPicker();
+		foreach (var extension in new[] { ".torrent", ".metalink", ".meta4" }) {
+			picker.FileTypeFilter.Add(extension);
+		}
+		InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(App.Window));
+		var files = await picker.PickMultipleFilesAsync();
+		if (files is null || files.Count == 0) {
+			return;
+		}
+		var lines = files.Select(f => "\"" + f.Path + "\"");
+		UrlsBox.Text = string.Join("\r\n", UrlsBox.Text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Concat(lines));
 	}
 }

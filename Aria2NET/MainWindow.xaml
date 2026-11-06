@@ -86,9 +86,11 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <Ellipse Width="10" Height="10" VerticalAlignment="Center" Fill="{x:Bind ViewModel.StatusBrush, Mode=OneWay}" />
             <TextBlock Grid.Column="1" Style="{StaticResource CaptionTextBlockStyle}" Text="{x:Bind ViewModel.StatusText, Mode=OneWay}" />
+            <TextBlock Grid.Column="2" Style="{StaticResource CaptionTextBlockStyle}" Opacity="0.8" Text="{x:Bind ViewModel.TorrentStatusText, Mode=OneWay}" />
         </Grid>
     </Grid>
 </Window>
