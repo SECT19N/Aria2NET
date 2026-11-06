@@ -1,4 +1,6 @@
 using Aria2NET.Core.Downloads;
+using Aria2NET.Core.Torrents;
+using Aria2NET.Services;
 using Aria2NET.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Input;
@@ -16,7 +18,8 @@ using WinRT.Interop;
 namespace Aria2NET.Pages;
 
 public sealed partial class DownloadsPage : Page {
-	private bool _dialogOpen;
+	// Static: a magnet link can ask for its files after the user has moved to another page, and only one dialog may be open at a time.
+	private static bool _dialogOpen;
 
 	public DownloadsViewModel ViewModel { get; } = App.Services.GetRequiredService<DownloadsViewModel>();
 
@@ -28,11 +31,15 @@ public sealed partial class DownloadsPage : Page {
 		FilterBar.SelectedItem = FilterBar.Items.FirstOrDefault(i => (string)i.Tag == ViewModel.Filter.ToString()) ?? FilterBar.Items[0];
 		DownloadList.SelectedItems.Clear();
 		ViewModel.SelectionRestoreNeeded += OnSelectionRestoreNeeded;
+		ViewModel.PromptTorrent = PromptTorrentAsync;
+		ViewModel.ExternalAddRequested += OnExternalAddRequested;
+		_ = HandleStartupAsync();
 		ViewModel.SetSelection([]);
 	}
 
 	private void Page_Unloaded(object sender, RoutedEventArgs e) {
 		ViewModel.SelectionRestoreNeeded -= OnSelectionRestoreNeeded;
+		ViewModel.ExternalAddRequested -= OnExternalAddRequested;
 		ViewModel.FinishRestore([]);
 	}
 
@@ -47,6 +54,51 @@ public sealed partial class DownloadsPage : Page {
 			ViewModel.FinishRestore(DownloadList.SelectedItems.OfType<DownloadRowViewModel>());
 		});
 
+	// ---------------------------------------------------------------- opened from outside
+
+	private async void OnExternalAddRequested(object? sender, EventArgs e) => await ShowExternalAddAsync();
+
+	private async Task HandleStartupAsync() {
+		await ShowExternalAddAsync();
+		await OfferAssociationAsync();
+	}
+
+	/// <summary>A .torrent file or magnet link was opened with the app: show the Add dialog with it filled in (the engine may still be starting).</summary>
+	private async Task ShowExternalAddAsync() {
+		if (ViewModel.TakePendingExternalText() is not { } text) {
+			return;
+		}
+		for (var i = 0; i < 75 && !ViewModel.IsEngineUp; i++) {
+			await Task.Delay(200);
+		}
+		// Another dialog (the first-run offer, a file picker) may be open; wait instead of losing the link.
+		while (_dialogOpen) {
+			await Task.Delay(200);
+		}
+		await ShowAddDialogAsync(text);
+	}
+
+	/// <summary>Once, after an upgrade or first start: offer to open torrent files and magnet links with the app.</summary>
+	private async Task OfferAssociationAsync() {
+		var association = App.Services.GetRequiredService<TorrentAssociation>();
+		if (!association.ShouldOffer) {
+			return;
+		}
+		association.MarkOffered();
+		var dialog = new ContentDialog {
+			Title = "Open torrents with Aria2NET?",
+			Content = "Aria2NET can open .torrent files and magnet links when you click them. Windows will ask you to confirm Aria2NET as the default app. You can change this later in Settings.",
+			PrimaryButtonText = "Set up",
+			CloseButtonText = "Not now",
+			DefaultButton = ContentDialogButton.Primary,
+		};
+		if (await ShowDialogAsync(dialog) == ContentDialogResult.Primary) {
+			if (!association.Enable()) {
+				await TorrentAssociation.OpenDefaultAppsAsync();
+			}
+		}
+	}
+
 	// ---------------------------------------------------------------- adding
 
 	private async void Add_Click(object sender, RoutedEventArgs e) => await ShowAddDialogAsync(null);
@@ -59,17 +111,75 @@ public sealed partial class DownloadsPage : Page {
 		args.Handled = true;
 		string text;
 		try {
-			var content = Clipboard.GetContent();
-			if (!content.Contains(StandardDataFormats.Text)) {
-				return;
-			}
-			text = await content.GetTextAsync();
+			text = await LinksFromAsync(Clipboard.GetContent());
 		}
 		catch (Exception ex) when (ex is InvalidOperationException or System.Runtime.InteropServices.COMException) {
 			return; // Clipboard busy or unavailable.
 		}
 		if (UrlParser.Parse(text).Valid.Count > 0) {
 			await ShowAddDialogAsync(text);
+		}
+	}
+
+	private void Page_DragOver(object sender, DragEventArgs e) {
+		var view = e.DataView;
+		if (ViewModel.IsEngineUp && (view.Contains(StandardDataFormats.StorageItems) || view.Contains(StandardDataFormats.Text))) {
+			e.AcceptedOperation = DataPackageOperation.Copy;
+			e.DragUIOverride.Caption = "Add to Aria2NET";
+		}
+	}
+
+	private async void Page_Drop(object sender, DragEventArgs e) {
+		string text;
+		var deferral = e.GetDeferral();
+		try {
+			text = await LinksFromAsync(e.DataView);
+		}
+		catch (Exception ex) when (ex is InvalidOperationException or System.Runtime.InteropServices.COMException) {
+			return;
+		}
+		finally {
+			deferral.Complete(); // the drag source must not wait for the dialog below
+		}
+		if (ViewModel.IsEngineUp && UrlParser.Parse(text).Valid.Count > 0) {
+			await ShowAddDialogAsync(text);
+		}
+	}
+
+	/// <summary>Links in the text of a clipboard or drop, plus the paths of any .torrent/.metalink files in it, one per line.</summary>
+	private static async Task<string> LinksFromAsync(DataPackageView view) {
+		var lines = new List<string>();
+		if (view.Contains(StandardDataFormats.StorageItems)) {
+			foreach (var item in await view.GetStorageItemsAsync()) {
+				if (item is Windows.Storage.IStorageFile file && UrlParser.Classify(file.Path) is LinkKind.TorrentFile or LinkKind.MetalinkFile) {
+					lines.Add("\"" + file.Path + "\"");
+				}
+			}
+		}
+		if (view.Contains(StandardDataFormats.Text)) {
+			lines.Add(await view.GetTextAsync());
+		}
+		return string.Join("\r\n", lines);
+	}
+
+	private static async Task<TorrentChoice> PromptTorrentAsync(TorrentPrompt prompt) {
+		var dialog = new TorrentFilesDialog(prompt);
+		var result = await ShowDialogWhenFreeAsync(dialog);
+		return result == ContentDialogResult.Primary ? dialog.Choice : dialog.Choice with { Files = [] };
+	}
+
+	/// <summary>Like <see cref="ShowDialogAsync"/>, but waits for the open dialog to close instead of giving up.</summary>
+	private static async Task<ContentDialogResult> ShowDialogWhenFreeAsync(ContentDialog dialog) {
+		while (_dialogOpen) {
+			await Task.Delay(200);
+		}
+		_dialogOpen = true;
+		try {
+			dialog.XamlRoot = ((FrameworkElement)App.Window.Content).XamlRoot;
+			return await dialog.ShowAsync();
+		}
+		finally {
+			_dialogOpen = false;
 		}
 	}
 
@@ -143,7 +253,15 @@ public sealed partial class DownloadsPage : Page {
 		}
 	}
 
-	private void List_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e) => ViewModel.OpenFile();
+	// Double-click opens the file; a multi-file torrent has no single file, so it opens its details instead.
+	private void List_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e) {
+		if (ViewModel.CanOpenFile) {
+			ViewModel.OpenFile();
+		}
+		else if (ViewModel.CanShowTorrentDetails) {
+			TorrentDetails_Click(sender, new RoutedEventArgs());
+		}
+	}
 
 	private void Filter_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args) {
 		if (sender.SelectedItem?.Tag is string tag && Enum.TryParse<StatusFilter>(tag, out var filter)) {
@@ -239,6 +357,21 @@ public sealed partial class DownloadsPage : Page {
 		var dialog = new RenameDialog(item.Name);
 		if (await ShowDialogAsync(dialog) == ContentDialogResult.Primary) {
 			await ViewModel.RenameSelectedAsync(dialog.NewName);
+		}
+	}
+
+	private async void TorrentDetails_Click(object sender, RoutedEventArgs e) {
+		if (ViewModel.CreateDetailViewModel() is { } detail) {
+			await ShowDialogAsync(new TorrentDetailDialog(detail));
+		}
+	}
+
+	private async void Recheck_Click(object sender, RoutedEventArgs e) => await ViewModel.RecheckSelectedAsync();
+
+	private async void Seeding_Click(object sender, RoutedEventArgs e) {
+		var dialog = new SeedingDialog();
+		if (await ShowDialogAsync(dialog) == ContentDialogResult.Primary) {
+			await ViewModel.SetSeedingSelectedAsync(dialog.Choice);
 		}
 	}
 

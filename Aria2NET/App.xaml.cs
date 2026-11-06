@@ -5,6 +5,7 @@ using Aria2NET.Core.Downloads;
 using Aria2NET.Core.History;
 using Aria2NET.Core.Logging;
 using Aria2NET.Core.Settings;
+using Aria2NET.Core.Torrents;
 using Aria2NET.Services;
 using Aria2NET.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +23,9 @@ public partial class App : Application {
 	private static DataFolderLock? _dataLock; // held until the process ends
 
 	public static IServiceProvider Services { get; private set; } = null!;
+
+	/// <summary>Torrent files and magnet links given on the command line of the first launch.</summary>
+	public static IReadOnlyList<string> StartupItems { get; set; } = [];
 
 	/// <summary>The main window (needed for window handles, e.g. folder pickers).</summary>
 	public static MainWindow Window => _window ?? throw new InvalidOperationException("Main window not created yet");
@@ -61,12 +65,16 @@ public partial class App : Application {
 			Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads"),
 			sp.GetRequiredService<ILogger<Aria2Engine>>()));
 
+		services.AddSingleton(sp => new TrackerListService(new HttpClient { Timeout = TimeSpan.FromSeconds(15) }, paths, sp.GetRequiredService<ILogger<TrackerListService>>()));
 		services.AddSingleton(sp => new HistoryService(paths, sp.GetRequiredService<ILogger<HistoryService>>()));
 		services.AddSingleton(sp => new EngineSupervisor(sp.GetRequiredService<IAria2Engine>(), new RestartPolicy(), sp.GetRequiredService<ILogger<EngineSupervisor>>()));
 		services.AddSingleton<NoticeCenter>();
+		services.AddSingleton<TorrentAssociation>();
 		services.AddSingleton<PersistenceCoordinator>();
 		services.AddSingleton<DownloadMonitor>(sp => new DownloadMonitor(
 			sp.GetRequiredService<IAria2Engine>(), sp.GetRequiredService<ILogger<DownloadMonitor>>()));
+		services.AddSingleton<TorrentOperations>(sp => new TorrentOperations(
+			sp.GetRequiredService<IAria2Engine>(), sp.GetRequiredService<ILogger<TorrentOperations>>()));
 		services.AddSingleton<DownloadOperations>(sp => new DownloadOperations(
 			sp.GetRequiredService<IAria2Engine>(), sp.GetRequiredService<ILogger<DownloadOperations>>()));
 		services.AddSingleton<ShellViewModel>();
@@ -83,16 +91,48 @@ public partial class App : Application {
 		_window = new MainWindow();
 		Services.GetRequiredService<PersistenceCoordinator>().Start();
 		_window.Activate();
+		if (StartupItems.Count > 0) {
+			HandleExternalLaunch(StartupItems);
+		}
 		_ = StartEngineAsync();
 	}
 
 	private static async Task StartEngineAsync() {
 		try {
-			await Services.GetRequiredService<IAria2Engine>().StartAsync();
+			var engine = Services.GetRequiredService<IAria2Engine>();
+			await engine.StartAsync();
+			_ = RefreshTrackerListAsync(engine);
 		}
 		catch (Exception ex) {
 			Log.LogError(ex, "Engine start threw");
 		}
+	}
+
+	/// <summary>Refreshes the cached public tracker list when it is a week old and hands it to the running engine. The engine reads the cache itself on every start, so failing here costs nothing.</summary>
+	private static async Task RefreshTrackerListAsync(IAria2Engine engine) {
+		try {
+			var trackers = Services.GetRequiredService<TrackerListService>();
+			if (!trackers.IsStale(DateTime.UtcNow)) {
+				return;
+			}
+			if (await trackers.RefreshAsync() is { } list && engine.Rpc is { } rpc) {
+				await rpc.ChangeGlobalOptionAsync(new Dictionary<string, string> { ["bt-tracker"] = Aria2Config.TrackerOptionValue(list) });
+			}
+		}
+		catch (Exception ex) {
+			Log.LogWarning(ex, "Tracker list refresh failed");
+		}
+	}
+
+	/// <summary>Shows the Add dialog filled with torrent files or magnet links that Windows handed to the app. Callable from any thread.</summary>
+	public static void HandleExternalLaunch(IReadOnlyList<string> items) {
+		if (items.Count == 0 || _window is not { } window) {
+			return;
+		}
+		window.DispatcherQueue.TryEnqueue(() => {
+			window.ShowDownloads();
+			Services.GetRequiredService<DownloadsViewModel>().RequestExternalAdd(items);
+		});
 	}
 
 	/// <summary>Called when a second launch is redirected to this instance.</summary>

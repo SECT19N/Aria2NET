@@ -21,6 +21,9 @@ $name = "Aria2NET-$Version-$Rid"
 
 & (Join-Path $PSScriptRoot 'get-aria2.ps1')
 
+# Optional: the country column in the torrent details. A failed download must not stop a release.
+try { & (Join-Path $PSScriptRoot 'get-geoip.ps1') } catch { Write-Warning "GeoIP database not bundled: $($_.Exception.Message)" }
+
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 $OutDir = (Resolve-Path $OutDir).Path
 $stage = Join-Path $OutDir $name

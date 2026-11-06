@@ -10,5 +10,7 @@
         <TextBlock Text="{x:Bind ViewModel.AppVersionText}" />
         <TextBlock Text="{x:Bind ViewModel.Aria2VersionText}" />
         <TextBlock Text="{x:Bind ViewModel.License}" TextWrapping="Wrap" MaxWidth="560" Opacity="0.8" Margin="0,12,0,0" />
+        <TextBlock TextWrapping="Wrap" MaxWidth="560" Opacity="0.8" Margin="0,8,0,0"
+                   Text="Peer country codes in the torrent details use the IP to Country Lite database by DB-IP.com (CC BY 4.0), looked up on this computer only." />
     </StackPanel>
 </Page>

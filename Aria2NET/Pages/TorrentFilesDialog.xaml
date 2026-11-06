@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentDialog
+    x:Class="Aria2NET.Pages.TorrentFilesDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:Aria2NET.ViewModels"
+    Title="Choose what to download"
+    PrimaryButtonText="Download"
+    CloseButtonText="Cancel"
+    DefaultButton="Primary">
+
+    <StackPanel Spacing="10" MinWidth="520">
+        <TextBlock x:Name="NameText" Style="{StaticResource BodyStrongTextBlockStyle}" TextWrapping="Wrap" />
+        <TextBlock x:Name="NoteText" Opacity="0.8" TextWrapping="Wrap" Visibility="Collapsed" />
+
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Content="Select all" Click="SelectAll_Click" />
+            <Button Content="Select none" Click="SelectNone_Click" />
+            <TextBlock x:Name="SummaryText" VerticalAlignment="Center" Opacity="0.8" Margin="8,0,0,0" />
+        </StackPanel>
+
+        <ListView x:Name="FileList" ItemsSource="{x:Bind Choices}" SelectionMode="None" MaxHeight="240"
+                  AutomationProperties.Name="Files in this torrent">
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="vm:TorrentFileChoice">
+                    <Grid ColumnSpacing="8" Padding="0,2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <CheckBox IsChecked="{x:Bind IsSelected, Mode=TwoWay}" Content="{x:Bind Path}" MinWidth="0"
+                                  Checked="Choice_Changed" Unchecked="Choice_Changed" />
+                        <TextBlock Grid.Column="1" Text="{x:Bind SizeText}" Opacity="0.7" VerticalAlignment="Center" />
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <Grid ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="FolderBox" Header="Save to" TextChanged="FolderBox_TextChanged" />
+            <Button x:Name="BrowseButton" Grid.Column="1" Content="Browse…" VerticalAlignment="Bottom" Click="Browse_Click" />
+        </Grid>
+        <TextBlock x:Name="SpaceText" TextWrapping="Wrap" />
+
+        <Grid ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <ComboBox x:Name="SeedBox" Header="After downloading" HorizontalAlignment="Stretch" SelectedIndex="0" SelectionChanged="Seed_Changed">
+                <ComboBoxItem Content="Seed until ratio 1.0 (default)" />
+                <ComboBoxItem Content="Seed forever" />
+                <ComboBoxItem Content="Seed until a ratio I choose" />
+                <ComboBoxItem Content="Don't seed" />
+            </ComboBox>
+            <ComboBox x:Name="AllocationBox" Grid.Column="1" Header="Disk space" HorizontalAlignment="Stretch" SelectedIndex="0">
+                <ComboBoxItem Content="Reserve the size up front (default)" />
+                <ComboBoxItem Content="Grow files as data arrives" />
+                <ComboBoxItem Content="Reserve the size up front, always" />
+            </ComboBox>
+        </Grid>
+        <NumberBox x:Name="RatioBox" Header="Stop seeding at ratio" Minimum="0.1" Maximum="100" Value="2" SmallChange="0.5"
+                   SpinButtonPlacementMode="Inline" Visibility="Collapsed" />
+    </StackPanel>
+</ContentDialog>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentDialog
+    x:Class="Aria2NET.Pages.SeedingDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Seeding"
+    PrimaryButtonText="Apply"
+    CloseButtonText="Cancel"
+    DefaultButton="Primary">
+
+    <StackPanel Spacing="10" MinWidth="360">
+        <TextBlock Text="Choose when the selected torrents stop uploading to other people." TextWrapping="Wrap" Opacity="0.8" />
+        <RadioButtons x:Name="ModeBox" SelectedIndex="0" SelectionChanged="Mode_Changed">
+            <x:String>Seed until ratio</x:String>
+            <x:String>Seed forever</x:String>
+            <x:String>Stop seeding now</x:String>
+        </RadioButtons>
+        <NumberBox x:Name="RatioBox" Header="Ratio (uploaded ÷ downloaded)" Minimum="0.1" Maximum="100" Value="1" SmallChange="0.5"
+                   SpinButtonPlacementMode="Inline" />
+    </StackPanel>
+</ContentDialog>

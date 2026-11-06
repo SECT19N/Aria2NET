@@ -47,6 +47,9 @@ public sealed partial class MainWindow : Window {
 		_monitor.Start();
 	}
 
+	/// <summary>Switches to the Downloads page.</summary>
+	public void ShowDownloads() => Nav.SelectedItem = Nav.MenuItems[0];
+
 	public void BringToFront() {
 		if (AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Minimized } presenter) {
 			presenter.Restore();

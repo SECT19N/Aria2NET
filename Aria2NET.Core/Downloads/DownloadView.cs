@@ -7,6 +7,10 @@ public enum StatusFilter {
 	Paused,
 	Completed,
 	Failed,
+	/// <summary>Torrents that have all their data and are uploading.</summary>
+	Seeding,
+	/// <summary>Every torrent and magnet, whatever its state.</summary>
+	Torrents,
 }
 
 public enum SortColumn {
@@ -29,8 +33,13 @@ public static class DownloadView {
 		StatusFilter.Paused => i.Status == DownloadStatus.Paused,
 		StatusFilter.Completed => i.Status == DownloadStatus.Complete,
 		StatusFilter.Failed => i.Status is DownloadStatus.Error or DownloadStatus.Removed,
+		StatusFilter.Seeding => i.Status == DownloadStatus.Seeding,
+		StatusFilter.Torrents => i.IsTorrent,
 		_ => true,
 	};
+
+	/// <summary>A magnet's finished metadata placeholder: its follower download is the one to show.</summary>
+	public static bool IsSuperseded(DownloadItem i) => i.IsMetadata && i.Status == DownloadStatus.Complete;
 
 	public static int Count(StatusFilter filter, IEnumerable<DownloadItem> items) => items.Count(i => Matches(filter, i));
 

@@ -4,6 +4,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="using:Aria2NET.ViewModels"
+    Background="Transparent" AllowDrop="True" DragOver="Page_DragOver" Drop="Page_Drop"
     Loaded="Page_Loaded" Unloaded="Page_Unloaded">
 
     <Page.KeyboardAccelerators>
@@ -83,6 +84,8 @@
                 <SelectorBarItem Tag="Paused" Text="{x:Bind ViewModel.PausedLabel, Mode=OneWay}" />
                 <SelectorBarItem Tag="Completed" Text="{x:Bind ViewModel.CompletedLabel, Mode=OneWay}" />
                 <SelectorBarItem Tag="Failed" Text="{x:Bind ViewModel.FailedLabel, Mode=OneWay}" />
+                <SelectorBarItem Tag="Seeding" Text="{x:Bind ViewModel.SeedingLabel, Mode=OneWay}" />
+                <SelectorBarItem Tag="Torrents" Text="{x:Bind ViewModel.TorrentsLabel, Mode=OneWay}" />
             </SelectorBar>
             <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.StatsText, Mode=OneWay}" VerticalAlignment="Center" Opacity="0.8" />
         </Grid>
@@ -146,6 +149,11 @@
                         <MenuFlyoutItem Text="Speed limit…" Click="SpeedLimit_Click" IsEnabled="{x:Bind ViewModel.CanSetSpeedLimit, Mode=OneWay}" />
                         <MenuFlyoutItem Text="Rename…" Click="Rename_Click" IsEnabled="{x:Bind ViewModel.CanRename, Mode=OneWay}" />
                         <MenuFlyoutItem Text="Change folder…" Click="ChangeFolder_Click" IsEnabled="{x:Bind ViewModel.CanChangeFolder, Mode=OneWay}" />
+                        <MenuFlyoutSeparator />
+                        <MenuFlyoutItem Text="Torrent details…" Click="TorrentDetails_Click" IsEnabled="{x:Bind ViewModel.CanShowTorrentDetails, Mode=OneWay}" />
+                        <MenuFlyoutItem Text="Check files again" Click="Recheck_Click" IsEnabled="{x:Bind ViewModel.CanRecheck, Mode=OneWay}" ToolTipService.ToolTip="Verify the files against the torrent and download whatever is damaged or missing" />
+                        <MenuFlyoutItem Text="Seeding…" Click="Seeding_Click" IsEnabled="{x:Bind ViewModel.CanChangeSeeding, Mode=OneWay}" />
+                        <MenuFlyoutSeparator />
                         <MenuFlyoutSubItem Text="Queue">
                             <MenuFlyoutItem Text="Start now" Click="ForceStart_Click" IsEnabled="{x:Bind ViewModel.CanForceStart, Mode=OneWay}" />
                             <MenuFlyoutSeparator />

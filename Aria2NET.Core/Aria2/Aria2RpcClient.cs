@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using Aria2NET.Core.Downloads;
+using Aria2NET.Core.Torrents;
 
 namespace Aria2NET.Core.Aria2;
 
@@ -16,6 +17,7 @@ public sealed class Aria2RpcClient(HttpClient http, Uri endpoint, string secret)
 	/// <summary>Only the fields we show; keeps each poll response small.</summary>
 	private static readonly string[] StatusKeys = [
 		"gid", "status", "totalLength", "completedLength", "downloadSpeed", "files", "dir", "errorCode", "errorMessage", "bittorrent",
+		"infoHash", "seeder", "uploadSpeed", "uploadLength", "numSeeders", "connections", "followedBy", "belongsTo",
 	];
 	private const int MaxListed = 1000;
 
@@ -48,6 +50,30 @@ public sealed class Aria2RpcClient(HttpClient http, Uri endpoint, string secret)
 	public async Task<string> AddUriAsync(IReadOnlyList<string> uris, IReadOnlyDictionary<string, string>? options = null, CancellationToken ct = default) {
 		using var result = await CallAsync("aria2.addUri", ct, uris, options ?? new Dictionary<string, string>());
 		return result.RootElement.GetString() ?? throw new Aria2RpcException(0, "addUri returned no GID");
+	}
+
+	/// <summary>Adds a .torrent (its bytes, base64 in the request). Returns the GID. <paramref name="webSeeds"/> are extra HTTP sources for the same content.</summary>
+	public async Task<string> AddTorrentAsync(byte[] torrent, IReadOnlyDictionary<string, string>? options = null, IReadOnlyList<string>? webSeeds = null, CancellationToken ct = default) {
+		using var result = await CallAsync("aria2.addTorrent", ct, Convert.ToBase64String(torrent), webSeeds ?? [], options ?? new Dictionary<string, string>());
+		return result.RootElement.GetString() ?? throw new Aria2RpcException(0, "addTorrent returned no GID");
+	}
+
+	/// <summary>Adds a metalink document. aria2 starts one download per file in it and returns all their GIDs.</summary>
+	public async Task<IReadOnlyList<string>> AddMetalinkAsync(byte[] metalink, IReadOnlyDictionary<string, string>? options = null, CancellationToken ct = default) {
+		using var result = await CallAsync("aria2.addMetalink", ct, Convert.ToBase64String(metalink), options ?? new Dictionary<string, string>());
+		return result.RootElement.EnumerateArray().Select(g => g.GetString() ?? "").Where(g => g.Length > 0).ToList();
+	}
+
+	/// <summary>Files of a download with their selection state and progress.</summary>
+	public async Task<IReadOnlyList<DownloadFile>> GetFilesAsync(string gid, CancellationToken ct = default) {
+		using var result = await CallAsync("aria2.getFiles", ct, gid);
+		return result.RootElement.EnumerateArray().Select(DownloadFile.FromJson).ToList();
+	}
+
+	/// <summary>Connected peers of a torrent (empty for anything else or when nothing is connected).</summary>
+	public async Task<IReadOnlyList<PeerInfo>> GetPeersAsync(string gid, CancellationToken ct = default) {
+		using var result = await CallAsync("aria2.getPeers", ct, gid);
+		return result.RootElement.EnumerateArray().Select(PeerInfo.FromJson).ToList();
 	}
 
 	public async Task<DownloadItem> TellStatusAsync(string gid, CancellationToken ct = default) {

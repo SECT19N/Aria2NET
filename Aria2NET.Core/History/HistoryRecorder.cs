@@ -10,8 +10,8 @@ public sealed class HistoryRecorder(HistoryStore store, ILogger? logger = null, 
 	private readonly Dictionary<string, Seen> _seen = [];
 	private bool _reconcileNext = true;
 
-	private readonly record struct Seen(DownloadStatus Status, string Name, string? Path, long TotalBytes, int? ErrorCode) {
-		public static Seen Of(DownloadItem item) => new(item.Status, item.Name, item.Path, item.TotalBytes, item.ErrorCode);
+	private readonly record struct Seen(DownloadStatus Status, string Name, string? Path, long TotalBytes, int? ErrorCode, string? InfoHash) {
+		public static Seen Of(DownloadItem item) => new(item.Status, item.Name, item.Path, item.TotalBytes, item.ErrorCode, item.InfoHash);
 	}
 
 	/// <summary>Called whenever the engine (re)starts: aria2 may know different downloads now, so the next snapshot is reconciled.</summary>
@@ -34,7 +34,9 @@ public sealed class HistoryRecorder(HistoryStore store, ILogger? logger = null, 
 		}
 	}
 
-	private void Record(IReadOnlyList<DownloadItem> items) {
+	private void Record(IReadOnlyList<DownloadItem> allItems) {
+		// A magnet's metadata placeholder is only a stage of the torrent that follows it; the follower is the one that counts.
+		var items = allItems.Where(i => !i.IsMetadata).ToList();
 		var now = _clock();
 		if (_reconcileNext) {
 			var result = store.Reconcile(items, now);

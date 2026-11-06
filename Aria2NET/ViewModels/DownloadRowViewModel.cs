@@ -11,6 +11,7 @@ public sealed partial class DownloadRowViewModel : ObservableObject {
 	private static readonly Brush PausedBrush = new SolidColorBrush(ColorHelper.FromArgb(0xFF, 0x8A, 0x8A, 0x8A));
 	private static readonly Brush CompleteBrush = new SolidColorBrush(ColorHelper.FromArgb(0xFF, 0x2E, 0x9E, 0x4F));
 	private static readonly Brush ErrorBrush = new SolidColorBrush(ColorHelper.FromArgb(0xFF, 0xD1, 0x34, 0x38));
+	private static readonly Brush SeedingBrush = new SolidColorBrush(ColorHelper.FromArgb(0xFF, 0x0F, 0x9D, 0x8A));
 
 	private DownloadItem _item;
 
@@ -68,28 +69,32 @@ public sealed partial class DownloadRowViewModel : ObservableObject {
 	private void Apply(DownloadItem item) {
 		Name = item.Name;
 		Progress = item.Progress;
-		IsIndeterminate = item.Status == DownloadStatus.Active && item.TotalBytes == 0;
+		IsIndeterminate = item.Status == DownloadStatus.Active && (item.TotalBytes == 0 || item.IsFetchingMetadata);
 		ProgressBrush = item.Status switch {
 			DownloadStatus.Paused => PausedBrush,
 			DownloadStatus.Complete => CompleteBrush,
+			DownloadStatus.Seeding => SeedingBrush,
 			DownloadStatus.Error or DownloadStatus.Removed => ErrorBrush,
 			_ => ActiveBrush,
 		};
 		SizeText = item.TotalBytes > 0
-			? item.Status == DownloadStatus.Complete ? ByteFormat.Size(item.TotalBytes) : $"{ByteFormat.Size(item.CompletedBytes)} / {ByteFormat.Size(item.TotalBytes)}"
+			? item.Status is DownloadStatus.Complete or DownloadStatus.Seeding ? ByteFormat.Size(item.TotalBytes) : $"{ByteFormat.Size(item.CompletedBytes)} / {ByteFormat.Size(item.TotalBytes)}"
 			: item.CompletedBytes > 0 ? ByteFormat.Size(item.CompletedBytes) : "—";
 		var active = item.Status == DownloadStatus.Active;
-		SpeedText = active ? ByteFormat.Speed(item.SpeedBytesPerSec) : "";
+		SpeedText = active ? ByteFormat.Speed(item.SpeedBytesPerSec) : item.Status == DownloadStatus.Seeding ? "↑ " + ByteFormat.Speed(item.UploadSpeedBytesPerSec) : "";
 		EtaText = active ? TimeFormat.Eta(item.Eta) : "";
 		StatusText = item.Status switch {
-			DownloadStatus.Active => "Downloading",
+			DownloadStatus.Active => item.IsFetchingMetadata ? "Fetching metadata…" : "Downloading",
+			DownloadStatus.Seeding => "Seeding",
 			DownloadStatus.Waiting => "Queued",
 			DownloadStatus.Paused => "Paused",
 			DownloadStatus.Error => "Error",
 			DownloadStatus.Complete => "Complete",
 			_ => "Removed",
 		};
-		StatusTip = item.Status == DownloadStatus.Error ? ErrorTip(item) : "";
+		StatusTip = item.Status == DownloadStatus.Error ? ErrorTip(item)
+			: item.IsTorrent && item.UploadedBytes > 0 ? $"Uploaded {ByteFormat.Size(item.UploadedBytes)} · ratio {item.ShareRatio:0.00}"
+			: "";
 		AccessibleName = $"{item.Name}, {StatusText}, {item.Progress:0} percent";
 	}
 

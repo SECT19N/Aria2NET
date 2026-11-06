@@ -1,4 +1,6 @@
 using Aria2NET.Core.Aria2;
+using Aria2NET.Core.Downloads;
+using Aria2NET.Core.Torrents;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -26,18 +28,23 @@ public sealed partial class ShellViewModel : ObservableObject {
 	[ObservableProperty]
 	public partial Brush StatusBrush { get; private set; } = Busy;
 
+	/// <summary>Upload speed and peer count while torrents are running; empty otherwise. aria2 does not report DHT nodes or whether the listen port is reachable.</summary>
+	[ObservableProperty]
+	public partial string TorrentStatusText { get; private set; } = "";
+
 	[ObservableProperty]
 	public partial bool ShowError { get; private set; }
 
 	[ObservableProperty]
 	public partial string ErrorMessage { get; private set; } = "";
 
-	public ShellViewModel(IAria2Engine engine, EngineSupervisor supervisor, ILogger<ShellViewModel> logger) {
+	public ShellViewModel(IAria2Engine engine, EngineSupervisor supervisor, DownloadMonitor monitor, ILogger<ShellViewModel> logger) {
 		_engine = engine;
 		_supervisor = supervisor;
 		_logger = logger;
 		_engine.StateChanged += (_, _) => _dispatcher.TryEnqueue(Refresh);
 		_supervisor.GaveUp += (_, _) => _dispatcher.TryEnqueue(Refresh);
+		monitor.SnapshotReady += (_, snapshot) => _dispatcher.TryEnqueue(() => TorrentStatusText = TorrentSummary.Describe(snapshot));
 		Refresh();
 	}
 

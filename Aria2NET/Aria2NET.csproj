@@ -28,6 +28,9 @@
   <ItemGroup>
     <Content Include="..\tools\aria2\*" Link="tools\aria2\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\tools\aria2\aria2c.exe')" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\tools\geoip\*" Link="tools\geoip\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\tools\geoip\dbip-country-lite.csv.gz')" />
+  </ItemGroup>
   <Target Name="WarnIfAria2Missing" BeforeTargets="Build" Condition="!Exists('$(MSBuildThisFileDirectory)..\tools\aria2\aria2c.exe')">
     <Warning Text="tools/aria2/aria2c.exe is missing. Run: pwsh -ExecutionPolicy Bypass -File tools/get-aria2.ps1" />
   </Target>

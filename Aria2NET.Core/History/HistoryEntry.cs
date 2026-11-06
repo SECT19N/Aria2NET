@@ -31,7 +31,10 @@ public sealed record HistoryEntry(
 	int? ErrorCode,
 	string? ErrorMessage,
 	DateTime AddedUtc,
-	DateTime? FinishedUtc);
+	DateTime? FinishedUtc,
+	string? InfoHash = null,
+	bool IsTorrent = false,
+	long UploadedBytes = 0);
 
 public enum HistorySort {
 	Added,

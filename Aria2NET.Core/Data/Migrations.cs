@@ -30,6 +30,13 @@ public static class Migrations {
 			CREATE INDEX ix_downloads_added ON downloads(added_utc);
 			CREATE INDEX ix_downloads_status ON downloads(status);
 			"""),
+		// 0.5 torrents: the info hash identifies a torrent across GID changes and is what duplicate detection looks up.
+		new(2, """
+			ALTER TABLE downloads ADD COLUMN info_hash TEXT;
+			ALTER TABLE downloads ADD COLUMN is_torrent INTEGER NOT NULL DEFAULT 0;
+			ALTER TABLE downloads ADD COLUMN uploaded_bytes INTEGER NOT NULL DEFAULT 0;
+			CREATE INDEX ix_downloads_hash ON downloads(info_hash);
+			"""),
 	];
 
 	public static int Latest => All[^1].Version;
