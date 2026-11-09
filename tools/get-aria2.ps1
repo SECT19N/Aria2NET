@@ -17,7 +17,8 @@ $work = Join-Path ([IO.Path]::GetTempPath()) ("aria2-" + [Guid]::NewGuid().ToStr
 New-Item -ItemType Directory -Path $work | Out-Null
 try {
     $zip = Join-Path $work 'aria2.zip'
-    Invoke-WebRequest -Uri $url -OutFile $zip
+    # GitHub's release CDN occasionally returns 5xx; retry with backoff before giving up.
+    Invoke-WebRequest -Uri $url -OutFile $zip -MaximumRetryCount 4 -RetryIntervalSec 10
 
     $actual = (Get-FileHash -Algorithm SHA256 -Path $zip).Hash.ToLowerInvariant()
     if ($actual -ne $sha256) {
