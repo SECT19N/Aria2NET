@@ -1,5 +1,6 @@
 using Aria2NET.Core;
 using Aria2NET.Core.Aria2;
+using Aria2NET.Core.Background;
 using Aria2NET.Core.Torrents;
 using Aria2NET.Services;
 using Aria2NET.ViewModels;
@@ -16,6 +17,27 @@ public sealed partial class SettingsPage : Page {
 	public SettingsPage() {
 		InitializeComponent();
 		ConfirmDeleteBox.IsChecked = ViewModel.ConfirmDeleteFiles;
+		CloseToTrayBox.IsChecked = ViewModel.CloseToTray;
+		MinimizeToTrayBox.IsChecked = ViewModel.MinimizeToTray;
+		ConfirmExitBox.IsChecked = ViewModel.ConfirmExitWithActive;
+		StartWithWindowsBox.IsChecked = ViewModel.StartWithWindows;
+		StartMinimizedBox.IsChecked = ViewModel.StartMinimized;
+		StartMinimizedBox.IsEnabled = StartWithWindowsBox.IsChecked == true;
+		StartPausedBox.IsChecked = ViewModel.StartPaused;
+		NotifyCompleteBox.IsChecked = ViewModel.NotifyOnComplete;
+		NotifyFailedBox.IsChecked = ViewModel.NotifyOnFailed;
+		NotifyTorrentBox.IsChecked = ViewModel.NotifyOnTorrentFinished;
+		NotifySoundBox.IsChecked = ViewModel.NotifySound;
+		NotifyUnfocusedBox.IsChecked = ViewModel.NotifyOnlyWhenUnfocused;
+		PreventSleepBox.IsChecked = ViewModel.PreventSleep;
+		PauseBatteryBox.IsChecked = ViewModel.PauseOnBattery;
+		PauseMeteredBox.IsChecked = ViewModel.PauseOnMetered;
+		HotkeysBox.IsChecked = ViewModel.HotkeysEnabled;
+		RestartBox.IsChecked = ViewModel.RestartAfterCrash;
+		foreach (var action in Enum.GetValues<FinishAction>()) {
+			FinishBox.Items.Add(WhenFinishedMachine.Label(action));
+		}
+		FinishBox.SelectedIndex = (int)FinishService.Action;
 		foreach (var choice in SettingsViewModel.RetentionChoices) {
 			RetentionBox.Items.Add(choice.Label);
 		}
@@ -38,6 +60,57 @@ public sealed partial class SettingsPage : Page {
 	}
 
 	private void ConfirmDelete_Click(object sender, RoutedEventArgs e) => ViewModel.ConfirmDeleteFiles = ConfirmDeleteBox.IsChecked == true;
+
+	private void CloseToTray_Click(object sender, RoutedEventArgs e) => ViewModel.CloseToTray = CloseToTrayBox.IsChecked == true;
+
+	private void MinimizeToTray_Click(object sender, RoutedEventArgs e) => ViewModel.MinimizeToTray = MinimizeToTrayBox.IsChecked == true;
+
+	private void ConfirmExit_Click(object sender, RoutedEventArgs e) => ViewModel.ConfirmExitWithActive = ConfirmExitBox.IsChecked == true;
+
+	private void StartWithWindows_Click(object sender, RoutedEventArgs e) {
+		ViewModel.StartWithWindows = StartWithWindowsBox.IsChecked == true;
+		StartWithWindowsBox.IsChecked = ViewModel.StartWithWindows; // show what actually happened if the registry refused
+		StartMinimizedBox.IsEnabled = StartWithWindowsBox.IsChecked == true;
+	}
+
+	private void StartMinimized_Click(object sender, RoutedEventArgs e) => ViewModel.StartMinimized = StartMinimizedBox.IsChecked == true;
+
+	private void StartPaused_Click(object sender, RoutedEventArgs e) => ViewModel.StartPaused = StartPausedBox.IsChecked == true;
+
+	private void NotifyComplete_Click(object sender, RoutedEventArgs e) => ViewModel.NotifyOnComplete = NotifyCompleteBox.IsChecked == true;
+
+	private void NotifyFailed_Click(object sender, RoutedEventArgs e) => ViewModel.NotifyOnFailed = NotifyFailedBox.IsChecked == true;
+
+	private void NotifyTorrent_Click(object sender, RoutedEventArgs e) => ViewModel.NotifyOnTorrentFinished = NotifyTorrentBox.IsChecked == true;
+
+	private void NotifySound_Click(object sender, RoutedEventArgs e) => ViewModel.NotifySound = NotifySoundBox.IsChecked == true;
+
+	private void NotifyUnfocused_Click(object sender, RoutedEventArgs e) => ViewModel.NotifyOnlyWhenUnfocused = NotifyUnfocusedBox.IsChecked == true;
+
+	private static WhenFinishedService FinishService => App.Services.GetRequiredService<WhenFinishedService>();
+
+	private void PreventSleep_Click(object sender, RoutedEventArgs e) => ViewModel.PreventSleep = PreventSleepBox.IsChecked == true;
+
+	private void PauseBattery_Click(object sender, RoutedEventArgs e) => ViewModel.PauseOnBattery = PauseBatteryBox.IsChecked == true;
+
+	private void PauseMetered_Click(object sender, RoutedEventArgs e) => ViewModel.PauseOnMetered = PauseMeteredBox.IsChecked == true;
+
+	private void Finish_Changed(object sender, SelectionChangedEventArgs e) {
+		if (FinishBox.SelectedIndex >= 0 && FinishBox.SelectedIndex != (int)FinishService.Action) {
+			FinishService.Action = (FinishAction)FinishBox.SelectedIndex;
+		}
+	}
+
+	private void Hotkeys_Click(object sender, RoutedEventArgs e) {
+		ViewModel.HotkeysEnabled = HotkeysBox.IsChecked == true;
+		var free = App.Services.GetRequiredService<BackgroundCoordinator>().ApplyHotkeys();
+		HotkeysStatus.Text = free ? "" : "Another program already uses one of these shortcuts, so it is not active.";
+	}
+
+	private void Restart_Click(object sender, RoutedEventArgs e) {
+		ViewModel.RestartAfterCrash = RestartBox.IsChecked == true;
+		App.Services.GetRequiredService<BackgroundCoordinator>().ApplyCrashRestart();
+	}
 
 	private async void OpenData_Click(object sender, RoutedEventArgs e) => await Launcher.LaunchFolderPathAsync(ViewModel.DataFolder);
 

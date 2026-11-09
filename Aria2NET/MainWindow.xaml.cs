@@ -24,7 +24,12 @@ public sealed partial class MainWindow : Window {
 	private readonly DownloadsViewModel _downloads;
 	private WindowPlacement? _lastRestored;
 	private WindowPlacement? _savedFit;
+	private readonly BackgroundCoordinator _background = App.Services.GetRequiredService<BackgroundCoordinator>();
+	private readonly ToastService _toasts = App.Services.GetRequiredService<ToastService>();
+	private volatile bool _foreground;
 	private bool _closeApproved;
+	private bool _exitRequested;
+	private bool _skipExitConfirm;
 
 	public ShellViewModel ViewModel { get; } = App.Services.GetRequiredService<ShellViewModel>();
 	public NoticeCenter Notices { get; } = App.Services.GetRequiredService<NoticeCenter>();
@@ -39,6 +44,7 @@ public sealed partial class MainWindow : Window {
 		RestorePlacement();
 		AppWindow.Changed += OnAppWindowChanged;
 		Activated += OnFirstActivated;
+		Activated += (_, args) => _foreground = args.WindowActivationState != WindowActivationState.Deactivated;
 
 		Nav.SelectedItem = Nav.MenuItems[0];
 
@@ -47,10 +53,24 @@ public sealed partial class MainWindow : Window {
 		_monitor.Start();
 	}
 
+	/// <summary>True while this is the active window. Readable from any thread.</summary>
+	public bool IsForeground => _foreground;
+
 	/// <summary>Switches to the Downloads page.</summary>
 	public void ShowDownloads() => Nav.SelectedItem = Nav.MenuItems[0];
 
+	/// <summary>Shuts the app down for real (the close button may only hide it to the tray). Asks first when downloads are running, unless told not to.</summary>
+	public void RequestExit(bool confirm = true) {
+		_exitRequested = true;
+		_skipExitConfirm = !confirm;
+		Close();
+	}
+
+	/// <summary>Shows the window again if it was hidden to the tray or minimized, and brings it forward.</summary>
 	public void BringToFront() {
+		if (!AppWindow.IsVisible) {
+			AppWindow.Show();
+		}
 		if (AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Minimized } presenter) {
 			presenter.Restore();
 		}
@@ -59,6 +79,7 @@ public sealed partial class MainWindow : Window {
 	}
 
 	public async Task ShowErrorAsync(string title, string message) {
+		BringToFrontIfHidden(); // a dialog on a hidden window would wait there unseen
 		var dialog = new ContentDialog {
 			Title = title,
 			Content = message + "\n\nDetails were written to the log file.",
@@ -70,6 +91,7 @@ public sealed partial class MainWindow : Window {
 
 	/// <summary>Asks a yes/no question. Returns false when the user cancels or another dialog is already open.</summary>
 	public async Task<bool> ConfirmAsync(string title, string message, string confirmText) {
+		BringToFrontIfHidden();
 		var dialog = new ContentDialog {
 			Title = title,
 			Content = message,
@@ -83,6 +105,12 @@ public sealed partial class MainWindow : Window {
 		}
 		catch (InvalidOperationException) {
 			return false; // WinUI allows one open dialog at a time
+		}
+	}
+
+	private void BringToFrontIfHidden() {
+		if (!AppWindow.IsVisible) {
+			BringToFront();
 		}
 	}
 
@@ -179,6 +207,12 @@ public sealed partial class MainWindow : Window {
 		if ((args.DidPositionChange || args.DidSizeChange) && sender.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Restored }) {
 			_lastRestored = CurrentPlacement();
 		}
+		// Minimizing is reported as a move or resize; hide the window so only the tray icon is left.
+		if ((args.DidPositionChange || args.DidSizeChange || args.DidPresenterChange)
+			&& sender.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Minimized }
+			&& _background.TrayAvailable && _settings.Load().MinimizeToTray) {
+			sender.Hide();
+		}
 	}
 
 	private void SavePlacement() {
@@ -196,12 +230,51 @@ public sealed partial class MainWindow : Window {
 
 	// ---------------------------------------------------------------- closing
 
+	/// <summary>Windows is signing out or shutting down and will end the process any moment: stop aria2 (it saves its session) within a few seconds and go quietly.</summary>
+	public void StopForSessionEnd() {
+		if (_closeApproved) {
+			return;
+		}
+		SavePlacement();
+		try {
+			_supervisor.Dispose();
+			// On the thread pool: blocking the UI thread on code that wants to continue on it would never finish.
+			Task.Run(async () => {
+				await _monitor.StopAsync();
+				await _engine.StopAsync();
+			}).Wait(TimeSpan.FromSeconds(4));
+		}
+		catch (Exception ex) {
+			_logger.LogError(ex, "Engine stop threw while Windows was ending the session");
+		}
+		_toasts.Dispose();
+		_background.Dispose();
+		_closeApproved = true;
+	}
+
 	// Stop aria2 gracefully (it saves its session) before the window goes away.
 	private async void OnClosing(AppWindow sender, AppWindowClosingEventArgs args) {
 		if (_closeApproved) {
 			return;
 		}
 		args.Cancel = true;
+		var settings = _settings.Load();
+		// Only hide when the tray icon is really there; otherwise the user would have no way back.
+		if (!_exitRequested && settings.CloseToTray && _background.TrayAvailable) {
+			SavePlacement();
+			AppWindow.Hide();
+			return;
+		}
+		if (settings.ConfirmExitWithActive && !_skipExitConfirm && _background.ActiveDownloads is > 0 and var running) {
+			BringToFront();
+			var message = running == 1
+				? "A download is still running. Exiting stops it; it continues the next time you open Aria2NET."
+				: $"{running} downloads are still running. Exiting stops them; they continue the next time you open Aria2NET.";
+			if (!await ConfirmAsync("Exit Aria2NET?", message, "Exit")) {
+				_exitRequested = false;
+				return;
+			}
+		}
 		SavePlacement();
 		try {
 			await _downloads.FinalizePendingAsync(); // a removal still inside its undo window becomes final
@@ -212,6 +285,8 @@ public sealed partial class MainWindow : Window {
 		catch (Exception ex) {
 			_logger.LogError(ex, "Engine stop threw during shutdown");
 		}
+		_toasts.Dispose();
+		_background.Dispose(); // takes the icon out of the notification area so no ghost is left behind
 		_closeApproved = true;
 		Close();
 	}

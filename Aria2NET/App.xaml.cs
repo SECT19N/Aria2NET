@@ -5,6 +5,7 @@ using Aria2NET.Core.Downloads;
 using Aria2NET.Core.History;
 using Aria2NET.Core.Logging;
 using Aria2NET.Core.Settings;
+using Aria2NET.Core.Shell;
 using Aria2NET.Core.Torrents;
 using Aria2NET.Services;
 using Aria2NET.ViewModels;
@@ -26,6 +27,9 @@ public partial class App : Application {
 
 	/// <summary>Torrent files and magnet links given on the command line of the first launch.</summary>
 	public static IReadOnlyList<string> StartupItems { get; set; } = [];
+
+	/// <summary>Windows started this launch at sign-in (the Run key entry), not the user.</summary>
+	public static bool StartedAtSignIn { get; set; }
 
 	/// <summary>The main window (needed for window handles, e.g. folder pickers).</summary>
 	public static MainWindow Window => _window ?? throw new InvalidOperationException("Main window not created yet");
@@ -71,6 +75,11 @@ public partial class App : Application {
 		services.AddSingleton<NoticeCenter>();
 		services.AddSingleton<TorrentAssociation>();
 		services.AddSingleton<PersistenceCoordinator>();
+		services.AddSingleton<BackgroundCoordinator>();
+		services.AddSingleton<ToastService>();
+		services.AddSingleton<PowerService>();
+		services.AddSingleton<WhenFinishedService>();
+		services.AddSingleton(_ => new StartupRegistration(Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "Aria2NET.exe")));
 		services.AddSingleton<DownloadMonitor>(sp => new DownloadMonitor(
 			sp.GetRequiredService<IAria2Engine>(), sp.GetRequiredService<ILogger<DownloadMonitor>>()));
 		services.AddSingleton<TorrentOperations>(sp => new TorrentOperations(
@@ -90,17 +99,43 @@ public partial class App : Application {
 		_ = Services.GetRequiredService<NoticeCenter>(); // created on the UI thread so any thread can post to it
 		_window = new MainWindow();
 		Services.GetRequiredService<PersistenceCoordinator>().Start();
-		_window.Activate();
+		Services.GetRequiredService<WhenFinishedService>().Start(_window);
+		Services.GetRequiredService<PowerService>().Start(_window);
+		var background = Services.GetRequiredService<BackgroundCoordinator>();
+		background.Start(_window);
+		Services.GetRequiredService<ToastService>().Start(_window);
+		RefreshStartupEntry();
+		// A sign-in start stays in the tray when asked to, but never without a tray icon: the window would then be unreachable.
+		var hidden = StartedAtSignIn && background.TrayAvailable && Services.GetRequiredService<SettingsStore<AppSettings>>().Load().StartMinimized;
+		if (!hidden) {
+			_window.Activate();
+		}
 		if (StartupItems.Count > 0) {
 			HandleExternalLaunch(StartupItems);
 		}
 		_ = StartEngineAsync();
 	}
 
+	/// <summary>If "start with Windows" is on and the app was moved, point the Run entry at the new location.</summary>
+	private static void RefreshStartupEntry() {
+		try {
+			if (Services.GetRequiredService<StartupRegistration>().Refresh()) {
+				Log.LogInformation("Updated the start-with-Windows entry to {Path}", Environment.ProcessPath);
+			}
+		}
+		catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException) {
+			Log.LogWarning(ex, "Could not update the start-with-Windows entry");
+		}
+	}
+
 	private static async Task StartEngineAsync() {
 		try {
 			var engine = Services.GetRequiredService<IAria2Engine>();
 			await engine.StartAsync();
+			if (engine.State == EngineState.Running && Services.GetRequiredService<SettingsStore<AppSettings>>().Load().StartPaused) {
+				await Services.GetRequiredService<DownloadOperations>().PauseAllAsync();
+				Log.LogInformation("Paused everything at start, as the settings ask");
+			}
 			_ = RefreshTrackerListAsync(engine);
 		}
 		catch (Exception ex) {
@@ -135,6 +170,18 @@ public partial class App : Application {
 		});
 	}
 
+	/// <summary>Shows the window with an empty Add dialog (the global hotkey). Callable from any thread.</summary>
+	public static void ShowAddDialog() {
+		if (_window is not { } window) {
+			return;
+		}
+		window.DispatcherQueue.TryEnqueue(() => {
+			window.BringToFront();
+			window.ShowDownloads();
+			Services.GetRequiredService<DownloadsViewModel>().RequestExternalAdd([]);
+		});
+	}
+
 	/// <summary>Called when a second launch is redirected to this instance.</summary>
 	public static void ActivateMainWindow() => _window?.DispatcherQueue.TryEnqueue(_window.BringToFront);
 
@@ -160,4 +207,10 @@ public partial class App : Application {
 internal static class NativeMethods {
 	[System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "MessageBoxW", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
 	internal static extern int MessageBox(IntPtr hWnd, string text, string caption, uint type);
+
+	[System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+	internal static extern int RegisterApplicationRestart(string commandLine, uint flags);
+
+	[System.Runtime.InteropServices.DllImport("kernel32.dll")]
+	internal static extern int UnregisterApplicationRestart();
 }

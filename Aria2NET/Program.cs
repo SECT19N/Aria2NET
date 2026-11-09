@@ -21,6 +21,7 @@ public static class Program {
 
 		// A .torrent file or magnet link that started the app (double-click, browser link).
 		App.StartupItems = LaunchArguments.Extract(args);
+		App.StartedAtSignIn = LaunchArguments.IsAutostart(args);
 		instance.Activated += (_, e) => {
 			App.ActivateMainWindow();
 			App.HandleExternalLaunch(ItemsOf(e));

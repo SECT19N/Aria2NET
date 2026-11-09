@@ -1,9 +1,9 @@
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using Aria2NET.Core.Aria2;
 using Aria2NET.Core.Downloads;
 using Aria2NET.Core.History;
 using Aria2NET.Core.Settings;
+using Aria2NET.Core.Shell;
 using Aria2NET.Core.Torrents;
 using Aria2NET.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -406,7 +406,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 
 	public void OpenFile() {
 		if (SingleSelected() is { Path: { } path } item && DownloadCapabilities.CanOpenFile(item)) {
-			Launch(new ProcessStartInfo(path) { UseShellExecute = true });
+			ReportOpen(ShellLauncher.TryOpenFile(path, out var error), path, error);
 		}
 	}
 
@@ -414,8 +414,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		if (SingleSelected() is not { Dir: { Length: > 0 } dir } item) {
 			return;
 		}
-		var file = item.Path;
-		Launch(new ProcessStartInfo("explorer.exe", file is not null && File.Exists(file) ? $"/select,\"{file}\"" : $"\"{dir}\"") { UseShellExecute = true });
+		ReportOpen(ShellLauncher.TryOpenFolder(dir, item.Path, out var error), dir, error);
 	}
 
 	public void CopyUrl() {
@@ -428,13 +427,10 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		Clipboard.SetContent(package);
 	}
 
-	private void Launch(ProcessStartInfo info) {
-		try {
-			Process.Start(info);
-		}
-		catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException) {
-			_logger.LogWarning(ex, "Could not open {Target}", info.FileName);
-			ShowMessage($"Could not open it: {ex.Message}");
+	private void ReportOpen(bool opened, string target, string error) {
+		if (!opened) {
+			_logger.LogWarning("Could not open {Target}: {Error}", target, error);
+			ShowMessage($"Could not open it: {error}");
 		}
 	}
 
