@@ -12,8 +12,29 @@ public static class ShellLauncher {
 	public static bool TryOpenFolder(string dir, string? file, out string error) =>
 		TryStart(new ProcessStartInfo("explorer.exe", FolderArguments(dir, file)) { UseShellExecute = true }, out error);
 
-	/// <summary>Explorer arguments: select the file when it is there, otherwise just show the folder.</summary>
-	public static string FolderArguments(string dir, string? file) => file is not null && File.Exists(file) ? $"/select,\"{file}\"" : $"\"{dir}\"";
+	/// <summary>
+	/// Explorer arguments: select the file when it is there, otherwise show the folder (or its nearest existing parent).
+	/// aria2 joins paths with a forward slash (<c>C:\Downloads/a.zip</c>) and Explorer ignores such a path, showing a generic window, so they are normalised first.
+	/// </summary>
+	public static string FolderArguments(string dir, string? file) {
+		if (file is not null && Normalize(file) is { } full && File.Exists(full)) {
+			return $"/select,\"{full}\"";
+		}
+		var folder = Normalize(dir) ?? dir;
+		while (!Directory.Exists(folder) && Path.GetDirectoryName(folder) is { Length: > 0 } parent) {
+			folder = parent;
+		}
+		return $"\"{folder}\"";
+	}
+
+	private static string? Normalize(string path) {
+		try {
+			return Path.GetFullPath(path);
+		}
+		catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException) {
+			return null;
+		}
+	}
 
 	private static bool TryStart(ProcessStartInfo info, out string error) {
 		try {
