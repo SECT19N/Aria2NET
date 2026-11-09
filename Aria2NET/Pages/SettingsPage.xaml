@@ -12,6 +12,22 @@
         <CheckBox Content="Ask before deleting files (Remove and delete file)"
                   x:Name="ConfirmDeleteBox" Click="ConfirmDelete_Click" />
 
+        <TextBlock Text="Background" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" />
+        <CheckBox x:Name="CloseToTrayBox" Content="Closing the window keeps Aria2NET running in the tray" Click="CloseToTray_Click" />
+        <CheckBox x:Name="MinimizeToTrayBox" Content="Minimizing the window hides it to the tray" Click="MinimizeToTray_Click" />
+        <CheckBox x:Name="ConfirmExitBox" Content="Ask before exiting while downloads are running" Click="ConfirmExit_Click" />
+        <CheckBox x:Name="StartWithWindowsBox" Content="Start Aria2NET when I sign in to Windows" Click="StartWithWindows_Click" />
+        <CheckBox x:Name="StartMinimizedBox" Content="Start in the tray, without opening the window" Margin="28,0,0,0" Click="StartMinimized_Click" />
+        <CheckBox x:Name="StartPausedBox" Content="Start with all downloads paused" Click="StartPaused_Click" />
+
+        <TextBlock Text="Notifications" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" />
+        <CheckBox x:Name="NotifyCompleteBox" Content="When a download completes" Click="NotifyComplete_Click" />
+        <CheckBox x:Name="NotifyFailedBox" Content="When a download fails" Click="NotifyFailed_Click" />
+        <CheckBox x:Name="NotifyTorrentBox" Content="When a torrent has finished downloading" Click="NotifyTorrent_Click" />
+        <CheckBox x:Name="NotifySoundBox" Content="Play a sound" Click="NotifySound_Click" />
+        <CheckBox x:Name="NotifyUnfocusedBox" Content="Only when the Aria2NET window is not in front" Click="NotifyUnfocused_Click" />
+        <TextBlock Text="Windows holds notifications back while Focus assist (Do not disturb) is on." Opacity="0.7" TextWrapping="Wrap" />
+
         <TextBlock Text="Torrents" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" />
         <CheckBox x:Name="AssociationBox" Content="Open .torrent files and magnet links with Aria2NET" Click="Association_Click" />
         <TextBlock x:Name="AssociationStatus" Opacity="0.7" TextWrapping="Wrap" />

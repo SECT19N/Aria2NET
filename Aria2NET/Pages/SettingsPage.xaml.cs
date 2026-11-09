@@ -16,6 +16,18 @@ public sealed partial class SettingsPage : Page {
 	public SettingsPage() {
 		InitializeComponent();
 		ConfirmDeleteBox.IsChecked = ViewModel.ConfirmDeleteFiles;
+		CloseToTrayBox.IsChecked = ViewModel.CloseToTray;
+		MinimizeToTrayBox.IsChecked = ViewModel.MinimizeToTray;
+		ConfirmExitBox.IsChecked = ViewModel.ConfirmExitWithActive;
+		StartWithWindowsBox.IsChecked = ViewModel.StartWithWindows;
+		StartMinimizedBox.IsChecked = ViewModel.StartMinimized;
+		StartMinimizedBox.IsEnabled = StartWithWindowsBox.IsChecked == true;
+		StartPausedBox.IsChecked = ViewModel.StartPaused;
+		NotifyCompleteBox.IsChecked = ViewModel.NotifyOnComplete;
+		NotifyFailedBox.IsChecked = ViewModel.NotifyOnFailed;
+		NotifyTorrentBox.IsChecked = ViewModel.NotifyOnTorrentFinished;
+		NotifySoundBox.IsChecked = ViewModel.NotifySound;
+		NotifyUnfocusedBox.IsChecked = ViewModel.NotifyOnlyWhenUnfocused;
 		foreach (var choice in SettingsViewModel.RetentionChoices) {
 			RetentionBox.Items.Add(choice.Label);
 		}
@@ -38,6 +50,32 @@ public sealed partial class SettingsPage : Page {
 	}
 
 	private void ConfirmDelete_Click(object sender, RoutedEventArgs e) => ViewModel.ConfirmDeleteFiles = ConfirmDeleteBox.IsChecked == true;
+
+	private void CloseToTray_Click(object sender, RoutedEventArgs e) => ViewModel.CloseToTray = CloseToTrayBox.IsChecked == true;
+
+	private void MinimizeToTray_Click(object sender, RoutedEventArgs e) => ViewModel.MinimizeToTray = MinimizeToTrayBox.IsChecked == true;
+
+	private void ConfirmExit_Click(object sender, RoutedEventArgs e) => ViewModel.ConfirmExitWithActive = ConfirmExitBox.IsChecked == true;
+
+	private void StartWithWindows_Click(object sender, RoutedEventArgs e) {
+		ViewModel.StartWithWindows = StartWithWindowsBox.IsChecked == true;
+		StartWithWindowsBox.IsChecked = ViewModel.StartWithWindows; // show what actually happened if the registry refused
+		StartMinimizedBox.IsEnabled = StartWithWindowsBox.IsChecked == true;
+	}
+
+	private void StartMinimized_Click(object sender, RoutedEventArgs e) => ViewModel.StartMinimized = StartMinimizedBox.IsChecked == true;
+
+	private void StartPaused_Click(object sender, RoutedEventArgs e) => ViewModel.StartPaused = StartPausedBox.IsChecked == true;
+
+	private void NotifyComplete_Click(object sender, RoutedEventArgs e) => ViewModel.NotifyOnComplete = NotifyCompleteBox.IsChecked == true;
+
+	private void NotifyFailed_Click(object sender, RoutedEventArgs e) => ViewModel.NotifyOnFailed = NotifyFailedBox.IsChecked == true;
+
+	private void NotifyTorrent_Click(object sender, RoutedEventArgs e) => ViewModel.NotifyOnTorrentFinished = NotifyTorrentBox.IsChecked == true;
+
+	private void NotifySound_Click(object sender, RoutedEventArgs e) => ViewModel.NotifySound = NotifySoundBox.IsChecked == true;
+
+	private void NotifyUnfocused_Click(object sender, RoutedEventArgs e) => ViewModel.NotifyOnlyWhenUnfocused = NotifyUnfocusedBox.IsChecked == true;
 
 	private async void OpenData_Click(object sender, RoutedEventArgs e) => await Launcher.LaunchFolderPathAsync(ViewModel.DataFolder);
 

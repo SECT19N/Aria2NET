@@ -17,6 +17,22 @@ public sealed class AppSettings {
 	public int HistoryRetentionDays { get; set; }
 	/// <summary>The one-time offer to open .torrent files and magnet links with Aria2NET has been shown.</summary>
 	public bool TorrentAssociationPrompted { get; set; }
+	/// <summary>The window's close button hides it to the tray (downloads keep running) instead of exiting.</summary>
+	public bool CloseToTray { get; set; } = true;
+	/// <summary>Minimizing hides the window to the tray instead of leaving a taskbar button.</summary>
+	public bool MinimizeToTray { get; set; }
+	/// <summary>Ask before exiting while downloads are still running.</summary>
+	public bool ConfirmExitWithActive { get; set; } = true;
+	/// <summary>When Windows starts the app at sign-in, keep it in the tray instead of opening the window.</summary>
+	public bool StartMinimized { get; set; } = true;
+	/// <summary>Pause every download once the engine is up, instead of continuing where the last session stopped.</summary>
+	public bool StartPaused { get; set; }
+	public bool NotifyOnComplete { get; set; } = true;
+	public bool NotifyOnFailed { get; set; } = true;
+	public bool NotifyOnTorrentFinished { get; set; } = true;
+	public bool NotifySound { get; set; } = true;
+	/// <summary>Skip the toast while the Aria2NET window is the active window.</summary>
+	public bool NotifyOnlyWhenUnfocused { get; set; }
 	public WindowPlacement? Window { get; set; }
 }
 
