@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using Aria2NET.Core.Downloads;
 using Aria2NET.Core.Torrents;
 using Aria2NET.ViewModels;
@@ -11,21 +10,21 @@ using WinRT.Interop;
 namespace Aria2NET.Pages;
 
 public sealed partial class TorrentFilesDialog : ContentDialog {
-	private readonly TorrentPrompt _prompt;
+	private readonly TorrentFileTree _tree;
 	private bool _ready;
 
-	public ObservableCollection<TorrentFileChoice> Choices { get; }
-
 	public TorrentFilesDialog(TorrentPrompt prompt) {
-		_prompt = prompt;
-		Choices = new(prompt.Files.Select(f => new TorrentFileChoice(f.Index, f.Path, f.Length)));
+		_tree = TorrentFileTree.Build(prompt.Files);
 		InitializeComponent();
 
 		NameText.Text = prompt.Name;
+		ToolTipService.SetToolTip(NameText, prompt.Name);
+		TotalText.Text = $"{_tree.TotalCount} {(_tree.TotalCount == 1 ? "file" : "files")} · {ByteFormat.Size(_tree.TotalBytes)}";
 		if (prompt.Note is { Length: > 0 } note) {
-			NoteText.Text = note;
-			NoteText.Visibility = Visibility.Visible;
+			NoteBar.Message = note;
+			NoteBar.IsOpen = true;
 		}
+		BuildTree();
 		FolderBox.Text = prompt.Folder;
 		FolderBox.IsEnabled = BrowseButton.IsEnabled = prompt.FolderEditable;
 		if (!prompt.FolderEditable) {
@@ -38,7 +37,7 @@ public sealed partial class TorrentFilesDialog : ContentDialog {
 	/// <summary>What the user chose. No files means the dialog was cancelled.</summary>
 	public TorrentChoice Choice => new(
 		FolderBox.Text.Trim(),
-		Choices.Where(c => c.IsSelected).Select(c => c.Index).ToList(),
+		_tree.SelectedIndexes(),
 		SeedBox.SelectedIndex switch {
 			1 => new SeedingOverride(SeedMode.Forever),
 			2 => new SeedingOverride(SeedMode.Ratio, double.IsNaN(RatioBox.Value) ? 1.0 : RatioBox.Value),
@@ -55,9 +54,9 @@ public sealed partial class TorrentFilesDialog : ContentDialog {
 		if (!_ready) {
 			return;
 		}
-		var chosen = Choices.Where(c => c.IsSelected).ToList();
-		var bytes = chosen.Sum(c => c.Length);
-		SummaryText.Text = $"{chosen.Count} of {Choices.Count} selected · {ByteFormat.Size(bytes)}";
+		var count = _tree.SelectedCount;
+		var bytes = _tree.SelectedBytes;
+		SummaryText.Text = $"{count} of {_tree.TotalCount} selected · {ByteFormat.Size(bytes)}";
 
 		var folder = FolderBox.Text.Trim();
 		var folderOk = folder.Length > 0 && Path.IsPathFullyQualified(folder);
@@ -70,10 +69,61 @@ public sealed partial class TorrentFilesDialog : ContentDialog {
 		else {
 			SpaceText.Text = "";
 		}
-		IsPrimaryButtonEnabled = chosen.Count > 0 && folderOk;
+		IsPrimaryButtonEnabled = count > 0 && folderOk;
 	}
 
-	private void Choice_Changed(object sender, RoutedEventArgs e) => Refresh();
+	// ---------------------------------------------------------------- the tree
+
+	// Used by the item template (x:Bind functions).
+	public static string GlyphFor(bool isFolder) => isFolder ? "" : "";
+
+	public static string SizeOf(long bytes) => ByteFormat.Size(bytes);
+
+	private void BuildTree() {
+		AddNodes(FileTree.RootNodes, _tree.Roots);
+		if (_tree.Roots is [{ IsFolder: true }] && FileTree.RootNodes.Count == 1) {
+			FileTree.RootNodes[0].IsExpanded = true; // a torrent that is just one folder: show what is in it
+		}
+		if (_tree.TotalCount == 1) {
+			// One file: no folders to open and nothing to pick, so drop the tree chrome.
+			Toolbar.Visibility = ColumnHeader.Visibility = Visibility.Collapsed;
+			FileTree.Height = 48;
+		}
+		else {
+			// Use the room the window has instead of a fixed small list.
+			var window = (App.Window.Content as FrameworkElement)?.XamlRoot?.Size.Height ?? 800;
+			FileTree.Height = Math.Clamp(window - 520, 220, 520);
+		}
+	}
+
+	private static void AddNodes(IList<TreeViewNode> into, IEnumerable<FileTreeNode> nodes) {
+		foreach (var node in nodes) {
+			var item = new TreeViewNode { Content = node };
+			AddNodes(item.Children, node.Children);
+			into.Add(item);
+		}
+	}
+
+	private static void SetExpanded(IEnumerable<TreeViewNode> nodes, bool expanded) {
+		foreach (var node in nodes) {
+			if (node.Children.Count > 0) {
+				node.IsExpanded = expanded;
+				SetExpanded(node.Children, expanded);
+			}
+		}
+	}
+
+	// The box has three states, but a click only ever means "all" or "none": a partly chosen folder becomes all.
+	private void Node_Click(object sender, RoutedEventArgs e) {
+		if (((FrameworkElement)sender).Tag is FileTreeNode node) {
+			node.IsChecked = node.IsChecked != true;
+			Refresh();
+		}
+	}
+
+	private void ExpandAll_Click(object sender, RoutedEventArgs e) => SetExpanded(FileTree.RootNodes, true);
+
+	private void CollapseAll_Click(object sender, RoutedEventArgs e) => SetExpanded(FileTree.RootNodes, false);
 
 	private void FolderBox_TextChanged(object sender, TextChangedEventArgs e) => Refresh();
 
@@ -82,9 +132,7 @@ public sealed partial class TorrentFilesDialog : ContentDialog {
 	private void SelectNone_Click(object sender, RoutedEventArgs e) => SetAll(false);
 
 	private void SetAll(bool value) {
-		foreach (var choice in Choices) {
-			choice.IsSelected = value;
-		}
+		_tree.SetAll(value);
 		Refresh();
 	}
 
