@@ -108,6 +108,31 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 		set => Change(s => s.NotifyOnlyWhenUnfocused = value);
 	}
 
+	public bool PreventSleep {
+		get => settings.Load().PreventSleep;
+		set => Change(s => s.PreventSleep = value);
+	}
+
+	public bool PauseOnBattery {
+		get => settings.Load().PauseOnBattery;
+		set => Change(s => s.PauseOnBattery = value);
+	}
+
+	public bool PauseOnMetered {
+		get => settings.Load().PauseOnMetered;
+		set => Change(s => s.PauseOnMetered = value);
+	}
+
+	public bool HotkeysEnabled {
+		get => settings.Load().HotkeysEnabled;
+		set => Change(s => s.HotkeysEnabled = value);
+	}
+
+	public bool RestartAfterCrash {
+		get => settings.Load().RestartAfterCrash;
+		set => Change(s => s.RestartAfterCrash = value);
+	}
+
 	private void Change(Action<AppSettings> apply) {
 		try {
 			var s = settings.Load();

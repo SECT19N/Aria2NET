@@ -1,5 +1,6 @@
 using Aria2NET.Core;
 using Aria2NET.Core.Aria2;
+using Aria2NET.Core.Background;
 using Aria2NET.Core.Torrents;
 using Aria2NET.Services;
 using Aria2NET.ViewModels;
@@ -28,6 +29,15 @@ public sealed partial class SettingsPage : Page {
 		NotifyTorrentBox.IsChecked = ViewModel.NotifyOnTorrentFinished;
 		NotifySoundBox.IsChecked = ViewModel.NotifySound;
 		NotifyUnfocusedBox.IsChecked = ViewModel.NotifyOnlyWhenUnfocused;
+		PreventSleepBox.IsChecked = ViewModel.PreventSleep;
+		PauseBatteryBox.IsChecked = ViewModel.PauseOnBattery;
+		PauseMeteredBox.IsChecked = ViewModel.PauseOnMetered;
+		HotkeysBox.IsChecked = ViewModel.HotkeysEnabled;
+		RestartBox.IsChecked = ViewModel.RestartAfterCrash;
+		foreach (var action in Enum.GetValues<FinishAction>()) {
+			FinishBox.Items.Add(WhenFinishedMachine.Label(action));
+		}
+		FinishBox.SelectedIndex = (int)FinishService.Action;
 		foreach (var choice in SettingsViewModel.RetentionChoices) {
 			RetentionBox.Items.Add(choice.Label);
 		}
@@ -76,6 +86,31 @@ public sealed partial class SettingsPage : Page {
 	private void NotifySound_Click(object sender, RoutedEventArgs e) => ViewModel.NotifySound = NotifySoundBox.IsChecked == true;
 
 	private void NotifyUnfocused_Click(object sender, RoutedEventArgs e) => ViewModel.NotifyOnlyWhenUnfocused = NotifyUnfocusedBox.IsChecked == true;
+
+	private static WhenFinishedService FinishService => App.Services.GetRequiredService<WhenFinishedService>();
+
+	private void PreventSleep_Click(object sender, RoutedEventArgs e) => ViewModel.PreventSleep = PreventSleepBox.IsChecked == true;
+
+	private void PauseBattery_Click(object sender, RoutedEventArgs e) => ViewModel.PauseOnBattery = PauseBatteryBox.IsChecked == true;
+
+	private void PauseMetered_Click(object sender, RoutedEventArgs e) => ViewModel.PauseOnMetered = PauseMeteredBox.IsChecked == true;
+
+	private void Finish_Changed(object sender, SelectionChangedEventArgs e) {
+		if (FinishBox.SelectedIndex >= 0 && FinishBox.SelectedIndex != (int)FinishService.Action) {
+			FinishService.Action = (FinishAction)FinishBox.SelectedIndex;
+		}
+	}
+
+	private void Hotkeys_Click(object sender, RoutedEventArgs e) {
+		ViewModel.HotkeysEnabled = HotkeysBox.IsChecked == true;
+		var free = App.Services.GetRequiredService<BackgroundCoordinator>().ApplyHotkeys();
+		HotkeysStatus.Text = free ? "" : "Another program already uses one of these shortcuts, so it is not active.";
+	}
+
+	private void Restart_Click(object sender, RoutedEventArgs e) {
+		ViewModel.RestartAfterCrash = RestartBox.IsChecked == true;
+		App.Services.GetRequiredService<BackgroundCoordinator>().ApplyCrashRestart();
+	}
 
 	private async void OpenData_Click(object sender, RoutedEventArgs e) => await Launcher.LaunchFolderPathAsync(ViewModel.DataFolder);
 

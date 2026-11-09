@@ -77,6 +77,8 @@ public partial class App : Application {
 		services.AddSingleton<PersistenceCoordinator>();
 		services.AddSingleton<BackgroundCoordinator>();
 		services.AddSingleton<ToastService>();
+		services.AddSingleton<PowerService>();
+		services.AddSingleton<WhenFinishedService>();
 		services.AddSingleton(_ => new StartupRegistration(Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "Aria2NET.exe")));
 		services.AddSingleton<DownloadMonitor>(sp => new DownloadMonitor(
 			sp.GetRequiredService<IAria2Engine>(), sp.GetRequiredService<ILogger<DownloadMonitor>>()));
@@ -97,6 +99,8 @@ public partial class App : Application {
 		_ = Services.GetRequiredService<NoticeCenter>(); // created on the UI thread so any thread can post to it
 		_window = new MainWindow();
 		Services.GetRequiredService<PersistenceCoordinator>().Start();
+		Services.GetRequiredService<WhenFinishedService>().Start(_window);
+		Services.GetRequiredService<PowerService>().Start(_window);
 		var background = Services.GetRequiredService<BackgroundCoordinator>();
 		background.Start(_window);
 		Services.GetRequiredService<ToastService>().Start(_window);
@@ -166,6 +170,18 @@ public partial class App : Application {
 		});
 	}
 
+	/// <summary>Shows the window with an empty Add dialog (the global hotkey). Callable from any thread.</summary>
+	public static void ShowAddDialog() {
+		if (_window is not { } window) {
+			return;
+		}
+		window.DispatcherQueue.TryEnqueue(() => {
+			window.BringToFront();
+			window.ShowDownloads();
+			Services.GetRequiredService<DownloadsViewModel>().RequestExternalAdd([]);
+		});
+	}
+
 	/// <summary>Called when a second launch is redirected to this instance.</summary>
 	public static void ActivateMainWindow() => _window?.DispatcherQueue.TryEnqueue(_window.BringToFront);
 
@@ -191,4 +207,10 @@ public partial class App : Application {
 internal static class NativeMethods {
 	[System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "MessageBoxW", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
 	internal static extern int MessageBox(IntPtr hWnd, string text, string caption, uint type);
+
+	[System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+	internal static extern int RegisterApplicationRestart(string commandLine, uint flags);
+
+	[System.Runtime.InteropServices.DllImport("kernel32.dll")]
+	internal static extern int UnregisterApplicationRestart();
 }

@@ -20,6 +20,21 @@
         <CheckBox x:Name="StartMinimizedBox" Content="Start in the tray, without opening the window" Margin="28,0,0,0" Click="StartMinimized_Click" />
         <CheckBox x:Name="StartPausedBox" Content="Start with all downloads paused" Click="StartPaused_Click" />
 
+        <TextBlock Text="Power" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" />
+        <CheckBox x:Name="PreventSleepBox" Content="Keep Windows awake while downloading" Click="PreventSleep_Click" />
+        <CheckBox x:Name="PauseBatteryBox" Content="Pause downloads while on battery power" Click="PauseBattery_Click" />
+        <CheckBox x:Name="PauseMeteredBox" Content="Pause downloads on a metered connection" Click="PauseMetered_Click" />
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="When downloads finish" VerticalAlignment="Center" />
+            <ComboBox x:Name="FinishBox" MinWidth="160" SelectionChanged="Finish_Changed" AutomationProperties.Name="When downloads finish" />
+        </StackPanel>
+        <TextBlock Text="Applies once, for this run only, and then resets. Also in the tray menu." Opacity="0.7" TextWrapping="Wrap" />
+
+        <TextBlock Text="Shortcuts and recovery" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" />
+        <CheckBox x:Name="HotkeysBox" Content="Global hotkeys: Ctrl+Alt+A shows or hides the window, Ctrl+Alt+N adds a download" Click="Hotkeys_Click" />
+        <TextBlock x:Name="HotkeysStatus" Opacity="0.7" TextWrapping="Wrap" />
+        <CheckBox x:Name="RestartBox" Content="Start again in the tray if Aria2NET crashes or stops responding" Click="Restart_Click" />
+
         <TextBlock Text="Notifications" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" />
         <CheckBox x:Name="NotifyCompleteBox" Content="When a download completes" Click="NotifyComplete_Click" />
         <CheckBox x:Name="NotifyFailedBox" Content="When a download fails" Click="NotifyFailed_Click" />

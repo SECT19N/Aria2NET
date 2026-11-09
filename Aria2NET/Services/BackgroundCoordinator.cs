@@ -14,7 +14,11 @@ internal sealed class BackgroundCoordinator(
 	DownloadMonitor monitor,
 	DownloadOperations operations,
 	SettingsStore<AppSettings> settings,
+	WhenFinishedService whenFinished,
 	ILoggerFactory loggerFactory) : IDisposable {
+
+	private const int HotkeyToggleWindow = 1, HotkeyAddDownload = 2;
+	private const uint ModAlt = 0x1, ModControl = 0x2;
 
 	private readonly ILogger _logger = loggerFactory.CreateLogger<BackgroundCoordinator>();
 	private TrayIcon? _tray;
@@ -36,7 +40,13 @@ internal sealed class BackgroundCoordinator(
 			_tray.ResumeAllRequested += () => _ = RunAsync(operations.ResumeAllAsync, "Resume all");
 			_tray.OpenFolderRequested += OpenDownloadFolder;
 			_tray.ExitRequested += () => window.RequestExit();
+			_tray.CurrentFinishAction = () => whenFinished.Action;
+			_tray.FinishActionChosen += action => whenFinished.Action = action;
+			_tray.SessionEnding += window.StopForSessionEnd;
+			_tray.HotkeyPressed += id => OnHotkey(window, id);
 			_tray.Show();
+			ApplyHotkeys();
+			ApplyCrashRestart();
 		}
 		catch (Exception ex) {
 			_logger.LogError(ex, "Could not create the tray icon; the window will close normally");
@@ -50,6 +60,53 @@ internal sealed class BackgroundCoordinator(
 		};
 		engine.StateChanged += (_, _) => dispatcher.TryEnqueue(Refresh);
 		Refresh();
+	}
+
+	/// <summary>Registers or releases the global hotkeys to match the setting. Returns false when another program already owns one of them.</summary>
+	public bool ApplyHotkeys() {
+		if (_tray is null) {
+			return true;
+		}
+		_tray.UnregisterHotkey(HotkeyToggleWindow);
+		_tray.UnregisterHotkey(HotkeyAddDownload);
+		if (!settings.Load().HotkeysEnabled) {
+			return true;
+		}
+		var toggle = _tray.RegisterHotkey(HotkeyToggleWindow, ModControl | ModAlt, 0x41 /* A */);
+		var add = _tray.RegisterHotkey(HotkeyAddDownload, ModControl | ModAlt, 0x4E /* N */);
+		if (!toggle || !add) {
+			_logger.LogWarning("A global hotkey is already taken by another program (show/hide: {Toggle}, add: {Add})", toggle, add);
+		}
+		return toggle && add;
+	}
+
+	/// <summary>Asks Windows to restart the app in the tray after a crash or hang, or withdraws that request. Windows only does so when the app had run for a minute.</summary>
+	public void ApplyCrashRestart() {
+		try {
+			if (settings.Load().RestartAfterCrash) {
+				NativeMethods.RegisterApplicationRestart("--autostart", 0x8 /* RESTART_NO_REBOOT */);
+			}
+			else {
+				NativeMethods.UnregisterApplicationRestart();
+			}
+		}
+		catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or EntryPointNotFoundException) {
+			_logger.LogInformation(ex, "Restart after a crash is not available");
+		}
+	}
+
+	private void OnHotkey(MainWindow window, int id) {
+		if (id == HotkeyToggleWindow) {
+			if (window.AppWindow.IsVisible && window.IsForeground) {
+				window.AppWindow.Hide(); // the tray icon is what delivered this, so there is a way back
+			}
+			else {
+				window.BringToFront();
+			}
+		}
+		else if (id == HotkeyAddDownload) {
+			App.ShowAddDialog();
+		}
 	}
 
 	private void Refresh() {

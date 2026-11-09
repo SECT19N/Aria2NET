@@ -230,6 +230,28 @@ public sealed partial class MainWindow : Window {
 
 	// ---------------------------------------------------------------- closing
 
+	/// <summary>Windows is signing out or shutting down and will end the process any moment: stop aria2 (it saves its session) within a few seconds and go quietly.</summary>
+	public void StopForSessionEnd() {
+		if (_closeApproved) {
+			return;
+		}
+		SavePlacement();
+		try {
+			_supervisor.Dispose();
+			// On the thread pool: blocking the UI thread on code that wants to continue on it would never finish.
+			Task.Run(async () => {
+				await _monitor.StopAsync();
+				await _engine.StopAsync();
+			}).Wait(TimeSpan.FromSeconds(4));
+		}
+		catch (Exception ex) {
+			_logger.LogError(ex, "Engine stop threw while Windows was ending the session");
+		}
+		_toasts.Dispose();
+		_background.Dispose();
+		_closeApproved = true;
+	}
+
 	// Stop aria2 gracefully (it saves its session) before the window goes away.
 	private async void OnClosing(AppWindow sender, AppWindowClosingEventArgs args) {
 		if (_closeApproved) {

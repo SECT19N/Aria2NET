@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Aria2NET.Core.Background;
 using Aria2NET.Core.Tray;
 using Microsoft.Extensions.Logging;
 
@@ -14,7 +15,7 @@ internal sealed class TrayIcon : IDisposable {
 	private const uint WmRButtonUp = 0x0205;
 	private const uint IconId = 1;
 
-	private const int MenuOpen = 1, MenuPauseAll = 2, MenuResumeAll = 3, MenuOpenFolder = 4, MenuExit = 5;
+	private const int MenuOpen = 1, MenuPauseAll = 2, MenuResumeAll = 3, MenuOpenFolder = 4, MenuExit = 5, MenuFinishBase = 100;
 
 	private readonly IntPtr _hwnd;
 	private readonly ILogger _logger;
@@ -47,8 +48,20 @@ internal sealed class TrayIcon : IDisposable {
 	public event Action? ResumeAllRequested;
 	public event Action? OpenFolderRequested;
 	public event Action? ExitRequested;
+	/// <summary>Windows is signing out or shutting down and will end the process soon.</summary>
+	public event Action? SessionEnding;
+	public event Action<int>? HotkeyPressed;
+	public event Action<FinishAction>? FinishActionChosen;
+
+	/// <summary>Which "When finished" entry is ticked in the menu.</summary>
+	public Func<FinishAction>? CurrentFinishAction { get; set; }
 
 	public void Show() => Add();
+
+	/// <summary>Registers a global hotkey that arrives as <see cref="HotkeyPressed"/>. False when another program already owns it.</summary>
+	public bool RegisterHotkey(int id, uint modifiers, uint key) => RegisterHotKey(_hwnd, id, modifiers | 0x4000 /* MOD_NOREPEAT */, key);
+
+	public void UnregisterHotkey(int id) => UnregisterHotKey(_hwnd, id);
 
 	public void Update(TrayState state, string tooltip) {
 		if (state == _state && tooltip == _tooltip) {
@@ -96,7 +109,14 @@ internal sealed class TrayIcon : IDisposable {
 				}
 				return IntPtr.Zero;
 			}
-			if (message == _taskbarCreated && _taskbarCreated != 0) {
+			if (message == 0x0312 /* WM_HOTKEY */) {
+				HotkeyPressed?.Invoke((int)wParam);
+				return IntPtr.Zero;
+			}
+			if (message == 0x0016 /* WM_ENDSESSION */ && wParam != IntPtr.Zero) {
+				SessionEnding?.Invoke();
+			}
+			else if (message == _taskbarCreated && _taskbarCreated != 0) {
 				Add(); // Explorer restarted and dropped every icon
 			}
 		}
@@ -115,6 +135,13 @@ internal sealed class TrayIcon : IDisposable {
 			AppendMenu(menu, 0, MenuResumeAll, "Resume all");
 			AppendMenu(menu, 0, MenuOpenFolder, "Open download folder");
 			AppendMenu(menu, 0x800, 0, null);
+			var finish = CreatePopupMenu(); // destroyed together with its parent
+			var current = CurrentFinishAction?.Invoke() ?? FinishAction.None;
+			foreach (var action in Enum.GetValues<FinishAction>()) {
+				AppendMenu(finish, action == current ? 0x8u /* MF_CHECKED */ : 0u, (nuint)(MenuFinishBase + (int)action), WhenFinishedMachine.Label(action));
+			}
+			AppendMenu(menu, 0x10 /* MF_POPUP */, (nuint)finish, "When downloads finish");
+			AppendMenu(menu, 0x800, 0, null);
 			AppendMenu(menu, 0, MenuExit, "Exit");
 			SetMenuDefaultItem(menu, MenuOpen, 0);
 
@@ -128,6 +155,7 @@ internal sealed class TrayIcon : IDisposable {
 				case MenuResumeAll: ResumeAllRequested?.Invoke(); break;
 				case MenuOpenFolder: OpenFolderRequested?.Invoke(); break;
 				case MenuExit: ExitRequested?.Invoke(); break;
+				case >= MenuFinishBase: FinishActionChosen?.Invoke((FinishAction)(command - MenuFinishBase)); break;
 			}
 		}
 		finally {
@@ -272,6 +300,14 @@ internal sealed class TrayIcon : IDisposable {
 
 	[DllImport("user32.dll", CharSet = CharSet.Unicode)]
 	private static extern uint RegisterWindowMessage(string name);
+
+	[DllImport("user32.dll")]
+	[return: MarshalAs(UnmanagedType.Bool)]
+	private static extern bool RegisterHotKey(IntPtr hwnd, int id, uint modifiers, uint key);
+
+	[DllImport("user32.dll")]
+	[return: MarshalAs(UnmanagedType.Bool)]
+	private static extern bool UnregisterHotKey(IntPtr hwnd, int id);
 
 	[DllImport("user32.dll")]
 	private static extern int GetSystemMetrics(int index);
