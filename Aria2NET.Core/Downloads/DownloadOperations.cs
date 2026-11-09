@@ -50,6 +50,13 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 	/// </summary>
 	public async Task<IReadOnlyList<string>> RemoveAsync(IReadOnlyCollection<DownloadItem> items, bool deleteFiles, CancellationToken ct = default) {
 		var rpc = Rpc;
+		// Ask for the file lists first: once removed, aria2 forgets everything but the first file.
+		var plans = new List<(DownloadItem Item, DownloadFilePlan Plan)>();
+		if (deleteFiles) {
+			foreach (var item in items) {
+				plans.Add((item, await PlanFilesAsync(rpc, item, ct)));
+			}
+		}
 		var live = items.Where(DownloadCapabilities.IsLive).Select(i => i.Gid).ToList();
 		if (live.Count > 0) {
 			await rpc.RemoveAsync(live, ct);
@@ -61,41 +68,85 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 		}
 
 		var problems = new List<string>();
-		if (deleteFiles) {
-			foreach (var item in items) {
-				await DeleteFilesAsync(item, problems, ct);
-			}
+		foreach (var (item, plan) in plans) {
+			await DeleteFilesAsync(item, plan, problems, ct);
 		}
 		return problems;
 	}
 
-	private async Task DeleteFilesAsync(DownloadItem item, List<string> problems, CancellationToken ct) {
-		if (string.IsNullOrEmpty(item.Path)) {
-			return;
+	private async Task<DownloadFilePlan> PlanFilesAsync(Aria2RpcClient rpc, DownloadItem item, CancellationToken ct) {
+		try {
+			using var status = await rpc.TellStatusFullAsync(item.Gid, ct);
+			var plan = DownloadFilePlan.FromStatus(status.RootElement);
+			if (plan.Files.Count > 0) {
+				return plan;
+			}
 		}
-		var toRecycle = item.Status == DownloadStatus.Complete;
-		foreach (var path in new[] { item.Path, item.Path + ".aria2" }) {
-			// aria2 may still be closing the file; give it a moment.
-			for (var attempt = 0; attempt < 5; attempt++) {
-				try {
-					if (File.Exists(path)) {
-						if (toRecycle && path == item.Path) {
-							FileSystem.DeleteFile(path, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
-						}
-						else {
-							File.Delete(path);
-						}
-					}
-					break;
-				}
-				catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
-					if (attempt == 4) {
-						logger.LogWarning(ex, "Could not delete {Path}", path);
-						problems.Add($"{path}: {ex.Message}");
+		catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException) {
+			logger.LogDebug(ex, "No file list for {Gid}; using the first file only", item.Gid);
+		}
+		return string.IsNullOrEmpty(item.Dir) || string.IsNullOrEmpty(item.Path) ? DownloadFilePlan.Empty : DownloadFilePlan.Build(item.Dir, [item.Path], null);
+	}
+
+	private async Task DeleteFilesAsync(DownloadItem item, DownloadFilePlan plan, List<string> problems, CancellationToken ct) {
+		// A finished download goes to the Recycle Bin (a multi-file torrent as its whole folder); partial data and control files are just deleted.
+		var recycle = item.Status is DownloadStatus.Complete or DownloadStatus.Seeding;
+		if (recycle && plan.Folder is not null && Directory.Exists(plan.Folder)) {
+			await TryDeleteAsync(() => FileSystem.DeleteDirectory(plan.Folder, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin), plan.Folder, problems, ct);
+		}
+		foreach (var path in plan.Files) {
+			if (File.Exists(path)) {
+				await TryDeleteAsync(() => {
+					if (recycle) {
+						FileSystem.DeleteFile(path, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
 					}
 					else {
-						await Task.Delay(200, ct);
+						File.Delete(path);
 					}
+				}, path, problems, ct);
+			}
+		}
+		foreach (var path in plan.ControlFiles) {
+			if (File.Exists(path)) {
+				await TryDeleteAsync(() => File.Delete(path), path, problems, ct);
+			}
+		}
+		if (plan.Folder is not null && Directory.Exists(plan.Folder)) {
+			RemoveEmptyFolders(plan.Folder);
+		}
+	}
+
+	/// <summary>Deletes <paramref name="root"/> and its sub-folders, but only the empty ones: anything the user put there stays.</summary>
+	private static void RemoveEmptyFolders(string root) {
+		try {
+			foreach (var folder in Directory.EnumerateDirectories(root, "*", System.IO.SearchOption.AllDirectories).OrderByDescending(d => d.Length)) {
+				if (!Directory.EnumerateFileSystemEntries(folder).Any()) {
+					Directory.Delete(folder);
+				}
+			}
+			if (!Directory.EnumerateFileSystemEntries(root).Any()) {
+				Directory.Delete(root);
+			}
+		}
+		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
+			// In use or protected; an empty folder left behind is harmless.
+		}
+	}
+
+	// aria2 may still be closing the file; give it a moment.
+	private async Task TryDeleteAsync(Action delete, string path, List<string> problems, CancellationToken ct) {
+		for (var attempt = 0; attempt < 5; attempt++) {
+			try {
+				delete();
+				return;
+			}
+			catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
+				if (attempt == 4) {
+					logger.LogWarning(ex, "Could not delete {Path}", path);
+					problems.Add($"{path}: {ex.Message}");
+				}
+				else {
+					await Task.Delay(200, ct);
 				}
 			}
 		}
