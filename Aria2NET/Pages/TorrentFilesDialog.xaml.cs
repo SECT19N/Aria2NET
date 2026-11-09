@@ -74,13 +74,8 @@ public sealed partial class TorrentFilesDialog : ContentDialog {
 
 	// ---------------------------------------------------------------- the tree
 
-	// Used by the item template (x:Bind functions).
-	public static string GlyphFor(bool isFolder) => isFolder ? "" : "";
-
-	public static string SizeOf(long bytes) => ByteFormat.Size(bytes);
-
 	private void BuildTree() {
-		AddNodes(FileTree.RootNodes, _tree.Roots);
+		AddNodes(FileTree.RootNodes, _tree.Roots.Select(r => new TorrentTreeItem(r, Refresh)).ToList());
 		if (_tree.Roots is [{ IsFolder: true }] && FileTree.RootNodes.Count == 1) {
 			FileTree.RootNodes[0].IsExpanded = true; // a torrent that is just one folder: show what is in it
 		}
@@ -96,11 +91,11 @@ public sealed partial class TorrentFilesDialog : ContentDialog {
 		}
 	}
 
-	private static void AddNodes(IList<TreeViewNode> into, IEnumerable<FileTreeNode> nodes) {
-		foreach (var node in nodes) {
-			var item = new TreeViewNode { Content = node };
-			AddNodes(item.Children, node.Children);
-			into.Add(item);
+	private static void AddNodes(IList<TreeViewNode> into, IEnumerable<TorrentTreeItem> items) {
+		foreach (var item in items) {
+			var node = new TreeViewNode { Content = item };
+			AddNodes(node.Children, item.Children);
+			into.Add(node);
 		}
 	}
 
@@ -110,14 +105,6 @@ public sealed partial class TorrentFilesDialog : ContentDialog {
 				node.IsExpanded = expanded;
 				SetExpanded(node.Children, expanded);
 			}
-		}
-	}
-
-	// The box has three states, but a click only ever means "all" or "none": a partly chosen folder becomes all.
-	private void Node_Click(object sender, RoutedEventArgs e) {
-		if (((FrameworkElement)sender).Tag is FileTreeNode node) {
-			node.IsChecked = node.IsChecked != true;
-			Refresh();
 		}
 	}
 

@@ -3,8 +3,7 @@
     x:Class="Aria2NET.Pages.TorrentFilesDialog"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:core="using:Aria2NET.Core.Torrents"
-    xmlns:local="using:Aria2NET.Pages"
+    xmlns:vm="using:Aria2NET.ViewModels"
     Title="Choose what to download"
     PrimaryButtonText="Download"
     CloseButtonText="Cancel"
@@ -56,7 +55,7 @@
                 <TreeView x:Name="FileTree" SelectionMode="None" CanDragItems="False" AllowDrop="False" Height="320"
                           AutomationProperties.Name="Files in this torrent">
                     <TreeView.ItemTemplate>
-                        <DataTemplate x:DataType="core:FileTreeNode">
+                        <DataTemplate x:DataType="vm:TorrentTreeItem">
                             <Grid ColumnSpacing="8" Height="36">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
@@ -65,13 +64,13 @@
                                     <ColumnDefinition Width="96" />
                                 </Grid.ColumnDefinitions>
                                 <CheckBox MinWidth="0" Padding="0" VerticalAlignment="Center" IsThreeState="True"
-                                          IsChecked="{x:Bind IsChecked, Mode=OneWay}" Tag="{x:Bind}" Click="Node_Click"
+                                          IsChecked="{x:Bind IsChecked, Mode=OneWay}" Click="{x:Bind Toggle}"
                                           AutomationProperties.Name="{x:Bind Name}" />
                                 <FontIcon Grid.Column="1" FontSize="16" Opacity="0.75" VerticalAlignment="Center"
-                                          Glyph="{x:Bind local:TorrentFilesDialog.GlyphFor(IsFolder)}" />
+                                          Glyph="{x:Bind Glyph}" />
                                 <TextBlock Grid.Column="2" Text="{x:Bind Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                            ToolTipService.ToolTip="{x:Bind Name}" />
-                                <TextBlock Grid.Column="3" Text="{x:Bind local:TorrentFilesDialog.SizeOf(Length)}" Opacity="0.7"
+                                <TextBlock Grid.Column="3" Text="{x:Bind SizeText}" Opacity="0.7"
                                            HorizontalAlignment="Right" VerticalAlignment="Center" />
                             </Grid>
                         </DataTemplate>
