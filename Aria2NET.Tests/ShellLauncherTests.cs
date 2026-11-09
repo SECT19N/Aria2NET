@@ -39,3 +39,25 @@ public class ShellLauncherPathTests {
 		Assert.Equal($"\"{temp.Path}\"", ShellLauncher.FolderArguments(System.IO.Path.Combine(temp.Path, "gone", "deeper"), null));
 	}
 }
+
+public class ShellLauncherHighlightTests {
+	[Fact]
+	public void A_file_inside_a_torrent_folder_highlights_the_folder() {
+		using var temp = new TempDir();
+		var folder = System.IO.Path.Combine(temp.Path, "Show");
+		Directory.CreateDirectory(System.IO.Path.Combine(folder, "sub"));
+		var file = System.IO.Path.Combine(folder, "sub", "a.mkv");
+		File.WriteAllText(file, "x");
+
+		Assert.Equal($"/select,\"{folder}\"", ShellLauncher.FolderArguments(temp.Path, file));
+	}
+
+	[Fact]
+	public void A_torrent_folder_is_highlighted_even_before_its_first_file_exists() {
+		using var temp = new TempDir();
+		var folder = System.IO.Path.Combine(temp.Path, "Show");
+		Directory.CreateDirectory(folder);
+
+		Assert.Equal($"/select,\"{folder}\"", ShellLauncher.FolderArguments(temp.Path, System.IO.Path.Combine(folder, "a.mkv")));
+	}
+}
