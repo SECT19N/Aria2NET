@@ -1,23 +1,14 @@
 name: build
 
+# Run by hand from the Actions tab ("Run workflow") on whichever branch you pick. Nothing triggers it automatically.
 on:
-  push:
-    branches: [master]
-  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# A newer push to the same branch/PR makes the older run pointless.
-concurrency:
-  group: build-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   build:
-    # Dependabot PRs are not built automatically (they queued up ahead of real work); run this workflow by hand on its branch.
-    if: github.actor != 'dependabot[bot]'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
@@ -50,9 +41,9 @@ jobs:
           path: TestResults/*.trx
           if-no-files-found: ignore
 
-  # Publishing has its own failure modes (it once left out the compiled XAML), so make sure it keeps working on every change.
+  # Publishing has its own failure modes (it once left out the compiled XAML), so check it too, but only once the build and tests pass.
   package:
-    if: github.actor != 'dependabot[bot]'
+    needs: build
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
