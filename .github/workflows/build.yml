@@ -1,14 +1,23 @@
 name: build
 
-# Run by hand from the Actions tab ("Run workflow") on whichever branch you pick. Nothing triggers it automatically.
+# Build + test runs on every pull request. The packaging check is manual: "Run workflow" on any branch.
+# No path filter on purpose: if "build" is a required check, a skipped workflow would leave doc-only PRs waiting forever.
 on:
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
 
+# A newer push to the same PR makes the older run pointless.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
+    # A skipped job counts as passing for a required check, so draft PRs are not blocked.
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
@@ -41,8 +50,10 @@ jobs:
           path: TestResults/*.trx
           if-no-files-found: ignore
 
-  # Publishing has its own failure modes (it once left out the compiled XAML), so check it too, but only once the build and tests pass.
+  # Publishing has its own failure modes (it once left out the compiled XAML), so check it before merging anything that touches
+  # packaging. Manual runs only, and only once the build and tests pass.
   package:
+    if: github.event_name == 'workflow_dispatch'
     needs: build
     runs-on: windows-latest
     steps:

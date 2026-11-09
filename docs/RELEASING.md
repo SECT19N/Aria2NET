@@ -30,9 +30,9 @@ Output goes to `artifacts/` (git-ignored). `win-arm64` builds on an x64 machine 
 ## What the zips contain / known limits
 - `Aria2NET.exe` plus runtime files, and `tools\aria2\aria2c.exe`. The arm64 zip ships the **x64** aria2 build (there is no official arm64 build); Windows runs it under emulation.
 - The exe is **not code signed**, so Windows SmartScreen may warn on first run. The SHA-256 shown next to each asset on the release page can be compared with `Get-FileHash`. Free signing through the SignPath Foundation OSS program and a winget manifest are planned for 0.9 (see `ROADMAP.md`).
-- `dotnet publish` skips the compiled XAML and the app's resource index for unpackaged WinUI apps; `Aria2NET.csproj` has a target that adds them and `package.ps1` fails if they are missing. The `package` job in `build.yml` runs it after the build and tests pass, so run that workflow before merging anything that touches packaging.
+- `dotnet publish` skips the compiled XAML and the app's resource index for unpackaged WinUI apps; `Aria2NET.csproj` has a target that adds them and `package.ps1` fails if they are missing. The `package` job in `build.yml` runs it, but only on a manual run (after build + test pass), so run that workflow by hand before merging anything that touches packaging.
 
 ## Other automation
-- `build.yml`: manual only ("Run workflow" on any branch). Build + test first, then a packaging smoke test once those pass.
+- `build.yml`: build + test on every pull request (drafts skipped, superseded runs cancelled). "Run workflow" on any branch also runs a packaging smoke test after build + test pass. Nothing runs on pushes to `master`.
 - `.github/dependabot.yml`: one grouped NuGet PR and one grouped Actions PR per month, at most one open of each. Dependabot PRs are not built automatically; to check one, Actions -> build -> Run workflow on its branch.
 - aria2 itself is pinned (version and SHA-256) in `tools/get-aria2.ps1`; update it by hand so the checksum stays a real check.
