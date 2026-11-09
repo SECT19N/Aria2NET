@@ -88,8 +88,13 @@ public sealed partial class TorrentFilesDialog : ContentDialog {
 		Refresh();
 	}
 
-	private void Seed_Changed(object sender, SelectionChangedEventArgs e) =>
+	private void Seed_Changed(object sender, SelectionChangedEventArgs e) {
+		// SelectedIndex="0" in the XAML raises this while the page is still loading, before RatioBox (declared below SeedBox) exists.
+		if (RatioBox is null) {
+			return;
+		}
 		RatioBox.Visibility = SeedBox.SelectedIndex == 2 ? Visibility.Visible : Visibility.Collapsed;
+	}
 
 	private async void Browse_Click(object sender, RoutedEventArgs e) {
 		var picker = new FolderPicker();
