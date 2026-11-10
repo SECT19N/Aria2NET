@@ -44,6 +44,38 @@ public sealed class AppSettings {
 	/// <summary>Ask Windows to start the app again (in the tray) if it crashes or stops responding.</summary>
 	public bool RestartAfterCrash { get; set; } = true;
 	public WindowPlacement? Window { get; set; }
+
+	// Downloads. Defaults match aria2's own, except file allocation (see Aria2Config).
+	/// <summary>How many downloads run at once; the rest wait in the queue.</summary>
+	public int MaxConcurrentDownloads { get; set; } = 5;
+	public int MaxConnectionsPerServer { get; set; } = 1;
+	/// <summary>Pieces one download is cut into (connections used for it).</summary>
+	public int Split { get; set; } = 5;
+	public int MinSplitSizeMiB { get; set; } = 20;
+	/// <summary>Attempts per file before it fails; 0 means keep trying.</summary>
+	public int MaxTries { get; set; } = 5;
+	public int RetryWaitSeconds { get; set; }
+	public int ConnectTimeoutSeconds { get; set; } = 60;
+	public int TimeoutSeconds { get; set; } = 60;
+	/// <summary>Null or empty keeps aria2's own user agent.</summary>
+	public string? UserAgent { get; set; }
+	public FileAllocationMode FileAllocation { get; set; } = FileAllocationMode.None;
+
+	// Speed. Limits are KiB/s; 0 means unlimited.
+	public int DownloadLimitKiBps { get; set; }
+	public int UploadLimitKiBps { get; set; }
+	public int AltDownloadLimitKiBps { get; set; }
+	public int AltUploadLimitKiBps { get; set; }
+	/// <summary>The alternative limits are in force instead of the normal ones.</summary>
+	public bool AltSpeedActive { get; set; }
+}
+
+/// <summary>aria2's <c>file-allocation</c> values.</summary>
+public enum FileAllocationMode {
+	/// <summary>Files grow as data arrives.</summary>
+	None,
+	Prealloc,
+	Falloc,
 }
 
 [JsonSourceGenerationOptions(WriteIndented = true)]

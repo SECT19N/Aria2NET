@@ -63,6 +63,13 @@
                 <AppBarButton.Icon><FontIcon Glyph="&#xE838;" /></AppBarButton.Icon>
             </AppBarButton>
 
+            <AppBarSeparator />
+            <AppBarToggleButton x:Name="AltSpeedButton" Label="Alt speed" Click="AltSpeed_Click"
+                                IsChecked="{x:Bind ViewModel.AltSpeedActive, Mode=OneWay}"
+                                ToolTipService.ToolTip="{x:Bind ViewModel.AltSpeedTip, Mode=OneWay}">
+                <AppBarToggleButton.Icon><FontIcon Glyph="&#xEC4A;" /></AppBarToggleButton.Icon>
+            </AppBarToggleButton>
+
             <CommandBar.SecondaryCommands>
                 <AppBarButton Label="Pause all" Click="PauseAll_Click" IsEnabled="{x:Bind ViewModel.CanPauseAll, Mode=OneWay}" />
                 <AppBarButton Label="Resume all" Click="ResumeAll_Click" IsEnabled="{x:Bind ViewModel.CanResumeAll, Mode=OneWay}" />

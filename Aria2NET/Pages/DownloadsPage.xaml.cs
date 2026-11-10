@@ -307,6 +307,8 @@ public sealed partial class DownloadsPage : Page {
 
 	private void OpenFolder_Click(object sender, RoutedEventArgs e) => ViewModel.OpenFolder();
 
+	private void AltSpeed_Click(object sender, RoutedEventArgs e) => _ = ViewModel.SetAltSpeedAsync(AltSpeedButton.IsChecked == true);
+
 	private void CopyUrl_Click(object sender, RoutedEventArgs e) => ViewModel.CopyUrl();
 
 	private void Undo_Click(object sender, RoutedEventArgs e) => ViewModel.UndoRemove();

@@ -64,10 +64,13 @@ public partial class App : Application {
 		services.AddLogging(b => b.ClearProviders().AddProvider(new FileLoggerProvider(paths.LogsDir)));
 		services.AddSingleton(sp => new SettingsStore<AppSettings>(
 			paths.SettingsFile, AppSettingsJsonContext.Default.AppSettings, sp.GetRequiredService<ILogger<SettingsStore<AppSettings>>>()));
-		services.AddSingleton<IAria2Engine>(sp => new Aria2Engine(
-			paths,
-			Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads"),
-			sp.GetRequiredService<ILogger<Aria2Engine>>()));
+		services.AddSingleton<IAria2Engine>(sp => {
+			var store = sp.GetRequiredService<SettingsStore<AppSettings>>();
+			return new Aria2Engine(paths, DefaultFolderResolver.UserDownloads(), sp.GetRequiredService<ILogger<Aria2Engine>>(), store.Load);
+		});
+		services.AddSingleton<SettingsApplier>(sp => new SettingsApplier(
+			sp.GetRequiredService<IAria2Engine>(), sp.GetRequiredService<SettingsStore<AppSettings>>(),
+			sp.GetRequiredService<DownloadOperations>(), sp.GetRequiredService<ILogger<SettingsApplier>>()));
 
 		services.AddSingleton(sp => new TrackerListService(new HttpClient { Timeout = TimeSpan.FromSeconds(15) }, paths, sp.GetRequiredService<ILogger<TrackerListService>>()));
 		services.AddSingleton(sp => new HistoryService(paths, sp.GetRequiredService<ILogger<HistoryService>>()));
@@ -131,6 +134,7 @@ public partial class App : Application {
 	private static async Task StartEngineAsync() {
 		try {
 			var engine = Services.GetRequiredService<IAria2Engine>();
+			Services.GetRequiredService<SettingsApplier>().Start();
 			await engine.StartAsync();
 			if (engine.State == EngineState.Running && Services.GetRequiredService<SettingsStore<AppSettings>>().Load().StartPaused) {
 				await Services.GetRequiredService<DownloadOperations>().PauseAllAsync();

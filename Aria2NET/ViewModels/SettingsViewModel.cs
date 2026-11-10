@@ -1,4 +1,5 @@
 using Aria2NET.Core;
+using Aria2NET.Core.Aria2;
 using Aria2NET.Core.History;
 using Aria2NET.Core.Settings;
 using Aria2NET.Core.Shell;
@@ -6,7 +7,91 @@ using Microsoft.Extensions.Logging;
 
 namespace Aria2NET.ViewModels;
 
-public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings> settings, HistoryService history, StartupRegistration startup, ILogger<SettingsViewModel> logger) {
+public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings> settings, HistoryService history, StartupRegistration startup, SettingsApplier applier, IAria2Engine engine, ILogger<SettingsViewModel> logger) {
+	/// <summary>User-agent presets shown in Settings; the first entry means aria2's own agent and the last is free text.</summary>
+	public static IReadOnlyList<(string Label, string? Value)> UserAgentChoices { get; } = [
+		("aria2 default", null),
+		("Chrome", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"),
+		("Firefox", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:132.0) Gecko/20100101 Firefox/132.0"),
+		("Edge", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0"),
+		("Custom", "")];
+
+	/// <summary>A fresh read of the settings file; the Settings page fills its controls from this.</summary>
+	public AppSettings Current => settings.Load();
+
+	/// <summary>Saves a change and pushes it to the running engine right away.</summary>
+	public void Update(Action<AppSettings> apply) {
+		Change(apply);
+		_ = applier.ApplyAsync(settings.Load());
+	}
+
+	public void ResetDownloads() {
+		var d = new AppSettings();
+		Update(s => {
+			s.DefaultDownloadFolder = d.DefaultDownloadFolder;
+			s.MaxConcurrentDownloads = d.MaxConcurrentDownloads;
+			s.MaxConnectionsPerServer = d.MaxConnectionsPerServer;
+			s.Split = d.Split;
+			s.MinSplitSizeMiB = d.MinSplitSizeMiB;
+			s.MaxTries = d.MaxTries;
+			s.RetryWaitSeconds = d.RetryWaitSeconds;
+			s.ConnectTimeoutSeconds = d.ConnectTimeoutSeconds;
+			s.TimeoutSeconds = d.TimeoutSeconds;
+			s.UserAgent = d.UserAgent;
+			s.FileAllocation = d.FileAllocation;
+		});
+	}
+
+	public void ResetSpeed() {
+		Update(s => {
+			s.DownloadLimitKiBps = s.UploadLimitKiBps = s.AltDownloadLimitKiBps = s.AltUploadLimitKiBps = 0;
+			s.AltSpeedActive = false;
+		});
+	}
+
+	/// <summary>The default folder differs from the folder the engine runs in, so a restart is needed.</summary>
+	public bool RestartRequired => applier.RestartRequired(settings.Load());
+
+	public Task RestartEngineAsync() => engine.RestartAsync();
+
+	public Task SetAltSpeedAsync(bool active) => applier.SetAltSpeedAsync(active);
+
+	/// <summary>Null when the folder can be used; otherwise a short reason. Creates the folder and writes a test file, so call it off the UI thread.</summary>
+	public static string? CheckFolder(string path) {
+		try {
+			Directory.CreateDirectory(path);
+			var probe = Path.Combine(path, $".aria2net-{Guid.NewGuid():N}.tmp");
+			File.WriteAllText(probe, "");
+			File.Delete(probe);
+			return null;
+		}
+		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) {
+			return $"Cannot write to this folder: {ex.Message}";
+		}
+	}
+
+	/// <summary>Free space on the drive holding <paramref name="path"/>, as text, or empty if unknown.</summary>
+	public static string FreeSpaceText(string path) {
+		try {
+			var root = Path.GetPathRoot(Path.GetFullPath(path));
+			return root is null ? "" : $"{FormatBytes(new DriveInfo(root).AvailableFreeSpace)} free";
+		}
+		catch (Exception ex) when (ex is IOException or ArgumentException or UnauthorizedAccessException or NotSupportedException) {
+			return "";
+		}
+	}
+
+	private static string FormatBytes(long bytes) {
+		string[] units = ["B", "KiB", "MiB", "GiB", "TiB"];
+		double v = bytes;
+		var i = 0;
+		while (v >= 1024 && i < units.Length - 1) {
+			v /= 1024;
+			i++;
+		}
+		return $"{v:0.#} {units[i]}";
+	}
+
 	/// <summary>Days finished downloads stay in History, in the order shown by the Settings combo box (0 = forever).</summary>
 	public static IReadOnlyList<(string Label, int Days)> RetentionChoices { get; } = [("Keep forever", 0), ("30 days", 30), ("90 days", 90), ("1 year", 365)];
 

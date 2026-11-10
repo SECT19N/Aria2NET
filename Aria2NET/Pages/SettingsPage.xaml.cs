@@ -1,6 +1,7 @@
 using Aria2NET.Core;
 using Aria2NET.Core.Aria2;
 using Aria2NET.Core.Background;
+using Aria2NET.Core.Settings;
 using Aria2NET.Core.Torrents;
 using Aria2NET.Services;
 using Aria2NET.ViewModels;
@@ -45,6 +46,159 @@ public sealed partial class SettingsPage : Page {
 		RetentionBox.IsEnabled = ViewModel.HistoryAvailable;
 		RefreshAssociation();
 		TrackerStatus.Text = TrackerSummary();
+		foreach (var (label, _) in SettingsViewModel.UserAgentChoices) {
+			UserAgentBox.Items.Add(label);
+		}
+		foreach (var mode in Enum.GetValues<FileAllocationMode>()) {
+			AllocationBox.Items.Add(mode.ToString());
+		}
+		LoadEngineSettings();
+		var applier = App.Services.GetRequiredService<SettingsApplier>();
+		EventHandler onSpeed = (_, _) => DispatcherQueue.TryEnqueue(LoadEngineSettings);
+		Loaded += (_, _) => applier.SpeedChanged += onSpeed;
+		Unloaded += (_, _) => applier.SpeedChanged -= onSpeed;
+	}
+
+	// ---------------------------------------------------------------- downloads and speed
+
+	private bool _loading;
+
+	private void LoadEngineSettings() {
+		_loading = true;
+		try {
+			var s = ViewModel.Current;
+			FolderBox.Text = s.DefaultDownloadFolder ?? "";
+			ConcurrentBox.Value = s.MaxConcurrentDownloads;
+			ConnectionsBox.Value = s.MaxConnectionsPerServer;
+			SplitBox.Value = s.Split;
+			MinSplitBox.Value = s.MinSplitSizeMiB;
+			TriesBox.Value = s.MaxTries;
+			RetryWaitBox.Value = s.RetryWaitSeconds;
+			ConnectTimeoutBox.Value = s.ConnectTimeoutSeconds;
+			TimeoutBox.Value = s.TimeoutSeconds;
+			var presets = SettingsViewModel.UserAgentChoices;
+			var index = string.IsNullOrWhiteSpace(s.UserAgent) ? 0 : presets.ToList().FindIndex(c => c.Value == s.UserAgent);
+			if (index < 0) {
+				index = presets.Count - 1; // custom
+			}
+			UserAgentBox.SelectedIndex = index;
+			UserAgentText.Visibility = index == presets.Count - 1 ? Visibility.Visible : Visibility.Collapsed;
+			UserAgentText.Text = index == presets.Count - 1 ? s.UserAgent ?? "" : "";
+			AllocationBox.SelectedIndex = (int)s.FileAllocation;
+			DownLimitBox.Value = s.DownloadLimitKiBps;
+			UpLimitBox.Value = s.UploadLimitKiBps;
+			AltDownLimitBox.Value = s.AltDownloadLimitKiBps;
+			AltUpLimitBox.Value = s.AltUploadLimitKiBps;
+			AltSpeedSwitch.IsOn = s.AltSpeedActive;
+			RestartBar.IsOpen = ViewModel.RestartRequired;
+		}
+		finally {
+			_loading = false;
+		}
+		_ = RefreshFolderStatusAsync();
+	}
+
+	private static int Int(NumberBox box) => (int)Math.Round(box.Value);
+
+	private void Number_Changed(NumberBox sender, NumberBoxValueChangedEventArgs args) {
+		if (_loading) {
+			return;
+		}
+		if (double.IsNaN(sender.Value)) {
+			sender.Value = double.IsNaN(args.OldValue) ? sender.Minimum : args.OldValue; // empty or invalid text: keep the old value
+			return;
+		}
+		ViewModel.Update(s => {
+			s.MaxConcurrentDownloads = Int(ConcurrentBox);
+			s.MaxConnectionsPerServer = Int(ConnectionsBox);
+			s.Split = Int(SplitBox);
+			s.MinSplitSizeMiB = Int(MinSplitBox);
+			s.MaxTries = Int(TriesBox);
+			s.RetryWaitSeconds = Int(RetryWaitBox);
+			s.ConnectTimeoutSeconds = Int(ConnectTimeoutBox);
+			s.TimeoutSeconds = Int(TimeoutBox);
+			s.DownloadLimitKiBps = Int(DownLimitBox);
+			s.UploadLimitKiBps = Int(UpLimitBox);
+			s.AltDownloadLimitKiBps = Int(AltDownLimitBox);
+			s.AltUploadLimitKiBps = Int(AltUpLimitBox);
+		});
+	}
+
+	private void UserAgent_Changed(object sender, SelectionChangedEventArgs e) {
+		if (_loading || UserAgentBox.SelectedIndex < 0) {
+			return;
+		}
+		var choice = SettingsViewModel.UserAgentChoices[UserAgentBox.SelectedIndex];
+		var custom = UserAgentBox.SelectedIndex == SettingsViewModel.UserAgentChoices.Count - 1;
+		UserAgentText.Visibility = custom ? Visibility.Visible : Visibility.Collapsed;
+		if (!custom) {
+			ViewModel.Update(s => s.UserAgent = choice.Value);
+		}
+	}
+
+	private void UserAgentText_LostFocus(object sender, RoutedEventArgs e) {
+		if (!_loading) {
+			ViewModel.Update(s => s.UserAgent = UserAgentText.Text.Trim());
+		}
+	}
+
+	private void Allocation_Changed(object sender, SelectionChangedEventArgs e) {
+		if (!_loading && AllocationBox.SelectedIndex >= 0) {
+			ViewModel.Update(s => s.FileAllocation = (FileAllocationMode)AllocationBox.SelectedIndex);
+		}
+	}
+
+	private void AltSpeed_Toggled(object sender, RoutedEventArgs e) {
+		if (!_loading) {
+			_ = ViewModel.SetAltSpeedAsync(AltSpeedSwitch.IsOn);
+		}
+	}
+
+	private void ResetDownloads_Click(object sender, RoutedEventArgs e) {
+		ViewModel.ResetDownloads();
+		LoadEngineSettings();
+	}
+
+	private void ResetSpeed_Click(object sender, RoutedEventArgs e) {
+		ViewModel.ResetSpeed();
+		LoadEngineSettings();
+	}
+
+	private async void BrowseFolder_Click(object sender, RoutedEventArgs e) {
+		var picker = new Windows.Storage.Pickers.FolderPicker();
+		picker.FileTypeFilter.Add("*");
+		WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(App.Window));
+		if (await picker.PickSingleFolderAsync() is { } folder) {
+			FolderBox.Text = folder.Path;
+			await CommitFolderAsync();
+		}
+	}
+
+	private async void Folder_LostFocus(object sender, RoutedEventArgs e) => await CommitFolderAsync();
+
+	private async Task CommitFolderAsync() {
+		var path = FolderBox.Text.Trim();
+		if (_loading || path == (ViewModel.Current.DefaultDownloadFolder ?? "")) {
+			return;
+		}
+		if (path.Length > 0 && await Task.Run(() => SettingsViewModel.CheckFolder(path)) is { } problem) {
+			FolderStatus.Text = problem;
+			return; // not saved
+		}
+		ViewModel.Update(s => s.DefaultDownloadFolder = path.Length == 0 ? null : path);
+		RestartBar.IsOpen = ViewModel.RestartRequired;
+		await RefreshFolderStatusAsync();
+	}
+
+	private async Task RefreshFolderStatusAsync() {
+		var folder = DefaultFolderResolver.ForEngine(ViewModel.Current);
+		FolderStatus.Text = await Task.Run(() => SettingsViewModel.FreeSpaceText(folder));
+	}
+
+	private async void RestartEngine_Click(object sender, RoutedEventArgs e) {
+		RestartBar.IsOpen = false;
+		await ViewModel.RestartEngineAsync();
+		RestartBar.IsOpen = ViewModel.RestartRequired;
 	}
 
 	private void Retention_Changed(object sender, SelectionChangedEventArgs e) {

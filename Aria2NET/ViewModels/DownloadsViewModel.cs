@@ -17,6 +17,7 @@ namespace Aria2NET.ViewModels;
 public sealed partial class DownloadsViewModel : ObservableObject {
 	private static readonly TimeSpan UndoWindow = TimeSpan.FromSeconds(5);
 
+	private readonly SettingsApplier _applier;
 	private readonly IAria2Engine _engine;
 	private readonly DownloadOperations _ops;
 	private readonly SettingsStore<AppSettings> _settings;
@@ -183,7 +184,8 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 
 	public bool ConfirmDeleteFiles => _settings.Load().ConfirmDeleteFiles;
 
-	public DownloadsViewModel(IAria2Engine engine, DownloadMonitor monitor, DownloadOperations ops, TorrentOperations torrents, NoticeCenter notices, SettingsStore<AppSettings> settings, HistoryService history, ILogger<DownloadsViewModel> logger) {
+	public DownloadsViewModel(IAria2Engine engine, DownloadMonitor monitor, DownloadOperations ops, TorrentOperations torrents, NoticeCenter notices, SettingsStore<AppSettings> settings, HistoryService history, SettingsApplier applier, ILogger<DownloadsViewModel> logger) {
+		_applier = applier;
 		_torrents = torrents;
 		_notices = notices;
 		_engine = engine;
@@ -206,20 +208,35 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		monitor.SnapshotReady += (_, snapshot) => _dispatcher.TryEnqueue(() => Apply(snapshot));
 		_engine.StateChanged += (_, _) => _dispatcher.TryEnqueue(RefreshEngine);
 		RefreshEngine();
+		applier.SpeedChanged += (_, _) => _dispatcher.TryEnqueue(RefreshAltSpeed);
+		RefreshAltSpeed();
 	}
 
 	// ---------------------------------------------------------------- adding
 
 	/// <summary>Folder the Add dialog starts with: last used, else the configured default, else Downloads.</summary>
-	public string InitialFolder() {
+	public string InitialFolder() => DefaultFolderResolver.ForAddDialog(_settings.Load());
+
+	// ---------------------------------------------------------------- alternative speeds
+
+	/// <summary>The alternative speed limits are in force (the toolbar toggle).</summary>
+	[ObservableProperty]
+	public partial bool AltSpeedActive { get; private set; }
+
+	[ObservableProperty]
+	public partial string AltSpeedTip { get; private set; } = "";
+
+	private void RefreshAltSpeed() {
 		var s = _settings.Load();
-		foreach (var candidate in new[] { s.LastUsedFolder, s.DefaultDownloadFolder }) {
-			if (!string.IsNullOrWhiteSpace(candidate)) {
-				return candidate;
-			}
-		}
-		return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+		AltSpeedActive = s.AltSpeedActive;
+		var (down, up) = (s.AltDownloadLimitKiBps, s.AltUploadLimitKiBps);
+		static string Limit(int kib) => kib <= 0 ? "unlimited" : $"{kib} KiB/s";
+		AltSpeedTip = AltSpeedActive
+			? "Alternative speeds are on. Click to go back to the normal limits."
+			: $"Switch to alternative speeds (download {Limit(down)}, upload {Limit(up)}). Set them in Settings.";
 	}
+
+	public Task SetAltSpeedAsync(bool active) => _applier.SetAltSpeedAsync(active);
 
 	/// <summary>Adds each link or file as its own download. Returns an error message, or null when everything was accepted.</summary>
 	public async Task<string?> AddAsync(IReadOnlyList<string> urls, string folder, string? fileName) {

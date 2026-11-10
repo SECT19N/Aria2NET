@@ -34,6 +34,21 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 
 	private Aria2RpcClient Rpc => engine.Rpc ?? throw new InvalidOperationException("The download engine is not running.");
 
+	/// <summary>The user changed the simultaneous-download setting: force-started downloads now sit on top of this value, and the live limit is set to match.</summary>
+	public async Task SetBaseConcurrentAsync(int value, CancellationToken ct = default) {
+		if (engine.Rpc is not { } rpc) {
+			return;
+		}
+		int target;
+		lock (_forceLock) {
+			if (ReferenceEquals(_forcedRpc, rpc)) {
+				_baseConcurrent = value;
+			}
+			target = value + _forced.Count;
+		}
+		await rpc.ChangeGlobalOptionAsync(new Dictionary<string, string> { [MaxConcurrent] = target.ToString(CultureInfo.InvariantCulture) }, ct);
+	}
+
 	public Task PauseAsync(IEnumerable<DownloadItem> items, CancellationToken ct = default) =>
 		Check(Rpc.PauseAsync(items.Where(DownloadCapabilities.CanPause).Select(i => i.Gid), ct));
 

@@ -1,19 +1,21 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using Aria2NET.Core.Settings;
 using Aria2NET.Core.Torrents;
 using Microsoft.Extensions.Logging;
 
 namespace Aria2NET.Core.Aria2;
 
 /// <summary>Owns a hidden aria2c child process and the RPC connection to it.</summary>
-public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria2Engine> logger) : IAria2Engine {
+public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria2Engine> logger, Func<AppSettings>? settings = null) : IAria2Engine {
 	private const int MaxStartAttempts = 3;
 	private static readonly TimeSpan ReadyTimeout = TimeSpan.FromSeconds(10);
 	private static readonly TimeSpan ExitTimeout = TimeSpan.FromSeconds(5);
 
 	private readonly AppPaths _paths = paths;
-	private readonly string _downloadDir = downloadDir;
+	private readonly Func<AppSettings>? _settings = settings;
 	private readonly ILogger<Aria2Engine> _logger = logger;
+	private string _downloadDir = downloadDir;
 	private readonly SemaphoreSlim _gate = new(1, 1);
 	private readonly HttpClient _http = new(new SocketsHttpHandler { UseProxy = false }) { Timeout = TimeSpan.FromSeconds(5) };
 
@@ -74,6 +76,11 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 
 	private async Task StartCoreAsync(CancellationToken ct) {
 		LastError = null;
+		// Read on every start so a restart picks up a changed default folder and the other options.
+		var userSettings = _settings?.Invoke();
+		if (userSettings is not null) {
+			_downloadDir = DefaultFolderResolver.ForEngine(userSettings);
+		}
 		var exe = Path.GetFullPath(_paths.Aria2Exe);
 		if (!File.Exists(exe)) {
 			Fail($"aria2c.exe not found at {exe}. Run tools/get-aria2.ps1.");
@@ -99,7 +106,8 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 
 		for (var attempt = 1; attempt <= MaxStartAttempts; attempt++) {
 			ct.ThrowIfCancellationRequested();
-			var config = Aria2Config.CreateRandom(_downloadDir, Environment.ProcessId, TrackerListService.ReadCache(_paths));
+			var config = Aria2Config.CreateRandom(_downloadDir, Environment.ProcessId, TrackerListService.ReadCache(_paths),
+				userSettings is null ? null : EngineOptions.ToGlobalOptions(userSettings));
 			File.WriteAllText(_paths.Aria2ConfFile, config.Render(_paths));
 
 			Process process;
