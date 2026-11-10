@@ -55,7 +55,9 @@ public sealed record Aria2Config(int Port, string Secret, int ParentPid, string 
 		sb.AppendLine($"dht-file-path={Path.Combine(paths.EngineDir, "dht.dat")}");
 		sb.AppendLine($"dht-file-path6={Path.Combine(paths.EngineDir, "dht6.dat")}");
 		sb.AppendLine("seed-ratio=1.0");
-		sb.AppendLine("file-allocation=falloc");
+		// Not falloc: without the "perform volume maintenance" privilege (any non-admin run) aria2 falls back to zero-filling the whole
+		// file, which blocks the engine for minutes on a big torrent. Files grow as data arrives instead.
+		sb.AppendLine("file-allocation=none");
 		if (Trackers is { Count: > 0 }) {
 			sb.AppendLine($"bt-tracker={TrackerOptionValue(Trackers)}");
 		}

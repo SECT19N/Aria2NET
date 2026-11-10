@@ -29,6 +29,7 @@ public sealed record SeedingOverride(SeedMode Mode = SeedMode.Default, double Ra
 }
 
 public enum AllocationChoice {
+	/// <summary>Whatever the engine is configured with: files grow as data arrives (<c>none</c>).</summary>
 	Default,
 	/// <summary>Files grow as data arrives (<c>none</c>); no space is reserved up front.</summary>
 	Sparse,

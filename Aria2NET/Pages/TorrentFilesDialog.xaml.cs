@@ -11,21 +11,25 @@ using WinRT.Interop;
 namespace Aria2NET.Pages;
 
 public sealed partial class TorrentFilesDialog : ContentDialog {
-	private readonly TorrentPrompt _prompt;
+	private readonly TorrentFileTree _tree;
+	private List<TorrentTreeItem> _roots = [];
 	private bool _ready;
 
-	public ObservableCollection<TorrentFileChoice> Choices { get; }
+	/// <summary>The rows showing right now, in order.</summary>
+	public ObservableCollection<TorrentTreeItem> Rows { get; } = [];
 
 	public TorrentFilesDialog(TorrentPrompt prompt) {
-		_prompt = prompt;
-		Choices = new(prompt.Files.Select(f => new TorrentFileChoice(f.Index, f.Path, f.Length)));
+		_tree = TorrentFileTree.Build(prompt.Files);
 		InitializeComponent();
 
 		NameText.Text = prompt.Name;
+		ToolTipService.SetToolTip(NameText, prompt.Name);
+		TotalText.Text = $"{_tree.TotalCount} {(_tree.TotalCount == 1 ? "file" : "files")} · {ByteFormat.Size(_tree.TotalBytes)}";
 		if (prompt.Note is { Length: > 0 } note) {
-			NoteText.Text = note;
-			NoteText.Visibility = Visibility.Visible;
+			NoteBar.Message = note;
+			NoteBar.IsOpen = true;
 		}
+		BuildTree();
 		FolderBox.Text = prompt.Folder;
 		FolderBox.IsEnabled = BrowseButton.IsEnabled = prompt.FolderEditable;
 		if (!prompt.FolderEditable) {
@@ -38,7 +42,7 @@ public sealed partial class TorrentFilesDialog : ContentDialog {
 	/// <summary>What the user chose. No files means the dialog was cancelled.</summary>
 	public TorrentChoice Choice => new(
 		FolderBox.Text.Trim(),
-		Choices.Where(c => c.IsSelected).Select(c => c.Index).ToList(),
+		_tree.SelectedIndexes(),
 		SeedBox.SelectedIndex switch {
 			1 => new SeedingOverride(SeedMode.Forever),
 			2 => new SeedingOverride(SeedMode.Ratio, double.IsNaN(RatioBox.Value) ? 1.0 : RatioBox.Value),
@@ -46,8 +50,7 @@ public sealed partial class TorrentFilesDialog : ContentDialog {
 			_ => SeedingOverride.Default,
 		},
 		AllocationBox.SelectedIndex switch {
-			1 => AllocationChoice.Sparse,
-			2 => AllocationChoice.Full,
+			1 => AllocationChoice.Full,
 			_ => AllocationChoice.Default,
 		});
 
@@ -55,9 +58,9 @@ public sealed partial class TorrentFilesDialog : ContentDialog {
 		if (!_ready) {
 			return;
 		}
-		var chosen = Choices.Where(c => c.IsSelected).ToList();
-		var bytes = chosen.Sum(c => c.Length);
-		SummaryText.Text = $"{chosen.Count} of {Choices.Count} selected · {ByteFormat.Size(bytes)}";
+		var count = _tree.SelectedCount;
+		var bytes = _tree.SelectedBytes;
+		SummaryText.Text = $"{count} of {_tree.TotalCount} selected · {ByteFormat.Size(bytes)}";
 
 		var folder = FolderBox.Text.Trim();
 		var folderOk = folder.Length > 0 && Path.IsPathFullyQualified(folder);
@@ -70,10 +73,69 @@ public sealed partial class TorrentFilesDialog : ContentDialog {
 		else {
 			SpaceText.Text = "";
 		}
-		IsPrimaryButtonEnabled = chosen.Count > 0 && folderOk;
+		IsPrimaryButtonEnabled = count > 0 && folderOk;
 	}
 
-	private void Choice_Changed(object sender, RoutedEventArgs e) => Refresh();
+	// ---------------------------------------------------------------- the tree
+
+	private void BuildTree() {
+		_roots = _tree.Roots.Select(r => new TorrentTreeItem(r, 0, Refresh, OnExpandedChanged)).ToList();
+		if (_roots is [{ Children.Count: > 0 } only]) {
+			only.SetExpanded(true); // a torrent that is just one folder: show what is in it
+		}
+		RebuildRows();
+		if (_tree.TotalCount == 1) {
+			// One file: no folders to open and nothing to pick, so drop the tree chrome.
+			Toolbar.Visibility = ColumnHeader.Visibility = Visibility.Collapsed;
+			FileList.Height = 48;
+		}
+		else {
+			// Use the room the window has instead of a fixed small list.
+			var window = (App.Window.Content as FrameworkElement)?.XamlRoot?.Size.Height ?? 800;
+			FileList.Height = Math.Clamp(window - 520, 220, 520);
+		}
+	}
+
+	/// <summary>The list shows only what is visible: every folder row, and the rows under the folders that are open.</summary>
+	private void RebuildRows() {
+		Rows.Clear();
+		foreach (var root in _roots) {
+			Rows.Add(root);
+			foreach (var below in root.VisibleDescendants()) {
+				Rows.Add(below);
+			}
+		}
+	}
+
+	// Opening or closing one folder changes only the rows under it, so the list keeps its scroll position.
+	private void OnExpandedChanged(TorrentTreeItem item) {
+		var at = Rows.IndexOf(item);
+		if (at < 0) {
+			return;
+		}
+		if (item.IsExpanded) {
+			var insertAt = at + 1;
+			foreach (var below in item.VisibleDescendants()) {
+				Rows.Insert(insertAt++, below);
+			}
+		}
+		else {
+			while (at + 1 < Rows.Count && Rows[at + 1].Depth > item.Depth) {
+				Rows.RemoveAt(at + 1);
+			}
+		}
+	}
+
+	private void ExpandAll_Click(object sender, RoutedEventArgs e) => SetAllExpanded(true);
+
+	private void CollapseAll_Click(object sender, RoutedEventArgs e) => SetAllExpanded(false);
+
+	private void SetAllExpanded(bool value) {
+		foreach (var root in _roots) {
+			root.SetExpandedAll(value);
+		}
+		RebuildRows();
+	}
 
 	private void FolderBox_TextChanged(object sender, TextChangedEventArgs e) => Refresh();
 
@@ -82,9 +144,7 @@ public sealed partial class TorrentFilesDialog : ContentDialog {
 	private void SelectNone_Click(object sender, RoutedEventArgs e) => SetAll(false);
 
 	private void SetAll(bool value) {
-		foreach (var choice in Choices) {
-			choice.IsSelected = value;
-		}
+		_tree.SetAll(value);
 		Refresh();
 	}
 

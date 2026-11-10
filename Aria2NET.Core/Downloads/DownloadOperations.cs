@@ -69,7 +69,8 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 
 		var problems = new List<string>();
 		foreach (var (item, plan) in plans) {
-			await DeleteFilesAsync(item, plan, problems, ct);
+			// Off the UI thread: recycling or deleting a large (pre-allocated) torrent takes long enough to freeze the window.
+			await Task.Run(() => DeleteFilesAsync(item, plan, problems, ct), ct);
 		}
 		return problems;
 	}
@@ -82,7 +83,7 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 				return plan;
 			}
 		}
-		catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException) {
+		catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested) {
 			logger.LogDebug(ex, "No file list for {Gid}; using the first file only", item.Gid);
 		}
 		return string.IsNullOrEmpty(item.Dir) || string.IsNullOrEmpty(item.Path) ? DownloadFilePlan.Empty : DownloadFilePlan.Build(item.Dir, [item.Path], null);
