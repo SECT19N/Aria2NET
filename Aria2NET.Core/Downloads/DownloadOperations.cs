@@ -69,7 +69,8 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 
 		var problems = new List<string>();
 		foreach (var (item, plan) in plans) {
-			await DeleteFilesAsync(item, plan, problems, ct);
+			// Off the UI thread: recycling or deleting a large (pre-allocated) torrent takes long enough to freeze the window.
+			await Task.Run(() => DeleteFilesAsync(item, plan, problems, ct), ct);
 		}
 		return problems;
 	}
