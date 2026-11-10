@@ -109,9 +109,8 @@
                     <ComboBoxItem Content="Don't seed" />
                 </ComboBox>
                 <ComboBox x:Name="AllocationBox" Grid.Column="1" Header="Disk space" HorizontalAlignment="Stretch" SelectedIndex="0">
-                    <ComboBoxItem Content="Reserve the size up front (default)" />
-                    <ComboBoxItem Content="Grow files as data arrives" />
-                    <ComboBoxItem Content="Reserve the size up front, always" />
+                    <ComboBoxItem Content="Grow files as data arrives (default)" />
+                    <ComboBoxItem Content="Reserve the full size first (slow without admin rights)" />
                 </ComboBox>
             </Grid>
             <NumberBox x:Name="RatioBox" Header="Stop seeding at ratio" Minimum="0.1" Maximum="100" Value="2" SmallChange="0.5"

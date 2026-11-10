@@ -20,7 +20,7 @@ public class TorrentConfigTests {
 		Assert.Contains("enable-dht=true", text);
 		Assert.Contains("bt-enable-lpd=true", text);
 		Assert.Contains("seed-ratio=1.0", text);
-		Assert.Contains("file-allocation=falloc", text);
+		Assert.Contains("file-allocation=none", text);
 		Assert.Contains(@"dht-file-path=C:\data\engine\dht.dat", text);
 		Assert.Contains(@"dht-file-path6=C:\data\engine\dht6.dat", text);
 		Assert.DoesNotContain("bt-tracker", text);
@@ -200,7 +200,7 @@ public class TorrentConfigIntegrationTests {
 		Assert.Equal("true", options["bt-save-metadata"]);
 		Assert.Equal("true", options["bt-load-saved-metadata"]);
 		Assert.Equal("true", options["bt-enable-lpd"]);
-		Assert.Equal("falloc", options["file-allocation"]);
+		Assert.Equal("none", options["file-allocation"]);
 		Assert.Equal("udp://a.example:1/announce,https://b.example/announce", options["bt-tracker"]);
 
 		await engine.Rpc.ChangeGlobalOptionAsync(new Dictionary<string, string> { ["bt-tracker"] = "udp://c.example:1/announce" });

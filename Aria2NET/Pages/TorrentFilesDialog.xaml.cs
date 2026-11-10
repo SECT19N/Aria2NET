@@ -50,8 +50,7 @@ public sealed partial class TorrentFilesDialog : ContentDialog {
 			_ => SeedingOverride.Default,
 		},
 		AllocationBox.SelectedIndex switch {
-			1 => AllocationChoice.Sparse,
-			2 => AllocationChoice.Full,
+			1 => AllocationChoice.Full,
 			_ => AllocationChoice.Default,
 		});
 
