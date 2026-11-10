@@ -486,7 +486,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		try {
 			await _ops.RemoveAsync(pending, deleteFiles: false);
 		}
-		catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException or InvalidOperationException) {
+		catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException or InvalidOperationException or TaskCanceledException) {
 			_logger.LogWarning(ex, "Removal failed");
 			foreach (var item in pending) {
 				_hidden.Remove(item.Gid);
@@ -682,9 +682,10 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		try {
 			await action();
 		}
-		catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException or InvalidOperationException or ArgumentException) {
+		// TaskCanceledException is the 5 s RPC timeout: aria2 does not answer while it zero-fills a big file.
+		catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException or InvalidOperationException or ArgumentException or TaskCanceledException) {
 			_logger.LogWarning(ex, "Download action failed");
-			ShowMessage(ex.Message);
+			ShowMessage(ex is TaskCanceledException ? "aria2 is busy preparing files and did not answer in time. Try again in a moment." : ex.Message);
 		}
 	}
 

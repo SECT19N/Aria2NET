@@ -52,30 +52,36 @@
             <Border BorderThickness="1" CornerRadius="4"
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                     Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                <TreeView x:Name="FileTree" SelectionMode="None" CanDragItems="False" AllowDrop="False" Height="320"
+                <ListView x:Name="FileList" ItemsSource="{x:Bind Rows}" SelectionMode="None" Height="320"
                           AutomationProperties.Name="Files in this torrent">
-                    <TreeView.ItemTemplate>
+                    <ListView.ItemTemplate>
                         <DataTemplate x:DataType="vm:TorrentTreeItem">
-                            <Grid ColumnSpacing="8" Height="36">
+                            <Grid Margin="{x:Bind Indent}" ColumnSpacing="6" Height="32">
                                 <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="24" />
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="96" />
                                 </Grid.ColumnDefinitions>
-                                <CheckBox MinWidth="0" Padding="0" VerticalAlignment="Center" IsThreeState="True"
+                                <Button Width="24" Height="24" Padding="0" BorderThickness="0" Background="Transparent"
+                                        Visibility="{x:Bind ChevronVisibility}" Click="{x:Bind ToggleExpand}"
+                                        AutomationProperties.Name="Expand or collapse">
+                                    <FontIcon FontSize="10" Glyph="{x:Bind ChevronGlyph, Mode=OneWay}" />
+                                </Button>
+                                <CheckBox Grid.Column="1" MinWidth="0" Padding="0" VerticalAlignment="Center" IsThreeState="True"
                                           IsChecked="{x:Bind IsChecked, Mode=OneWay}" Click="{x:Bind Toggle}"
                                           AutomationProperties.Name="{x:Bind Name}" />
-                                <FontIcon Grid.Column="1" FontSize="16" Opacity="0.75" VerticalAlignment="Center"
+                                <FontIcon Grid.Column="2" FontSize="16" Opacity="0.75" VerticalAlignment="Center"
                                           Glyph="{x:Bind Glyph}" />
-                                <TextBlock Grid.Column="2" Text="{x:Bind Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                <TextBlock Grid.Column="3" Text="{x:Bind Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                            ToolTipService.ToolTip="{x:Bind Name}" />
-                                <TextBlock Grid.Column="3" Text="{x:Bind SizeText}" Opacity="0.7"
+                                <TextBlock Grid.Column="4" Text="{x:Bind SizeText}" Opacity="0.7"
                                            HorizontalAlignment="Right" VerticalAlignment="Center" />
                             </Grid>
                         </DataTemplate>
-                    </TreeView.ItemTemplate>
-                </TreeView>
+                    </ListView.ItemTemplate>
+                </ListView>
             </Border>
         </StackPanel>
 

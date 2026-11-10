@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using Aria2NET.Core.Downloads;
 using Aria2NET.Core.Torrents;
 using Aria2NET.ViewModels;
@@ -11,7 +12,11 @@ namespace Aria2NET.Pages;
 
 public sealed partial class TorrentFilesDialog : ContentDialog {
 	private readonly TorrentFileTree _tree;
+	private List<TorrentTreeItem> _roots = [];
 	private bool _ready;
+
+	/// <summary>The rows showing right now, in order.</summary>
+	public ObservableCollection<TorrentTreeItem> Rows { get; } = [];
 
 	public TorrentFilesDialog(TorrentPrompt prompt) {
 		_tree = TorrentFileTree.Build(prompt.Files);
@@ -75,42 +80,63 @@ public sealed partial class TorrentFilesDialog : ContentDialog {
 	// ---------------------------------------------------------------- the tree
 
 	private void BuildTree() {
-		AddNodes(FileTree.RootNodes, _tree.Roots.Select(r => new TorrentTreeItem(r, Refresh)).ToList());
-		if (_tree.Roots is [{ IsFolder: true }] && FileTree.RootNodes.Count == 1) {
-			FileTree.RootNodes[0].IsExpanded = true; // a torrent that is just one folder: show what is in it
+		_roots = _tree.Roots.Select(r => new TorrentTreeItem(r, 0, Refresh, OnExpandedChanged)).ToList();
+		if (_roots is [{ Children.Count: > 0 } only]) {
+			only.SetExpanded(true); // a torrent that is just one folder: show what is in it
 		}
+		RebuildRows();
 		if (_tree.TotalCount == 1) {
 			// One file: no folders to open and nothing to pick, so drop the tree chrome.
 			Toolbar.Visibility = ColumnHeader.Visibility = Visibility.Collapsed;
-			FileTree.Height = 48;
+			FileList.Height = 48;
 		}
 		else {
 			// Use the room the window has instead of a fixed small list.
 			var window = (App.Window.Content as FrameworkElement)?.XamlRoot?.Size.Height ?? 800;
-			FileTree.Height = Math.Clamp(window - 520, 220, 520);
+			FileList.Height = Math.Clamp(window - 520, 220, 520);
 		}
 	}
 
-	private static void AddNodes(IList<TreeViewNode> into, IEnumerable<TorrentTreeItem> items) {
-		foreach (var item in items) {
-			var node = new TreeViewNode { Content = item };
-			AddNodes(node.Children, item.Children);
-			into.Add(node);
-		}
-	}
-
-	private static void SetExpanded(IEnumerable<TreeViewNode> nodes, bool expanded) {
-		foreach (var node in nodes) {
-			if (node.Children.Count > 0) {
-				node.IsExpanded = expanded;
-				SetExpanded(node.Children, expanded);
+	/// <summary>The list shows only what is visible: every folder row, and the rows under the folders that are open.</summary>
+	private void RebuildRows() {
+		Rows.Clear();
+		foreach (var root in _roots) {
+			Rows.Add(root);
+			foreach (var below in root.VisibleDescendants()) {
+				Rows.Add(below);
 			}
 		}
 	}
 
-	private void ExpandAll_Click(object sender, RoutedEventArgs e) => SetExpanded(FileTree.RootNodes, true);
+	// Opening or closing one folder changes only the rows under it, so the list keeps its scroll position.
+	private void OnExpandedChanged(TorrentTreeItem item) {
+		var at = Rows.IndexOf(item);
+		if (at < 0) {
+			return;
+		}
+		if (item.IsExpanded) {
+			var insertAt = at + 1;
+			foreach (var below in item.VisibleDescendants()) {
+				Rows.Insert(insertAt++, below);
+			}
+		}
+		else {
+			while (at + 1 < Rows.Count && Rows[at + 1].Depth > item.Depth) {
+				Rows.RemoveAt(at + 1);
+			}
+		}
+	}
 
-	private void CollapseAll_Click(object sender, RoutedEventArgs e) => SetExpanded(FileTree.RootNodes, false);
+	private void ExpandAll_Click(object sender, RoutedEventArgs e) => SetAllExpanded(true);
+
+	private void CollapseAll_Click(object sender, RoutedEventArgs e) => SetAllExpanded(false);
+
+	private void SetAllExpanded(bool value) {
+		foreach (var root in _roots) {
+			root.SetExpandedAll(value);
+		}
+		RebuildRows();
+	}
 
 	private void FolderBox_TextChanged(object sender, TextChangedEventArgs e) => Refresh();
 
