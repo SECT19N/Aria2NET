@@ -27,7 +27,7 @@ A WinUI 3 download manager (IDM-style) on top of aria2c. aria2 does the transfer
 | 0.6 | Lives in background | Tray, notifications, start with Windows |
 | 0.7 | Settings | Speed limits, folders, connections, proxy |
 | **0.8 = MVP** | Daily-usable | Use it instead of the browser's downloader for pasted links and torrents |
-| 0.9 | Hardening | Bug fixing, tests, polish, installer |
+| 0.9 | Hardening | Bug fixing, tests, polish, installer and auto-update |
 | **1.0** | Full feature release | Everything below the 1.0 section |
 | 1.x | Post-1.0 polish | Smaller extras |
 | **2.0** | Browser capture | Chrome/Edge/Firefox send downloads to Aria2NET |
@@ -141,7 +141,7 @@ A WinUI 3 download manager (IDM-style) on top of aria2c. aria2 does the transfer
 - Pre-allocation choice for torrents (sparse vs full) shown with free-space check.
 - Free disk space check before starting any download, with a warning if the file will not fit.
 - Duplicate torrent detection by info hash (open the existing one instead of adding twice).
-- Torrent file association via the installer / first-run prompt.
+- Torrent file association via the first-run prompt (and the installer once Velopack lands in 0.9).
 - Display of DHT status (node count) and connectability (port open or not) in the footer.
 - Verify / recheck existing data ("I already have the files, check them") using `check-integrity`.
 - Sequential-ish mode for streaming isn't supported by aria2 — document it as a limitation.
@@ -196,7 +196,8 @@ Nothing new except stabilization. MVP definition: **you can install it, paste li
 - Crash handling: global exception logging, "Copy diagnostics" button.
 - Accessibility pass (keyboard nav, screen reader names, high contrast).
 - DPI/ARM64 checks (x64 aria2 runs under emulation on ARM).
-- Installer (Inno Setup) plus a portable zip.
+- Installer and auto-update with [Velopack](https://velopack.io), using GitHub Releases as the update feed: per-user `Setup.exe` (no admin), delta updates, `VelopackApp.Build().Run()` first in `Program.cs`, an update service in the app layer (Core stays UI-free), an "Updates" group in Settings (automatic check, check now, stable or pre-release channel), and "restart to update" only after downloads are paused and the engine is stopped cleanly. `release.yml` switches from zipping to `vpk pack` / `vpk upload github` for `win-x64` and `win-arm64` (with `vpk download github` first so deltas can be built). The plain zip stays as the portable download; the update check does nothing when the app is not installed (`IsInstalled` is false, e.g. `dotnet run` or the zip). Spike first: pack the current build locally and check that install and start work with the custom WinUI entry point.
+- Telemetry-free "what's new" screen after an update (Velopack's post-update hook).
 - README with screenshots, install guide, user docs.
 - Soak test: 100+ simultaneous downloads, 10 GB+ files, 1000+ history rows, a week of uptime.
 - Memory/handle leak check (WinUI list virtualization, event handler unsubscription).
@@ -252,7 +253,7 @@ Everything that makes it a complete IDM-class manager without a browser extensio
 
 **Polish**
 - Backup/restore all settings, categories, queues.
-- Update checker (app + aria2 binary).
+- Update checker for the aria2 binary (the app itself updates through Velopack, see 0.9).
 - Localization infrastructure, first extra languages.
 - Onboarding (TeachingTips), keyboard shortcut reference, in-app help.
 
@@ -295,7 +296,6 @@ Everything that makes it a complete IDM-class manager without a browser extensio
 - Tray-only "quick add" flyout (paste, press Enter).
 - Download speed test (check your line vs server).
 - Windows Search / jump to file from within the app.
-- Telemetry-free "what's new" screen after updates.
 - Voice/Narrator-friendly status announcements for completions.
 
 ---

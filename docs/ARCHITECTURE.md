@@ -79,7 +79,7 @@ Facts verified against the real aria2c 1.37.0 by `TorrentSpikeTests` (a second a
 - aria2 itself: `<app folder>\tools\aria2\aria2c.exe`.
 
 ## Why unpackaged
-No MSIX means no registry/file virtualization, easy native messaging for the browser extension (2.0), easy launching of bundled tools, and a plain installer or zip.
+No MSIX means no registry/file virtualization, easy native messaging for the browser extension (2.0), easy launching of bundled tools, and a Velopack installer (planned for 0.9) or a plain zip.
 
 ## Getting started
 ```

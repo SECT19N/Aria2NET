@@ -29,7 +29,7 @@ Output goes to `artifacts/` (git-ignored). `win-arm64` builds on an x64 machine 
 
 ## What the zips contain / known limits
 - `Aria2NET.exe` plus runtime files, and `tools\aria2\aria2c.exe`. The arm64 zip ships the **x64** aria2 build (there is no official arm64 build); Windows runs it under emulation.
-- The exe is **not code signed**, so Windows SmartScreen may warn on first run. The SHA-256 shown next to each asset on the release page can be compared with `Get-FileHash`. Free signing through the SignPath Foundation OSS program and a winget manifest are planned for 0.9 (see `ROADMAP.md`).
+- The exe is **not code signed**, so Windows SmartScreen may warn on first run. The SHA-256 shown next to each asset on the release page can be compared with `Get-FileHash`. Free signing through the SignPath Foundation OSS program, a winget manifest, and a Velopack installer with auto-update from GitHub Releases are planned for 0.9 (see `ROADMAP.md`); the release workflow will then publish Velopack packages next to the zips.
 - `dotnet publish` skips the compiled XAML and the app's resource index for unpackaged WinUI apps; `Aria2NET.csproj` has a target that adds them and `package.ps1` fails if they are missing. The `package` job in `build.yml` runs it, but only on a manual run (after build + test pass), so run that workflow by hand before merging anything that touches packaging.
 
 ## Other automation
