@@ -14,10 +14,10 @@ namespace Aria2NET.ViewModels;
 
 /// <summary>The History page: everything downloaded so far, searchable and filterable. Must be created on the UI thread.</summary>
 public sealed partial class HistoryViewModel : ObservableObject {
-	private static readonly string[] StatusNames = ["All statuses", "Completed", "Failed", "Removed", "Interrupted", "In progress"];
-	private static readonly string[] SortNames = ["Date added", "Date finished", "Name", "Size", "Status"];
-	private const string AllSites = "All sites";
-	private const string AllTypes = "All types";
+	private static readonly string[] StatusNames = [Loc.S("History_AllStatuses", "All statuses"), Loc.S("Status_Completed", "Completed"), Loc.S("Status_Failed", "Failed"), Loc.S("Status_Removed", "Removed"), Loc.S("Status_Interrupted", "Interrupted"), Loc.S("History_InProgress", "In progress")];
+	private static readonly string[] SortNames = [Loc.S("History_SortAdded", "Date added"), Loc.S("History_SortFinished", "Date finished"), Loc.S("Downloads_ColName", "Name"), Loc.S("Downloads_ColSize", "Size"), Loc.S("Downloads_ColStatus", "Status")];
+	private static readonly string AllSites = Loc.S("History_AllSites", "All sites");
+	private static readonly string AllTypes = Loc.S("History_AllTypes", "All types");
 
 	private readonly HistoryService _history;
 	private readonly DownloadOperations _operations;
@@ -70,7 +70,7 @@ public sealed partial class HistoryViewModel : ObservableObject {
 	[NotifyPropertyChangedFor(nameof(DirectionText))]
 	public partial bool Descending { get; set; } = true;
 
-	public string DirectionText => Descending ? "Descending" : "Ascending";
+	public string DirectionText => Descending ? Loc.S("History_Descending", "Descending") : Loc.S("History_Ascending", "Ascending");
 
 	[ObservableProperty]
 	public partial DateTimeOffset? FromDate { get; set; }
@@ -147,8 +147,8 @@ public sealed partial class HistoryViewModel : ObservableObject {
 	}
 
 	private HistoryQuery BuildQuery(int limit = 2000) {
-		var from = FromDate is { } f ? f.LocalDateTime.Date.ToUniversalTime() : (DateTime?)null;
-		var to = ToDate is { } t ? t.LocalDateTime.Date.AddDays(1).ToUniversalTime() : (DateTime?)null;
+		var from = FromDate is { } f ? f.LocalDateTime.Date.ToUniversalTime() : (DateTime?) null;
+		var to = ToDate is { } t ? t.LocalDateTime.Date.AddDays(1).ToUniversalTime() : (DateTime?) null;
 		return new HistoryQuery(
 			Search: SearchText,
 			Statuses: StatusIndex switch {
@@ -163,7 +163,7 @@ public sealed partial class HistoryViewModel : ObservableObject {
 			ToUtc: to,
 			Host: SiteIndex > 0 && SiteIndex < Sites.Count ? Sites[SiteIndex] : null,
 			Category: TypeIndex > 0 ? Types[TypeIndex] : null,
-			Sort: (HistorySort)Math.Clamp(SortIndex, 0, SortNames.Length - 1),
+			Sort: (HistorySort) Math.Clamp(SortIndex, 0, SortNames.Length - 1),
 			Descending: Descending,
 			Limit: limit);
 	}
@@ -200,14 +200,13 @@ public sealed partial class HistoryViewModel : ObservableObject {
 			HasRows = Rows.Count > 0;
 			OnPropertyChanged(nameof(IsFilteredEmpty));
 			OnPropertyChanged(nameof(IsHistoryEmpty));
-			CountText = entries.Count == total ? $"{total} {(total == 1 ? "download" : "downloads")}" : $"{entries.Count} of {total} downloads";
+			CountText = entries.Count == total ? (total == 1 ? Loc.S("History_CountOne", "1 download") : Loc.F("History_CountMany", "{0} downloads", total)) : Loc.F("History_CountOf", "{0} of {1} downloads", entries.Count, total);
 			_selection = [];
 			RefreshCapabilities();
 			_ = MarkMissingFilesAsync(Rows.ToList(), version);
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			_logger.LogError(ex, "Loading history failed");
-			ShowMessage("History could not be read. Details are in the log file.");
+			ShowMessage(Loc.S("History_ReadFailed", "History could not be read. Details are in the log file."));
 		}
 	}
 
@@ -262,8 +261,7 @@ public sealed partial class HistoryViewModel : ObservableObject {
 			try {
 				await _operations.DownloadAgainAsync(row.Entry.Uri!, target);
 				started++;
-			}
-			catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException or InvalidOperationException) {
+			} catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException or InvalidOperationException) {
 				_logger.LogWarning(ex, "Download again failed for {Uri}", row.Entry.Uri);
 				problems.Add($"{row.Name}: {ex.Message}");
 			}
@@ -300,10 +298,9 @@ public sealed partial class HistoryViewModel : ObservableObject {
 			var entries = await Task.Run(() => store.Query(BuildQuery(limit: 100_000)));
 			// Excel only recognises UTF-8 CSV with a byte-order mark.
 			await File.WriteAllTextAsync(path, json ? HistoryExport.ToJson(entries) : HistoryExport.ToCsv(entries), new UTF8Encoding(encoderShouldEmitUTF8Identifier: !json));
-		}
-		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
+		} catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
 			_logger.LogWarning(ex, "Export failed");
-			ShowMessage($"Could not write the file: {ex.Message}");
+			ShowMessage(Loc.F("History_WriteFailed", "Could not write the file: {0}", ex.Message));
 		}
 	}
 
@@ -333,7 +330,7 @@ public sealed partial class HistoryViewModel : ObservableObject {
 	private void ReportOpen(bool opened, string target, string error) {
 		if (!opened) {
 			_logger.LogWarning("Could not open {Target}: {Error}", target, error);
-			ShowMessage($"Could not open it: {error}");
+			ShowMessage(Loc.F("Downloads_OpenFailed", "Could not open it: {0}", error));
 		}
 	}
 

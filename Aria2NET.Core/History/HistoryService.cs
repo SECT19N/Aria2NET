@@ -25,8 +25,7 @@ public sealed class HistoryService {
 			}
 			Store = new HistoryStore(database, logger);
 			Recorder = new HistoryRecorder(Store, logger);
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			logger.LogError(ex, "History database could not be opened; history is off");
 			Problem = "The history database could not be opened, so history is switched off. Details are in the log file.";
 		}

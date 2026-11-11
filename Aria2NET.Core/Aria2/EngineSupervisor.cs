@@ -102,14 +102,11 @@ public sealed class EngineSupervisor : IDisposable {
 					return;
 				}
 			}
-		}
-		catch (OperationCanceledException) {
+		} catch (OperationCanceledException) {
 			// Shutting down.
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			_logger?.LogError(ex, "Automatic restart failed");
-		}
-		finally {
+		} finally {
 			lock (_gate) {
 				_busy = false;
 			}

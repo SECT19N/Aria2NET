@@ -17,6 +17,13 @@ public sealed class TrackerListService(HttpClient http, AppPaths paths, ILogger<
 	private static readonly TimeSpan MaxAge = TimeSpan.FromDays(7);
 	private static readonly string[] Schemes = ["http", "https", "udp"];
 
+	/// <summary>The address to fetch the list from for these settings, or null when extra trackers are switched off (or the custom address is unusable).</summary>
+	public static string? SourceUrl(Settings.AppSettings s) => s.Trackers switch {
+		Settings.TrackerSource.Off => null,
+		Settings.TrackerSource.Custom => Settings.EngineOptions.ValidateTorrent(s) is null ? s.TrackerUrl!.Trim() : null,
+		_ => DefaultUrl,
+	};
+
 	/// <summary>Keeps tracker addresses only. The result is written into aria2's config file, so a line with a comma, space or newline could smuggle in another option and is rejected.</summary>
 	public static IReadOnlyList<string> Parse(string? text) {
 		var result = new List<string>();
@@ -44,8 +51,7 @@ public sealed class TrackerListService(HttpClient http, AppPaths paths, ILogger<
 	public static IReadOnlyList<string> ReadCache(AppPaths paths) {
 		try {
 			return File.Exists(paths.TrackerListFile) ? Parse(File.ReadAllText(paths.TrackerListFile)) : [];
-		}
-		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
+		} catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
 			return [];
 		}
 	}
@@ -54,8 +60,7 @@ public sealed class TrackerListService(HttpClient http, AppPaths paths, ILogger<
 	public bool IsStale(DateTime nowUtc) {
 		try {
 			return !File.Exists(paths.TrackerListFile) || nowUtc - File.GetLastWriteTimeUtc(paths.TrackerListFile) > MaxAge;
-		}
-		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
+		} catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
 			return true;
 		}
 	}
@@ -84,7 +89,7 @@ public sealed class TrackerListService(HttpClient http, AppPaths paths, ILogger<
 				}
 			}
 
-			var list = Parse(System.Text.Encoding.UTF8.GetString(buffer.GetBuffer(), 0, (int)buffer.Length));
+			var list = Parse(System.Text.Encoding.UTF8.GetString(buffer.GetBuffer(), 0, (int) buffer.Length));
 			if (list.Count == 0) {
 				logger?.LogWarning("Tracker list at {Url} had no usable trackers; keeping the cached one", url);
 				return null;
@@ -95,8 +100,7 @@ public sealed class TrackerListService(HttpClient http, AppPaths paths, ILogger<
 			File.Move(temp, paths.TrackerListFile, overwrite: true);
 			logger?.LogInformation("Tracker list refreshed: {Count} trackers", list.Count);
 			return list;
-		}
-		catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or UnauthorizedAccessException && !ct.IsCancellationRequested) {
+		} catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or UnauthorizedAccessException && !ct.IsCancellationRequested) {
 			logger?.LogWarning("Could not refresh the tracker list: {Message}", ex.Message);
 			return null;
 		}

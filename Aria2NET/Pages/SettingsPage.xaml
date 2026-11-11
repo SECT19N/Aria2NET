@@ -4,66 +4,188 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <StackPanel Padding="24" Spacing="12">
-        <TextBlock Text="Settings" Style="{StaticResource TitleTextBlockStyle}" />
-        <TextBlock Text="Download, speed, network and torrent settings arrive in version 0.7." Opacity="0.7" />
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <StackPanel x:Name="PageRoot" Padding="24" Spacing="12">
+        <TextBlock x:Uid="SettingsPage_TextBlock1" Text="Settings" Style="{StaticResource TitleTextBlockStyle}"/>
+        <Grid ColumnSpacing="12" MaxWidth="640" HorizontalAlignment="Left">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <AutoSuggestBox x:Uid="SettingsPage_SearchBox" x:Name="SearchBox" PlaceholderText="Search settings" QueryIcon="Find" TextChanged="Search_TextChanged"
+                            AutomationProperties.Name="Search settings"/>
+            <ComboBox x:Uid="SettingsPage_JumpBox" x:Name="JumpBox" Grid.Column="1" PlaceholderText="Jump to…" MinWidth="180" SelectionChanged="Jump_Changed"
+                      AutomationProperties.Name="Jump to a section"/>
+        </Grid>
+        <TextBlock x:Uid="SettingsPage_SearchEmpty" x:Name="SearchEmpty" Text="No settings match your search." Opacity="0.7" Visibility="Collapsed"/>
+        <InfoBar x:Uid="SettingsPage_RestartBar" x:Name="RestartBar" IsOpen="False" IsClosable="False" Severity="Informational"
+                 Title="Restart the engine to apply" Message="Some changes (default folder, ports and DHT, certificate check, IPv6, hand-typed options) apply when the download engine restarts. Downloads in progress resume.">
+            <InfoBar.ActionButton>
+                <Button x:Uid="SettingsPage_Button1" Content="Restart engine" Click="RestartEngine_Click"/>
+            </InfoBar.ActionButton>
+        </InfoBar>
 
-        <TextBlock Text="Downloads" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" />
-        <CheckBox Content="Ask before deleting files (Remove and delete file)"
-                  x:Name="ConfirmDeleteBox" Click="ConfirmDelete_Click" />
-
-        <TextBlock Text="Background" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" />
-        <CheckBox x:Name="CloseToTrayBox" Content="Closing the window keeps Aria2NET running in the tray" Click="CloseToTray_Click" />
-        <CheckBox x:Name="MinimizeToTrayBox" Content="Minimizing the window hides it to the tray" Click="MinimizeToTray_Click" />
-        <CheckBox x:Name="ConfirmExitBox" Content="Ask before exiting while downloads are running" Click="ConfirmExit_Click" />
-        <CheckBox x:Name="StartWithWindowsBox" Content="Start Aria2NET when I sign in to Windows" Click="StartWithWindows_Click" />
-        <CheckBox x:Name="StartMinimizedBox" Content="Start in the tray, without opening the window" Margin="28,0,0,0" Click="StartMinimized_Click" />
-        <CheckBox x:Name="StartPausedBox" Content="Start with all downloads paused" Click="StartPaused_Click" />
-
-        <TextBlock Text="Power" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" />
-        <CheckBox x:Name="PreventSleepBox" Content="Keep Windows awake while downloading" Click="PreventSleep_Click" />
-        <CheckBox x:Name="PauseBatteryBox" Content="Pause downloads while on battery power" Click="PauseBattery_Click" />
-        <CheckBox x:Name="PauseMeteredBox" Content="Pause downloads on a metered connection" Click="PauseMetered_Click" />
-        <StackPanel Orientation="Horizontal" Spacing="8">
-            <TextBlock Text="When downloads finish" VerticalAlignment="Center" />
-            <ComboBox x:Name="FinishBox" MinWidth="160" SelectionChanged="Finish_Changed" AutomationProperties.Name="When downloads finish" />
+        <TextBlock x:Uid="SettingsPage_TextBlock2" Text="Appearance" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" Tag="section"/>
+        <StackPanel Orientation="Horizontal" Spacing="16">
+            <ComboBox x:Uid="SettingsPage_ThemeBox" x:Name="ThemeBox" Header="Theme" MinWidth="200" SelectionChanged="Theme_Changed"/>
+            <ComboBox x:Uid="SettingsPage_LanguageBox" x:Name="LanguageBox" Header="Language" MinWidth="200" IsEnabled="False" ToolTipService.ToolTip="More languages will be added later"/>
         </StackPanel>
-        <TextBlock Text="Applies once, for this run only, and then resets. Also in the tray menu." Opacity="0.7" TextWrapping="Wrap" />
 
-        <TextBlock Text="Shortcuts and recovery" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" />
-        <CheckBox x:Name="HotkeysBox" Content="Global hotkeys: Ctrl+Alt+A shows or hides the window, Ctrl+Alt+N adds a download" Click="Hotkeys_Click" />
-        <TextBlock x:Name="HotkeysStatus" Opacity="0.7" TextWrapping="Wrap" />
-        <CheckBox x:Name="RestartBox" Content="Start again in the tray if Aria2NET crashes or stops responding" Click="Restart_Click" />
-
-        <TextBlock Text="Notifications" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" />
-        <CheckBox x:Name="NotifyCompleteBox" Content="When a download completes" Click="NotifyComplete_Click" />
-        <CheckBox x:Name="NotifyFailedBox" Content="When a download fails" Click="NotifyFailed_Click" />
-        <CheckBox x:Name="NotifyTorrentBox" Content="When a torrent has finished downloading" Click="NotifyTorrent_Click" />
-        <CheckBox x:Name="NotifySoundBox" Content="Play a sound" Click="NotifySound_Click" />
-        <CheckBox x:Name="NotifyUnfocusedBox" Content="Only when the Aria2NET window is not in front" Click="NotifyUnfocused_Click" />
-        <TextBlock Text="Windows holds notifications back while Focus assist (Do not disturb) is on." Opacity="0.7" TextWrapping="Wrap" />
-
-        <TextBlock Text="Torrents" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" />
-        <CheckBox x:Name="AssociationBox" Content="Open .torrent files and magnet links with Aria2NET" Click="Association_Click" />
-        <TextBlock x:Name="AssociationStatus" Opacity="0.7" TextWrapping="Wrap" />
-        <HyperlinkButton x:Name="DefaultAppsLink" Content="Choose Aria2NET in Windows default apps…" Click="DefaultApps_Click" Visibility="Collapsed" Padding="0" />
+        <TextBlock x:Uid="SettingsPage_TextBlock3" Text="Downloads" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" Tag="section"/>
+        <CheckBox x:Uid="SettingsPage_ConfirmDeleteBox" Content="Ask before deleting files (Remove and delete file)"
+                  x:Name="ConfirmDeleteBox" Click="ConfirmDelete_Click"/>
+        <ComboBox x:Uid="SettingsPage_ConflictBox" x:Name="ConflictBox" Header="When a file with the same name already exists" MinWidth="260" SelectionChanged="Conflict_Changed"/>
+        <TextBlock x:Uid="SettingsPage_TextBlock4" Text="Checked against the file name in the link or the one you typed; a name chosen by the server cannot be known beforehand. Applies to new downloads." Opacity="0.7" TextWrapping="Wrap"/>
+        <Grid ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBox x:Uid="SettingsPage_FolderBox" x:Name="FolderBox" Header="Default download folder" PlaceholderText="Your Downloads folder" LostFocus="Folder_LostFocus"/>
+            <Button x:Uid="SettingsPage_Button2" Grid.Column="1" Content="Browse…" VerticalAlignment="Bottom" Click="BrowseFolder_Click"/>
+        </Grid>
+        <TextBlock x:Name="FolderStatus" Opacity="0.7" TextWrapping="Wrap" />
+        <TextBlock x:Uid="SettingsPage_TextBlock5" Text="New downloads go here unless you pick another folder in the Add dialog. Changing it needs an engine restart." Opacity="0.7" TextWrapping="Wrap"/>
+        <StackPanel Orientation="Horizontal" Spacing="16">
+            <NumberBox x:Uid="SettingsPage_ConcurrentBox" x:Name="ConcurrentBox" Header="Downloads at once" Minimum="1" Maximum="50" SpinButtonPlacementMode="Inline" ValueChanged="Number_Changed"/>
+            <NumberBox x:Uid="SettingsPage_ConnectionsBox" x:Name="ConnectionsBox" Header="Connections per server" Minimum="1" Maximum="16" SpinButtonPlacementMode="Inline" ValueChanged="Number_Changed"/>
+            <NumberBox x:Uid="SettingsPage_SplitBox" x:Name="SplitBox" Header="Split (pieces per file)" Minimum="1" Maximum="64" SpinButtonPlacementMode="Inline" ValueChanged="Number_Changed"/>
+            <NumberBox x:Uid="SettingsPage_MinSplitBox" x:Name="MinSplitBox" Header="Min split size (MiB)" Minimum="1" Maximum="1024" SpinButtonPlacementMode="Inline" ValueChanged="Number_Changed"/>
+        </StackPanel>
+        <TextBlock x:Uid="SettingsPage_TextBlock6" Text="More connections can be faster but some servers refuse more than a few. Applies to new downloads." Opacity="0.7" TextWrapping="Wrap"/>
+        <StackPanel Orientation="Horizontal" Spacing="16">
+            <NumberBox x:Uid="SettingsPage_TriesBox" x:Name="TriesBox" Header="Retries (0 = keep trying)" Minimum="0" Maximum="100" SpinButtonPlacementMode="Inline" ValueChanged="Number_Changed"/>
+            <NumberBox x:Uid="SettingsPage_RetryWaitBox" x:Name="RetryWaitBox" Header="Wait between tries (s)" Minimum="0" Maximum="600" SpinButtonPlacementMode="Inline" ValueChanged="Number_Changed"/>
+            <NumberBox x:Uid="SettingsPage_ConnectTimeoutBox" x:Name="ConnectTimeoutBox" Header="Connect timeout (s)" Minimum="1" Maximum="600" SpinButtonPlacementMode="Inline" ValueChanged="Number_Changed"/>
+            <NumberBox x:Uid="SettingsPage_TimeoutBox" x:Name="TimeoutBox" Header="Timeout (s)" Minimum="1" Maximum="600" SpinButtonPlacementMode="Inline" ValueChanged="Number_Changed"/>
+        </StackPanel>
         <StackPanel Orientation="Horizontal" Spacing="8">
-            <Button Content="Update public tracker list" Click="UpdateTrackers_Click" />
+            <ComboBox x:Uid="SettingsPage_UserAgentBox" x:Name="UserAgentBox" Header="User agent" MinWidth="160" SelectionChanged="UserAgent_Changed"/>
+            <TextBox x:Uid="SettingsPage_UserAgentText" x:Name="UserAgentText" Header="Custom user agent" MinWidth="320" Visibility="Collapsed" LostFocus="UserAgentText_LostFocus"/>
+        </StackPanel>
+        <ComboBox x:Uid="SettingsPage_AllocationBox" x:Name="AllocationBox" Header="File allocation" MinWidth="160" SelectionChanged="Allocation_Changed"/>
+        <TextBlock x:Uid="SettingsPage_TextBlock7" Text="None grows files as data arrives (fast to start). Prealloc and Falloc reserve the full size first; Falloc is slow for big files unless Windows lets the app skip zero-filling." Opacity="0.7" TextWrapping="Wrap"/>
+        <Button x:Uid="SettingsPage_Button3" Content="Reset download settings to defaults" Click="ResetDownloads_Click"/>
+
+        <TextBlock x:Uid="SettingsPage_TextBlock8" Text="Speed" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" Tag="section"/>
+        <StackPanel Orientation="Horizontal" Spacing="16">
+            <NumberBox x:Uid="SettingsPage_DownLimitBox" x:Name="DownLimitBox" Header="Download limit (KiB/s)" Minimum="0" Maximum="10000000" SpinButtonPlacementMode="Inline" SmallChange="100" LargeChange="1000" ValueChanged="Number_Changed"/>
+            <NumberBox x:Uid="SettingsPage_UpLimitBox" x:Name="UpLimitBox" Header="Upload limit (KiB/s)" Minimum="0" Maximum="10000000" SpinButtonPlacementMode="Inline" SmallChange="100" LargeChange="1000" ValueChanged="Number_Changed"/>
+        </StackPanel>
+        <TextBlock x:Uid="SettingsPage_TextBlock9" Text="Alternative speeds" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+        <StackPanel Orientation="Horizontal" Spacing="16">
+            <NumberBox x:Uid="SettingsPage_AltDownLimitBox" x:Name="AltDownLimitBox" Header="Alt download limit (KiB/s)" Minimum="0" Maximum="10000000" SpinButtonPlacementMode="Inline" SmallChange="100" LargeChange="1000" ValueChanged="Number_Changed"/>
+            <NumberBox x:Uid="SettingsPage_AltUpLimitBox" x:Name="AltUpLimitBox" Header="Alt upload limit (KiB/s)" Minimum="0" Maximum="10000000" SpinButtonPlacementMode="Inline" SmallChange="100" LargeChange="1000" ValueChanged="Number_Changed"/>
+        </StackPanel>
+        <ToggleSwitch x:Uid="SettingsPage_AltSpeedSwitch" x:Name="AltSpeedSwitch" Header="Use alternative speeds" Toggled="AltSpeed_Toggled"/>
+        <TextBlock x:Uid="SettingsPage_TextBlock10" Text="0 means no limit. Flip alternative speeds from the Downloads toolbar to throttle quickly (say, during a video call) and back." Opacity="0.7" TextWrapping="Wrap"/>
+        <Button x:Uid="SettingsPage_Button4" Content="Reset speed settings to defaults" Click="ResetSpeed_Click"/>
+
+        <TextBlock x:Uid="SettingsPage_TextBlock11" Text="Network" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" Tag="section"/>
+        <ComboBox x:Uid="SettingsPage_ProxyModeBox" x:Name="ProxyModeBox" Header="Proxy" MinWidth="200" SelectionChanged="ProxyMode_Changed"/>
+        <StackPanel x:Name="ProxyFields" Spacing="8" Visibility="Collapsed">
+            <TextBox x:Uid="SettingsPage_ProxyAddressBox" x:Name="ProxyAddressBox" Header="Proxy address" PlaceholderText="proxy.example.com:8080" MaxWidth="420" HorizontalAlignment="Left" LostFocus="ProxyField_LostFocus"/>
+            <StackPanel Orientation="Horizontal" Spacing="16">
+                <TextBox x:Uid="SettingsPage_ProxyUserBox" x:Name="ProxyUserBox" Header="User name (optional)" MinWidth="200" LostFocus="ProxyField_LostFocus"/>
+                <PasswordBox x:Uid="SettingsPage_ProxyPasswordBox" x:Name="ProxyPasswordBox" Header="Password (optional)" MinWidth="200" LostFocus="ProxyPassword_LostFocus"/>
+            </StackPanel>
+            <TextBlock x:Uid="SettingsPage_TextBlock12" Text="The password is stored encrypted for your Windows account." Opacity="0.7" TextWrapping="Wrap"/>
+        </StackPanel>
+        <TextBlock x:Name="ProxyStatus" Opacity="0.7" TextWrapping="Wrap" />
+        <ToggleSwitch x:Uid="SettingsPage_CertSwitch" x:Name="CertSwitch" Header="Check server certificates" Toggled="Network_Toggled"/>
+        <TextBlock x:Uid="SettingsPage_TextBlock13" Text="Turn this off only for a server you trust that has a broken certificate: downloads become open to tampering. Applies after an engine restart." Opacity="0.7" TextWrapping="Wrap"/>
+        <ToggleSwitch x:Uid="SettingsPage_Ipv6Switch" x:Name="Ipv6Switch" Header="Use IPv6 (applies after an engine restart)" Toggled="Network_Toggled"/>
+        <Button x:Uid="SettingsPage_Button5" Content="Reset network settings to defaults" Click="ResetNetwork_Click"/>
+
+        <TextBlock x:Uid="SettingsPage_TextBlock14" Text="General: startup and tray" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" Tag="section"/>
+        <CheckBox x:Uid="SettingsPage_CloseToTrayBox" x:Name="CloseToTrayBox" Content="Closing the window keeps Aria2NET running in the tray" Click="CloseToTray_Click"/>
+        <CheckBox x:Uid="SettingsPage_MinimizeToTrayBox" x:Name="MinimizeToTrayBox" Content="Minimizing the window hides it to the tray" Click="MinimizeToTray_Click"/>
+        <CheckBox x:Uid="SettingsPage_ConfirmExitBox" x:Name="ConfirmExitBox" Content="Ask before exiting while downloads are running" Click="ConfirmExit_Click"/>
+        <CheckBox x:Uid="SettingsPage_StartWithWindowsBox" x:Name="StartWithWindowsBox" Content="Start Aria2NET when I sign in to Windows" Click="StartWithWindows_Click"/>
+        <CheckBox x:Uid="SettingsPage_StartMinimizedBox" x:Name="StartMinimizedBox" Content="Start in the tray, without opening the window" Margin="28,0,0,0" Click="StartMinimized_Click"/>
+        <CheckBox x:Uid="SettingsPage_StartPausedBox" x:Name="StartPausedBox" Content="Start with all downloads paused" Click="StartPaused_Click"/>
+
+        <TextBlock x:Uid="SettingsPage_TextBlock15" Text="Power" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" Tag="section"/>
+        <CheckBox x:Uid="SettingsPage_PreventSleepBox" x:Name="PreventSleepBox" Content="Keep Windows awake while downloading" Click="PreventSleep_Click"/>
+        <CheckBox x:Uid="SettingsPage_PauseBatteryBox" x:Name="PauseBatteryBox" Content="Pause downloads while on battery power" Click="PauseBattery_Click"/>
+        <CheckBox x:Uid="SettingsPage_PauseMeteredBox" x:Name="PauseMeteredBox" Content="Pause downloads on a metered connection" Click="PauseMetered_Click"/>
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock x:Uid="SettingsPage_TextBlock16" Text="When downloads finish" VerticalAlignment="Center"/>
+            <ComboBox x:Uid="SettingsPage_FinishBox" x:Name="FinishBox" MinWidth="160" SelectionChanged="Finish_Changed" AutomationProperties.Name="When downloads finish"/>
+        </StackPanel>
+        <TextBlock x:Uid="SettingsPage_TextBlock17" Text="Applies once, for this run only, and then resets. Also in the tray menu." Opacity="0.7" TextWrapping="Wrap"/>
+
+        <TextBlock x:Uid="SettingsPage_TextBlock18" Text="Shortcuts and recovery" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" Tag="section"/>
+        <CheckBox x:Uid="SettingsPage_HotkeysBox" x:Name="HotkeysBox" Content="Global hotkeys: Ctrl+Alt+A shows or hides the window, Ctrl+Alt+N adds a download" Click="Hotkeys_Click"/>
+        <TextBlock x:Name="HotkeysStatus" Opacity="0.7" TextWrapping="Wrap" />
+        <CheckBox x:Uid="SettingsPage_RestartBox" x:Name="RestartBox" Content="Start again in the tray if Aria2NET crashes or stops responding" Click="Restart_Click"/>
+
+        <TextBlock x:Uid="SettingsPage_TextBlock19" Text="Notifications" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" Tag="section"/>
+        <CheckBox x:Uid="SettingsPage_NotifyCompleteBox" x:Name="NotifyCompleteBox" Content="When a download completes" Click="NotifyComplete_Click"/>
+        <CheckBox x:Uid="SettingsPage_NotifyFailedBox" x:Name="NotifyFailedBox" Content="When a download fails" Click="NotifyFailed_Click"/>
+        <CheckBox x:Uid="SettingsPage_NotifyTorrentBox" x:Name="NotifyTorrentBox" Content="When a torrent has finished downloading" Click="NotifyTorrent_Click"/>
+        <CheckBox x:Uid="SettingsPage_NotifySoundBox" x:Name="NotifySoundBox" Content="Play a sound" Click="NotifySound_Click"/>
+        <CheckBox x:Uid="SettingsPage_NotifyUnfocusedBox" x:Name="NotifyUnfocusedBox" Content="Only when the Aria2NET window is not in front" Click="NotifyUnfocused_Click"/>
+        <TextBlock x:Uid="SettingsPage_TextBlock20" Text="Windows holds notifications back while Focus assist (Do not disturb) is on." Opacity="0.7" TextWrapping="Wrap"/>
+
+        <TextBlock x:Uid="SettingsPage_TextBlock21" Text="Torrents" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" Tag="section"/>
+        <CheckBox x:Uid="SettingsPage_AssociationBox" x:Name="AssociationBox" Content="Open .torrent files and magnet links with Aria2NET" Click="Association_Click"/>
+        <TextBlock x:Name="AssociationStatus" Opacity="0.7" TextWrapping="Wrap" />
+        <HyperlinkButton x:Uid="SettingsPage_DefaultAppsLink" x:Name="DefaultAppsLink" Content="Choose Aria2NET in Windows default apps…" Click="DefaultApps_Click" Visibility="Collapsed" Padding="0"/>
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button x:Uid="SettingsPage_Button6" Content="Update public tracker list" Click="UpdateTrackers_Click"/>
             <TextBlock x:Name="TrackerStatus" VerticalAlignment="Center" Opacity="0.7" />
         </StackPanel>
 
-        <TextBlock Text="History" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" />
         <StackPanel Orientation="Horizontal" Spacing="8">
-            <TextBlock Text="Keep finished downloads in History for" VerticalAlignment="Center" />
-            <ComboBox x:Name="RetentionBox" MinWidth="140" SelectionChanged="Retention_Changed" AutomationProperties.Name="History retention" />
-            <Button Content="Clear history…" Click="ClearHistory_Click" />
+            <ComboBox x:Uid="SettingsPage_TrackerSourceBox" x:Name="TrackerSourceBox" Header="Extra trackers" MinWidth="200" SelectionChanged="TrackerSource_Changed"/>
+            <TextBox x:Uid="SettingsPage_TrackerUrlBox" x:Name="TrackerUrlBox" Header="Tracker list address (https)" MinWidth="360" Visibility="Collapsed" LostFocus="TrackerUrl_LostFocus"/>
+        </StackPanel>
+        <TextBlock x:Name="TorrentStatus" Opacity="0.7" TextWrapping="Wrap" />
+        <StackPanel Orientation="Horizontal" Spacing="16">
+            <NumberBox x:Uid="SettingsPage_PortStartBox" x:Name="PortStartBox" Header="First listen port" Minimum="1024" Maximum="65535" SpinButtonPlacementMode="Inline" ValueChanged="TorrentNumber_Changed"/>
+            <NumberBox x:Uid="SettingsPage_PortEndBox" x:Name="PortEndBox" Header="Last listen port" Minimum="1024" Maximum="65535" SpinButtonPlacementMode="Inline" ValueChanged="TorrentNumber_Changed"/>
+            <NumberBox x:Uid="SettingsPage_DhtPortBox" x:Name="DhtPortBox" Header="DHT port (UDP)" Minimum="1024" Maximum="65535" SpinButtonPlacementMode="Inline" ValueChanged="TorrentNumber_Changed"/>
+        </StackPanel>
+        <TextBlock x:Uid="SettingsPage_TextBlock22" Text="Open these ports in your router or firewall for more peers. Ports and DHT apply after an engine restart." Opacity="0.7" TextWrapping="Wrap"/>
+        <CheckBox x:Uid="SettingsPage_DhtBox" x:Name="DhtBox" Content="Use DHT (find peers without a tracker; applies after an engine restart)" Click="TorrentToggle_Click"/>
+        <CheckBox x:Uid="SettingsPage_PexBox" x:Name="PexBox" Content="Peer exchange (peers share other peers with you)" Click="TorrentToggle_Click"/>
+        <CheckBox x:Uid="SettingsPage_LpdBox" x:Name="LpdBox" Content="Local peer discovery (find peers on your own network)" Click="TorrentToggle_Click"/>
+        <ComboBox x:Uid="SettingsPage_EncryptionBox" x:Name="EncryptionBox" Header="Encryption" MinWidth="260" SelectionChanged="Encryption_Changed"/>
+        <StackPanel Orientation="Horizontal" Spacing="16">
+            <NumberBox x:Uid="SettingsPage_SeedRatioBox" x:Name="SeedRatioBox" Header="Stop seeding at ratio (0 = no limit)" Minimum="0" Maximum="1000" SmallChange="0.1" SpinButtonPlacementMode="Inline" ValueChanged="TorrentNumber_Changed"/>
+            <NumberBox x:Uid="SettingsPage_SeedTimeBox" x:Name="SeedTimeBox" Header="Stop seeding after (minutes, 0 = no limit)" Minimum="0" Maximum="5256000" SmallChange="10" LargeChange="60" SpinButtonPlacementMode="Inline" ValueChanged="TorrentNumber_Changed"/>
+        </StackPanel>
+        <TextBlock x:Uid="SettingsPage_TextBlock23" Text="Seeding stops when either limit is reached. Applies to torrents added from now on; use Seeding… on a torrent to change one that already exists." Opacity="0.7" TextWrapping="Wrap"/>
+        <Button x:Uid="SettingsPage_Button7" Content="Reset torrent settings to defaults" Click="ResetTorrents_Click"/>
+
+        <TextBlock x:Uid="SettingsPage_TextBlock24" Text="History" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" Tag="section"/>
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock x:Uid="SettingsPage_TextBlock25" Text="Keep finished downloads in History for" VerticalAlignment="Center"/>
+            <ComboBox x:Uid="SettingsPage_RetentionBox" x:Name="RetentionBox" MinWidth="140" SelectionChanged="Retention_Changed" AutomationProperties.Name="History retention"/>
+            <Button x:Uid="SettingsPage_Button8" Content="Clear history…" Click="ClearHistory_Click"/>
         </StackPanel>
 
-        <TextBlock Text="Data folder" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" />
+        <TextBlock x:Uid="SettingsPage_TextBlock26" Text="Advanced and data" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" Tag="section"/>
+        <ComboBox x:Uid="SettingsPage_LogLevelBox" x:Name="LogLevelBox" Header="Log detail" MinWidth="260" SelectionChanged="LogLevel_Changed"/>
+        <TextBlock x:Uid="SettingsPage_TextBlock27" Text="Applies to Aria2NET's own log and to aria2's. Debug writes a lot; use it to find a problem, then set it back." Opacity="0.7" TextWrapping="Wrap"/>
+        <TextBox x:Uid="SettingsPage_RawOptionsBox" x:Name="RawOptionsBox" Header="aria2 options (one name=value per line)" AcceptsReturn="True" TextWrapping="NoWrap" MinHeight="90" MaxHeight="200"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                 PlaceholderText="bt-max-peers=80" LostFocus="RawOptions_LostFocus"/>
+        <TextBlock x:Name="RawOptionsStatus" TextWrapping="Wrap" />
+        <TextBlock x:Uid="SettingsPage_TextBlock28" Text="For experts. These are applied last, so they override the settings above. Options Aria2NET manages (connection, files, programs to run) are refused. Changes may need an engine restart." Opacity="0.7" TextWrapping="Wrap"/>
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button x:Uid="SettingsPage_Button9" Content="Export settings…" Click="ExportSettings_Click"/>
+            <Button x:Uid="SettingsPage_Button10" Content="Import settings…" Click="ImportSettings_Click"/>
+            <Button x:Uid="SettingsPage_Button11" Content="Reset all settings…" Click="ResetAll_Click"/>
+        </StackPanel>
+        <TextBlock x:Name="TransferStatus" TextWrapping="Wrap" />
+        <TextBlock x:Uid="SettingsPage_TextBlock29" Text="Exported files leave out the proxy password, the window position and the last folder. Importing keeps those of this PC." Opacity="0.7" TextWrapping="Wrap"/>
         <TextBlock Text="{x:Bind ViewModel.DataFolder}" IsTextSelectionEnabled="True" />
         <StackPanel Orientation="Horizontal" Spacing="8">
-            <Button Content="Open data folder" Click="OpenData_Click" />
-            <Button Content="Open logs folder" Click="OpenLogs_Click" />
+            <Button x:Uid="SettingsPage_Button12" Content="Open data folder" Click="OpenData_Click"/>
+            <Button x:Uid="SettingsPage_Button13" Content="Open logs folder" Click="OpenLogs_Click"/>
         </StackPanel>
     </StackPanel>
+    </ScrollViewer>
 </Page>

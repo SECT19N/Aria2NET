@@ -15,8 +15,7 @@ public sealed class DataFolderLock : IDisposable {
 		try {
 			var stream = new FileStream(lockFile, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
 			return new DataFolderLock(stream);
-		}
-		catch (IOException) {
+		} catch (IOException) {
 			return null;
 		}
 	}

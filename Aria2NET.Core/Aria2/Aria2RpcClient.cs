@@ -172,7 +172,7 @@ public sealed class Aria2RpcClient(HttpClient http, Uri endpoint, string secret)
 	public async Task<PollSnapshot> PollAsync(CancellationToken ct = default) {
 		using var result = await SendAsync("system.multicall", ct, w => {
 			w.WriteStartArray();
-			WriteMulticallEntry(w, "aria2.tellActive", (object)StatusKeys); // cast: a bare string[] would bind to the params array itself
+			WriteMulticallEntry(w, "aria2.tellActive", (object) StatusKeys); // cast: a bare string[] would bind to the params array itself
 			WriteMulticallEntry(w, "aria2.tellWaiting", 0, MaxListed, StatusKeys);
 			WriteMulticallEntry(w, "aria2.tellStopped", 0, MaxListed, StatusKeys);
 			WriteMulticallEntry(w, "aria2.getGlobalStat");
@@ -226,9 +226,8 @@ public sealed class Aria2RpcClient(HttpClient http, Uri endpoint, string secret)
 		JsonDocument doc;
 		try {
 			doc = JsonDocument.Parse(bytes);
-		}
-		catch (JsonException) when (!response.IsSuccessStatusCode) {
-			throw new HttpRequestException($"aria2 RPC returned HTTP {(int)response.StatusCode}");
+		} catch (JsonException) when (!response.IsSuccessStatusCode) {
+			throw new HttpRequestException($"aria2 RPC returned HTTP {(int) response.StatusCode}");
 		}
 
 		if (doc.RootElement.TryGetProperty("error", out var error)) {
@@ -292,7 +291,16 @@ public sealed class Aria2RpcClient(HttpClient http, Uri endpoint, string secret)
 			case IReadOnlyDictionary<string, string> map:
 				w.WriteStartObject();
 				foreach (var (k, v) in map) {
-					w.WriteString(k, v);
+					if (k == "header") {
+						// aria2 takes repeatable options as an array; one header per line in the value.
+						w.WriteStartArray(k);
+						foreach (var line in v.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)) {
+							w.WriteStringValue(line);
+						}
+						w.WriteEndArray();
+					} else {
+						w.WriteString(k, v);
+					}
 				}
 				w.WriteEndObject();
 				break;

@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 namespace Aria2NET.Core.Torrents;
 
 public enum SeedMode {
-	/// <summary>Whatever aria2 is configured with (ratio 1.0).</summary>
+	/// <summary>Whatever aria2 is configured with (the seeding rule in Settings; ratio 1.0 unless changed).</summary>
 	Default,
 	Forever,
 	/// <summary>Stop once uploaded/downloaded reaches <see cref="SeedingOverride.Ratio"/>.</summary>
@@ -20,9 +20,13 @@ public sealed record SeedingOverride(SeedMode Mode = SeedMode.Default, double Ra
 	public static SeedingOverride Default { get; } = new();
 
 	/// <summary>aria2 options for this choice. Note aria2 reads <c>seed-ratio=0.0</c> as "no ratio limit" and <c>seed-time=0</c> as "do not seed".</summary>
+	/// <remarks>aria2 stops at whichever of ratio and time comes first, so these also lift a time limit set in Settings.</remarks>
 	public IReadOnlyDictionary<string, string> ToOptions() => Mode switch {
-		SeedMode.Forever => new Dictionary<string, string> { ["seed-ratio"] = "0.0" },
-		SeedMode.Ratio => new Dictionary<string, string> { ["seed-ratio"] = Math.Max(0.1, Ratio).ToString("0.0#", CultureInfo.InvariantCulture) },
+		SeedMode.Forever => new Dictionary<string, string> { ["seed-ratio"] = "0.0", ["seed-time"] = Settings.EngineOptions.NoSeedTime },
+		SeedMode.Ratio => new Dictionary<string, string> {
+			["seed-ratio"] = Math.Max(0.1, Ratio).ToString("0.0#", CultureInfo.InvariantCulture),
+			["seed-time"] = Settings.EngineOptions.NoSeedTime,
+		},
 		SeedMode.Never => new Dictionary<string, string> { ["seed-time"] = "0" },
 		_ => new Dictionary<string, string>(),
 	};
@@ -43,7 +47,8 @@ public sealed record TorrentAddRequest(
 	IReadOnlyList<int>? SelectedFiles = null,
 	int TotalFiles = 0,
 	SeedingOverride? Seeding = null,
-	AllocationChoice Allocation = AllocationChoice.Default) {
+	AllocationChoice Allocation = AllocationChoice.Default,
+	AddOptions? Extra = null) {
 
 	/// <param name="includeDir">False when changing a download that already exists: aria2 ignores a new <c>dir</c> for it (checked against 1.37.0).</param>
 	public IReadOnlyDictionary<string, string> ToOptions(bool includeDir = true) {
@@ -53,6 +58,9 @@ public sealed record TorrentAddRequest(
 		}
 		if (SelectedFiles is { Count: > 0 } && SelectFileSpec.Build(SelectedFiles, TotalFiles) is { } spec) {
 			options["select-file"] = spec;
+		}
+		foreach (var (k, v) in (Extra ?? AddOptions.None).ToOptions()) {
+			options[k] = v;
 		}
 		foreach (var (k, v) in (Seeding ?? SeedingOverride.Default).ToOptions()) {
 			options[k] = v;
@@ -110,8 +118,7 @@ public sealed class TorrentOperations(IAria2Engine engine, ILogger<TorrentOperat
 			DownloadItem item;
 			try {
 				item = await Rpc.TellStatusAsync(metadataGid, ct);
-			}
-			catch (Aria2RpcException) {
+			} catch (Aria2RpcException) {
 				return null; // removed and forgotten
 			}
 			if (item.Status is DownloadStatus.Error or DownloadStatus.Removed) {
@@ -144,9 +151,11 @@ public sealed class TorrentOperations(IAria2Engine engine, ILogger<TorrentOperat
 	}
 
 	/// <summary>Adds a metalink file. aria2 starts one download per file in it.</summary>
-	public async Task<IReadOnlyList<string>> AddMetalinkAsync(byte[] metalink, string dir, CancellationToken ct = default) {
+	public async Task<IReadOnlyList<string>> AddMetalinkAsync(byte[] metalink, string dir, AddOptions? extra = null, CancellationToken ct = default) {
 		EnsureFolder(dir);
-		return await Rpc.AddMetalinkAsync(metalink, new Dictionary<string, string> { ["dir"] = dir }, ct);
+		var options = (extra ?? AddOptions.None).ToOptions().ToDictionary(p => p.Key, p => p.Value);
+		options["dir"] = dir;
+		return await Rpc.AddMetalinkAsync(metalink, options, ct);
 	}
 
 	/// <summary>Finds the torrent among the running downloads, or in History if it was added before.</summary>
@@ -162,8 +171,7 @@ public sealed class TorrentOperations(IAria2Engine engine, ILogger<TorrentOperat
 	private void EnsureFolder(string dir) {
 		try {
 			Directory.CreateDirectory(dir);
-		}
-		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException) {
+		} catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException) {
 			logger?.LogWarning(ex, "Could not create {Dir}", dir);
 			throw new IOException($"Cannot use the folder {dir}: {ex.Message}", ex);
 		}

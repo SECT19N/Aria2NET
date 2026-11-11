@@ -168,6 +168,7 @@ A WinUI 3 download manager (IDM-style) on top of aria2c. aria2 does the transfer
 - Lock-screen/session awareness: keep downloading when locked, handle sign-out gracefully.
 
 ### 0.7 Settings
+> **Status (branch `feat/0.7-settings`):** built: downloads, speed and alternative speeds (with a toolbar toggle), network (proxy, certificates, IPv6), torrent settings, the Add dialog's "More options" with site presets, theme and name-clash policy, the About page with notices, raw aria2 options, log level, settings search and jump list, import/export/"Reset all", and UI strings in `Strings\en-US\Resources.resw` (one language for now). Not built: a "Reset to default" button for each single setting (there is one per section), the temp (incomplete) folder, user-facing text that comes from `Aria2NET.Core` (toast text, download error descriptions, byte/time formats, validator messages) is still English-only.
 - General: theme (system/light/dark), language (English only for now, resource files from day one), startup, tray behavior.
 - Downloads: default folder, temp (incomplete) folder, max concurrent, connections per server, split count, min split size, retries, timeouts, user agent, file allocation, auto-rename vs overwrite vs ask.
 - Speed: global download/upload limit, quick toggle "limit on/off" in the toolbar.

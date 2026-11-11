@@ -65,7 +65,7 @@ public sealed partial class TorrentDetailViewModel : ObservableObject {
 	public partial Brush? AvailabilityBrush { get; private set; }
 
 	[ObservableProperty]
-	public partial string PeersHeader { get; private set; } = "Peers";
+	public partial string PeersHeader { get; private set; } = Loc.S("Detail_Peers", "Peers");
 
 	[ObservableProperty]
 	public partial string Problem { get; private set; } = "";
@@ -98,37 +98,35 @@ public sealed partial class TorrentDetailViewModel : ObservableObject {
 			HasGeoIp = geo.RangeCount > 0;
 			Apply(await TorrentDetailLoader.LoadAsync(rpc, _gid, geo));
 			Problem = "";
-		}
-		catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException or TaskCanceledException) {
+		} catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException or TaskCanceledException) {
 			// The download was removed, or the engine is restarting; keep showing the last data.
 			_logger.LogDebug(ex, "Refreshing torrent details failed");
 			Problem = ex is Aria2RpcException ? "This torrent is no longer in the list." : "Waiting for the download engine…";
-		}
-		finally {
+		} finally {
 			_busy = false;
 		}
 	}
 
 	private void Apply(TorrentDetailSnapshot s) {
 		Title = s.Name;
-		Summary = $"{s.Status} · {ByteFormat.Size(s.CompletedBytes)} of {ByteFormat.Size(s.TotalBytes)} ({s.Progress:0.#}%) · ratio {s.Ratio:0.00}";
+		Summary = Loc.F("Detail_Summary", "{0} · {1} of {2} ({3:0.#}%) · ratio {4:0.00}", s.Status, ByteFormat.Size(s.CompletedBytes), ByteFormat.Size(s.TotalBytes), s.Progress, s.Ratio);
 		InfoHash = s.InfoHash;
 		SavedTo = s.Directory;
-		Transfer = $"↓ {ByteFormat.Speed(s.DownloadSpeed)}   ↑ {ByteFormat.Speed(s.UploadSpeed)}   uploaded {ByteFormat.Size(s.UploadedBytes)}";
-		Swarm = $"{s.SeedersInSwarm} seeders · {s.Connections} connections";
+		Transfer = Loc.F("Detail_Transfer", "↓ {0}   ↑ {1}   uploaded {2}", ByteFormat.Speed(s.DownloadSpeed), ByteFormat.Speed(s.UploadSpeed), ByteFormat.Size(s.UploadedBytes));
+		Swarm = Loc.F("Detail_Swarm", "{0} seeders · {1} connections", s.SeedersInSwarm, s.Connections);
 		Created = s.CreatedAt is { } at ? at.LocalDateTime.ToString("g") : "";
 		Comment = s.Comment ?? "";
-		PieceInfo = s.PieceCount > 0 ? $"{s.PieceCount:N0} pieces of {ByteFormat.Size(s.PieceLength)}" : "No piece information yet";
-		PeersHeader = $"Peers ({s.Peers.Count})";
+		PieceInfo = s.PieceCount > 0 ? Loc.F("Detail_Pieces", "{0:N0} pieces of {1}", s.PieceCount, ByteFormat.Size(s.PieceLength)) : Loc.S("Detail_NoPieces", "No piece information yet");
+		PeersHeader = Loc.F("Detail_PeersCount", "Peers ({0})", s.Peers.Count);
 
 		Replace(Files, s.Files.Select(f => new DetailFileRow(
 			RelativeName(f.Path, s.Directory), ByteFormat.Size(f.Length),
-			!f.Selected ? "skipped" : f.Length > 0 ? $"{f.CompletedLength * 100.0 / f.Length:0.#}%" : "", f.Selected)));
+			!f.Selected ? Loc.S("Detail_Skipped", "skipped") : f.Length > 0 ? $"{f.CompletedLength * 100.0 / f.Length:0.#}%" : "", f.Selected)));
 		Replace(Peers, s.Peers.OrderByDescending(p => p.DownloadSpeed + p.UploadSpeed).ThenBy(p => p.Address).Select(p => new DetailPeerRow(
 			p.Address, p.Client, p.Country ?? "", GeoIpResolver.CountryName(p.Country),
 			p.DownloadSpeed > 0 ? ByteFormat.Speed(p.DownloadSpeed) : "", p.UploadSpeed > 0 ? ByteFormat.Speed(p.UploadSpeed) : "",
 			$"{p.Progress:0}%", Flags(p))));
-		Replace(Trackers, s.Trackers.Select(t => new DetailTrackerRow(t.Url, $"Tier {t.Tier}")));
+		Replace(Trackers, s.Trackers.Select(t => new DetailTrackerRow(t.Url, Loc.F("Detail_Tier", "Tier {0}", t.Tier))));
 
 		HaveBrush = Bar(s.HaveBar, Color.FromArgb(0xFF, 0x2E, 0x9E, 0x4F), Color.FromArgb(0x40, 0x80, 0x80, 0x80));
 		// Availability: grey = no peer has it, teal = every connected peer has it.
@@ -169,9 +167,9 @@ public sealed partial class TorrentDetailViewModel : ObservableObject {
 		for (var i = 0; i < values.Length; i++) {
 			var v = Math.Clamp(values[i], 0, 1);
 			var color = Color.FromArgb(
-				(byte)(empty.A + (full.A - empty.A) * v), (byte)(empty.R + (full.R - empty.R) * v),
-				(byte)(empty.G + (full.G - empty.G) * v), (byte)(empty.B + (full.B - empty.B) * v));
-			brush.GradientStops.Add(new GradientStop { Color = color, Offset = (double)i / values.Length });
+				(byte) (empty.A + (full.A - empty.A) * v), (byte) (empty.R + (full.R - empty.R) * v),
+				(byte) (empty.G + (full.G - empty.G) * v), (byte) (empty.B + (full.B - empty.B) * v));
+			brush.GradientStops.Add(new GradientStop { Color = color, Offset = (double) i / values.Length });
 			brush.GradientStops.Add(new GradientStop { Color = color, Offset = (i + 1.0) / values.Length });
 		}
 		return brush;

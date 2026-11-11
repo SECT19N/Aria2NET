@@ -34,6 +34,21 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 
 	private Aria2RpcClient Rpc => engine.Rpc ?? throw new InvalidOperationException("The download engine is not running.");
 
+	/// <summary>The user changed the simultaneous-download setting: force-started downloads now sit on top of this value, and the live limit is set to match.</summary>
+	public async Task SetBaseConcurrentAsync(int value, CancellationToken ct = default) {
+		if (engine.Rpc is not { } rpc) {
+			return;
+		}
+		int target;
+		lock (_forceLock) {
+			if (ReferenceEquals(_forcedRpc, rpc)) {
+				_baseConcurrent = value;
+			}
+			target = value + _forced.Count;
+		}
+		await rpc.ChangeGlobalOptionAsync(new Dictionary<string, string> { [MaxConcurrent] = target.ToString(CultureInfo.InvariantCulture) }, ct);
+	}
+
 	public Task PauseAsync(IEnumerable<DownloadItem> items, CancellationToken ct = default) =>
 		Check(Rpc.PauseAsync(items.Where(DownloadCapabilities.CanPause).Select(i => i.Gid), ct));
 
@@ -82,8 +97,7 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 			if (plan.Files.Count > 0) {
 				return plan;
 			}
-		}
-		catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested) {
+		} catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested) {
 			logger.LogDebug(ex, "No file list for {Gid}; using the first file only", item.Gid);
 		}
 		return string.IsNullOrEmpty(item.Dir) || string.IsNullOrEmpty(item.Path) ? DownloadFilePlan.Empty : DownloadFilePlan.Build(item.Dir, [item.Path], null);
@@ -100,8 +114,7 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 				await TryDeleteAsync(() => {
 					if (recycle) {
 						FileSystem.DeleteFile(path, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
-					}
-					else {
+					} else {
 						File.Delete(path);
 					}
 				}, path, problems, ct);
@@ -128,8 +141,7 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 			if (!Directory.EnumerateFileSystemEntries(root).Any()) {
 				Directory.Delete(root);
 			}
-		}
-		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
+		} catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
 			// In use or protected; an empty folder left behind is harmless.
 		}
 	}
@@ -140,13 +152,11 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 			try {
 				delete();
 				return;
-			}
-			catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
+			} catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
 				if (attempt == 4) {
 					logger.LogWarning(ex, "Could not delete {Path}", path);
 					problems.Add($"{path}: {ex.Message}");
-				}
-				else {
+				} else {
 					await Task.Delay(200, ct);
 				}
 			}
@@ -245,8 +255,7 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 		}
 		try {
 			await rpc.ChangeGlobalOptionAsync(new Dictionary<string, string> { [MaxConcurrent] = target.ToString(CultureInfo.InvariantCulture) }, ct);
-		}
-		catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException) {
+		} catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException) {
 			logger.LogWarning(ex, "Could not restore {Option}", MaxConcurrent);
 		}
 	}

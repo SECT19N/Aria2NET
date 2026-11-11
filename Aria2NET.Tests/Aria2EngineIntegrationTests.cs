@@ -22,8 +22,7 @@ public class Aria2EngineIntegrationTests {
 					result.Add(p);
 					continue;
 				}
-			}
-			catch (System.ComponentModel.Win32Exception) {
+			} catch (System.ComponentModel.Win32Exception) {
 				// Not inspectable.
 			}
 			p.Dispose();

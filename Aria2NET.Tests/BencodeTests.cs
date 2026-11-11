@@ -9,12 +9,12 @@ public class BencodeTests {
 
 	[Fact]
 	public void Decodes_integers_strings_lists_and_dictionaries() {
-		var value = (Dictionary<string, object>)Bencode.Decode(Bytes("d3:bari-42e3:fool1:a2:bcee"));
+		var value = (Dictionary<string, object>) Bencode.Decode(Bytes("d3:bari-42e3:fool1:a2:bcee"));
 
 		Assert.Equal(-42L, value["bar"]);
-		var list = (List<object>)value["foo"];
-		Assert.Equal(Bytes("a"), (byte[])list[0]);
-		Assert.Equal(Bytes("bc"), (byte[])list[1]);
+		var list = (List<object>) value["foo"];
+		Assert.Equal(Bytes("a"), (byte[]) list[0]);
+		Assert.Equal(Bytes("bc"), (byte[]) list[1]);
 	}
 
 	[Fact]
@@ -27,7 +27,7 @@ public class BencodeTests {
 		var encoded = Bencode.Encode(dict);
 
 		Assert.Equal("d1:al1:xi2ee1:zi1ee", Encoding.ASCII.GetString(encoded));
-		var back = (Dictionary<string, object>)Bencode.Decode(encoded);
+		var back = (Dictionary<string, object>) Bencode.Decode(encoded);
 		Assert.Equal(1L, back["z"]);
 	}
 

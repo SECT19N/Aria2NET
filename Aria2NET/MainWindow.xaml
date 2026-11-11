@@ -21,17 +21,17 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <TitleBar x:Name="AppTitleBar" Grid.Row="0" Title="Aria2NET" />
+        <TitleBar x:Uid="MainWindow_AppTitleBar" x:Name="AppTitleBar" Grid.Row="0" Title="Aria2NET"/>
 
         <StackPanel Grid.Row="1">
-            <InfoBar Severity="Error"
+            <InfoBar x:Uid="MainWindow_InfoBar1" Severity="Error"
                      Title="aria2 engine problem"
                      Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
                      IsOpen="{x:Bind ViewModel.ShowError, Mode=OneWay}"
                      IsClosable="False"
                      Margin="12,0,12,8">
                 <InfoBar.ActionButton>
-                    <Button Content="Restart engine" Command="{x:Bind ViewModel.RestartEngineCommand}" />
+                    <Button x:Uid="MainWindow_Button1" Content="Restart engine" Command="{x:Bind ViewModel.RestartEngineCommand}"/>
                 </InfoBar.ActionButton>
             </InfoBar>
 
@@ -61,19 +61,19 @@
                         OpenPaneLength="200"
                         SelectionChanged="Nav_SelectionChanged">
             <NavigationView.MenuItems>
-                <NavigationViewItem Content="Downloads" Tag="downloads">
+                <NavigationViewItem x:Uid="MainWindow_NavigationViewItem1" Content="Downloads" Tag="downloads">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE896;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem Content="History" Tag="history">
+                <NavigationViewItem x:Uid="MainWindow_NavigationViewItem2" Content="History" Tag="history">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE81C;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
             </NavigationView.MenuItems>
             <NavigationView.FooterMenuItems>
-                <NavigationViewItem Content="About" Tag="about">
+                <NavigationViewItem x:Uid="MainWindow_NavigationViewItem3" Content="About" Tag="about">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE946;" />
                     </NavigationViewItem.Icon>

@@ -15,8 +15,7 @@ public static class OrphanFiles {
 			IEnumerable<string> files;
 			try {
 				files = Directory.EnumerateFiles(folder, "*.aria2", SearchOption.TopDirectoryOnly).ToList();
-			}
-			catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
+			} catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
 				continue;
 			}
 			foreach (var control in files) {
@@ -41,8 +40,7 @@ public static class OrphanFiles {
 					File.Delete(orphan.DataFile);
 				}
 				cleaned++;
-			}
-			catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
+			} catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
 				// In use or protected; leave it for the next scan.
 			}
 		}

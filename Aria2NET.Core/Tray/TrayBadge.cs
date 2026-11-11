@@ -21,7 +21,7 @@ public static class TrayBadge {
 					continue;
 				}
 				var i = (y * size + x) * 4;
-				var (r, g, b) = distance <= radius ? color : ((byte)255, (byte)255, (byte)255);
+				var (r, g, b) = distance <= radius ? color : ((byte) 255, (byte) 255, (byte) 255);
 				bgra[i] = b;
 				bgra[i + 1] = g;
 				bgra[i + 2] = r;

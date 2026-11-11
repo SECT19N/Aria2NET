@@ -14,7 +14,7 @@ public class DatabaseTests {
 		using var c = db.Open();
 		using var cmd = c.CreateCommand();
 		cmd.CommandText = "PRAGMA user_version";
-		return (long)cmd.ExecuteScalar()!;
+		return (long) cmd.ExecuteScalar()!;
 	}
 
 	[Fact]

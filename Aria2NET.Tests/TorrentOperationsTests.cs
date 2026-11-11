@@ -85,7 +85,7 @@ public class MagnetAndSelectionTests {
 	[Fact]
 	public void Reads_a_base32_info_hash() {
 		// 20 bytes 0x00..0x13 in base32.
-		var bytes = Enumerable.Range(0, 20).Select(i => (byte)i).ToArray();
+		var bytes = Enumerable.Range(0, 20).Select(i => (byte) i).ToArray();
 		var base32 = ToBase32(bytes);
 
 		Assert.True(MagnetLink.TryGetInfoHash("magnet:?xt=urn:btih:" + base32, out var hash));

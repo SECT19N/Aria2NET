@@ -42,8 +42,8 @@ public static class WindowPlacementFitter {
 		var target = displays
 			.Select(d => (Display: d, Visible: d.Intersect(rect)))
 			.Where(p => p.Visible.Width >= MinVisibleWidth && p.Visible.Height >= MinVisibleHeight)
-			.OrderByDescending(p => (long)p.Visible.Width * p.Visible.Height)
-			.Select(p => (ScreenRect?)p.Display)
+			.OrderByDescending(p => (long) p.Visible.Width * p.Visible.Height)
+			.Select(p => (ScreenRect?) p.Display)
 			.FirstOrDefault();
 
 		if (target is not { } screen) {

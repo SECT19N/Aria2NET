@@ -39,8 +39,7 @@ public sealed partial class NoticeCenter : ObservableObject {
 	public void Post(Notice notice) => _dispatcher.TryEnqueue(() => {
 		if (Current is null) {
 			Current = notice;
-		}
-		else {
+		} else {
 			_waiting.Enqueue(notice);
 		}
 	});

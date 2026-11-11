@@ -9,9 +9,9 @@ namespace Aria2NET.Core.Aria2;
 /// Settings for one aria2c launch. Written to a conf file instead of the command line so the
 /// RPC secret is not visible in the process list.
 /// </summary>
-public sealed record Aria2Config(int Port, string Secret, int ParentPid, string DownloadDir, IReadOnlyList<string>? Trackers = null) {
-	public static Aria2Config CreateRandom(string downloadDir, int parentPid, IReadOnlyList<string>? trackers = null) =>
-		new(FindFreeLoopbackPort(), GenerateSecret(), parentPid, downloadDir, trackers);
+public sealed record Aria2Config(int Port, string Secret, int ParentPid, string DownloadDir, IReadOnlyList<string>? Trackers = null, IReadOnlyDictionary<string, string>? Options = null) {
+	public static Aria2Config CreateRandom(string downloadDir, int parentPid, IReadOnlyList<string>? trackers = null, IReadOnlyDictionary<string, string>? options = null) =>
+		new(FindFreeLoopbackPort(), GenerateSecret(), parentPid, downloadDir, trackers, options);
 
 	public static string GenerateSecret() =>
 		Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
@@ -20,9 +20,8 @@ public sealed record Aria2Config(int Port, string Secret, int ParentPid, string 
 		var listener = new TcpListener(IPAddress.Loopback, 0);
 		listener.Start();
 		try {
-			return ((IPEndPoint)listener.LocalEndpoint).Port;
-		}
-		finally {
+			return ((IPEndPoint) listener.LocalEndpoint).Port;
+		} finally {
 			listener.Stop();
 		}
 	}
@@ -58,6 +57,14 @@ public sealed record Aria2Config(int Port, string Secret, int ParentPid, string 
 		// Not falloc: without the "perform volume maintenance" privilege (any non-admin run) aria2 falls back to zero-filling the whole
 		// file, which blocks the engine for minutes on a big torrent. Files grow as data arrives instead.
 		sb.AppendLine("file-allocation=none");
+		// The user's settings come last, so they win over the defaults above (aria2 uses the last occurrence).
+		foreach (var (key, value) in Options ?? new Dictionary<string, string>()) {
+			// An empty value means "not set", which is what leaving the line out does. A control character (a line break in a hand-edited
+			// settings file, say) could start another option such as rpc-secret, so such a line is never written.
+			if (value.Length > 0 && !key.Any(char.IsControl) && !value.Any(char.IsControl)) {
+				sb.AppendLine($"{key}={value}");
+			}
+		}
 		if (Trackers is { Count: > 0 }) {
 			sb.AppendLine($"bt-tracker={TrackerOptionValue(Trackers)}");
 		}

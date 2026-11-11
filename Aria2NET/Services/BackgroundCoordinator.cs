@@ -36,8 +36,8 @@ internal sealed class BackgroundCoordinator(
 		try {
 			_tray = new TrayIcon(WindowNative.GetWindowHandle(window), Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico"), _logger);
 			_tray.OpenRequested += window.BringToFront;
-			_tray.PauseAllRequested += () => _ = RunAsync(operations.PauseAllAsync, "Pause all");
-			_tray.ResumeAllRequested += () => _ = RunAsync(operations.ResumeAllAsync, "Resume all");
+			_tray.PauseAllRequested += () => _ = RunAsync(operations.PauseAllAsync, Loc.S("Tray_PauseAll", "Pause all"));
+			_tray.ResumeAllRequested += () => _ = RunAsync(operations.ResumeAllAsync, Loc.S("Tray_ResumeAll", "Resume all"));
 			_tray.OpenFolderRequested += OpenDownloadFolder;
 			_tray.ExitRequested += () => window.RequestExit();
 			_tray.CurrentFinishAction = () => whenFinished.Action;
@@ -47,8 +47,7 @@ internal sealed class BackgroundCoordinator(
 			_tray.Show();
 			ApplyHotkeys();
 			ApplyCrashRestart();
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			_logger.LogError(ex, "Could not create the tray icon; the window will close normally");
 			_tray?.Dispose();
 			_tray = null;
@@ -85,12 +84,10 @@ internal sealed class BackgroundCoordinator(
 		try {
 			if (settings.Load().RestartAfterCrash) {
 				NativeMethods.RegisterApplicationRestart("--autostart", 0x8 /* RESTART_NO_REBOOT */);
-			}
-			else {
+			} else {
 				NativeMethods.UnregisterApplicationRestart();
 			}
-		}
-		catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or EntryPointNotFoundException) {
+		} catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or EntryPointNotFoundException) {
 			_logger.LogInformation(ex, "Restart after a crash is not available");
 		}
 	}
@@ -99,12 +96,10 @@ internal sealed class BackgroundCoordinator(
 		if (id == HotkeyToggleWindow) {
 			if (window.AppWindow.IsVisible && window.IsForeground) {
 				window.AppWindow.Hide(); // the tray icon is what delivered this, so there is a way back
-			}
-			else {
+			} else {
 				window.BringToFront();
 			}
-		}
-		else if (id == HotkeyAddDownload) {
+		} else if (id == HotkeyAddDownload) {
 			App.ShowAddDialog();
 		}
 	}
@@ -117,8 +112,7 @@ internal sealed class BackgroundCoordinator(
 	private async Task RunAsync(Func<CancellationToken, Task> action, string name) {
 		try {
 			await action(CancellationToken.None);
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			_logger.LogWarning(ex, "{Action} from the tray failed", name);
 		}
 	}

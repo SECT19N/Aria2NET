@@ -8,8 +8,7 @@ internal sealed class TempDir : IDisposable {
 	public void Dispose() {
 		try {
 			Directory.Delete(Path, recursive: true);
-		}
-		catch (IOException) {
+		} catch (IOException) {
 			// Best effort cleanup.
 		}
 	}

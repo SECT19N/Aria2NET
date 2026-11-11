@@ -84,18 +84,18 @@ public sealed partial class DownloadRowViewModel : ObservableObject {
 		SpeedText = active ? ByteFormat.Speed(item.SpeedBytesPerSec) : item.Status == DownloadStatus.Seeding ? "↑ " + ByteFormat.Speed(item.UploadSpeedBytesPerSec) : "";
 		EtaText = active ? TimeFormat.Eta(item.Eta) : "";
 		StatusText = item.Status switch {
-			DownloadStatus.Active => item.IsFetchingMetadata ? "Fetching metadata…" : "Downloading",
-			DownloadStatus.Seeding => "Seeding",
-			DownloadStatus.Waiting => "Queued",
-			DownloadStatus.Paused => "Paused",
-			DownloadStatus.Error => "Error",
-			DownloadStatus.Complete => "Complete",
-			_ => "Removed",
+			DownloadStatus.Active => item.IsFetchingMetadata ? Loc.S("Status_FetchingMetadata", "Fetching metadata…") : Loc.S("Status_Downloading", "Downloading"),
+			DownloadStatus.Seeding => Loc.S("Status_Seeding", "Seeding"),
+			DownloadStatus.Waiting => Loc.S("Status_Queued", "Queued"),
+			DownloadStatus.Paused => Loc.S("Status_Paused", "Paused"),
+			DownloadStatus.Error => Loc.S("Status_Error", "Error"),
+			DownloadStatus.Complete => Loc.S("Status_Complete", "Complete"),
+			_ => Loc.S("Status_Removed", "Removed"),
 		};
 		StatusTip = item.Status == DownloadStatus.Error ? ErrorTip(item)
-			: item.IsTorrent && item.UploadedBytes > 0 ? $"Uploaded {ByteFormat.Size(item.UploadedBytes)} · ratio {item.ShareRatio:0.00}"
+			: item.IsTorrent && item.UploadedBytes > 0 ? Loc.F("Row_Uploaded", "Uploaded {0} · ratio {1:0.00}", ByteFormat.Size(item.UploadedBytes), item.ShareRatio)
 			: "";
-		AccessibleName = $"{item.Name}, {StatusText}, {item.Progress:0} percent";
+		AccessibleName = Loc.F("Row_Accessible", "{0}, {1}, {2:0} percent", item.Name, StatusText, item.Progress);
 	}
 
 	private static string ErrorTip(DownloadItem item) {

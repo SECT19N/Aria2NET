@@ -22,8 +22,7 @@ public sealed record TorrentMetadata(string Name, string InfoHash, IReadOnlyList
 		try {
 			root = Bencode.Decode(data) as Dictionary<string, object> ?? throw new FormatException();
 			rawInfo = Bencode.FindRawTopLevelValue(data, "info");
-		}
-		catch (FormatException) {
+		} catch (FormatException) {
 			throw new FormatException("This is not a torrent file.");
 		}
 		if (rawInfo is null || root["info"] is not Dictionary<string, object> info) {
@@ -51,11 +50,9 @@ public sealed record TorrentMetadata(string Name, string InfoHash, IReadOnlyList
 				}
 				files.Add(new TorrentFileEntry(files.Count + 1, path, length));
 			}
-		}
-		else if (info.TryGetValue("length", out var single) && single is long singleLength && singleLength >= 0) {
+		} else if (info.TryGetValue("length", out var single) && single is long singleLength && singleLength >= 0) {
 			files.Add(new TorrentFileEntry(1, name, singleLength));
-		}
-		else {
+		} else {
 			throw new FormatException("This torrent lists no files.");
 		}
 

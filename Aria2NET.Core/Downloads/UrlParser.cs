@@ -58,7 +58,7 @@ public static class UrlParser {
 				yield return trimmed[1..^1];
 				continue;
 			}
-			foreach (var token in trimmed.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)) {
+			foreach (var token in trimmed.Split((char[]?) null, StringSplitOptions.RemoveEmptyEntries)) {
 				yield return token;
 			}
 		}

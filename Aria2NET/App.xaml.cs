@@ -61,13 +61,22 @@ public partial class App : Application {
 		}
 
 		services.AddSingleton(paths);
-		services.AddLogging(b => b.ClearProviders().AddProvider(new FileLoggerProvider(paths.LogsDir)));
+		var startupSettings = new SettingsStore<AppSettings>(paths.SettingsFile, AppSettingsJsonContext.Default.AppSettings).Load();
+		var fileLogger = new FileLoggerProvider(paths.LogsDir, EngineOptions.AppLogLevelFor(startupSettings.LogLevel));
+		services.AddSingleton(fileLogger);
+		// The provider does the filtering, so its level can change while the app runs.
+		services.AddLogging(b => b.ClearProviders().SetMinimumLevel(LogLevel.Trace).AddProvider(fileLogger));
 		services.AddSingleton(sp => new SettingsStore<AppSettings>(
 			paths.SettingsFile, AppSettingsJsonContext.Default.AppSettings, sp.GetRequiredService<ILogger<SettingsStore<AppSettings>>>()));
-		services.AddSingleton<IAria2Engine>(sp => new Aria2Engine(
-			paths,
-			Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads"),
-			sp.GetRequiredService<ILogger<Aria2Engine>>()));
+		services.AddSingleton(sp => new HeaderPresets(new SettingsStore<HeaderPresetFile>(
+			paths.PresetsFile, HeaderPresetJsonContext.Default.HeaderPresetFile, sp.GetRequiredService<ILogger<HeaderPresets>>())));
+		services.AddSingleton<IAria2Engine>(sp => {
+			var store = sp.GetRequiredService<SettingsStore<AppSettings>>();
+			return new Aria2Engine(paths, DefaultFolderResolver.UserDownloads(), sp.GetRequiredService<ILogger<Aria2Engine>>(), store.Load);
+		});
+		services.AddSingleton<SettingsApplier>(sp => new SettingsApplier(
+			sp.GetRequiredService<IAria2Engine>(), sp.GetRequiredService<SettingsStore<AppSettings>>(),
+			sp.GetRequiredService<DownloadOperations>(), sp.GetRequiredService<ILogger<SettingsApplier>>(), paths));
 
 		services.AddSingleton(sp => new TrackerListService(new HttpClient { Timeout = TimeSpan.FromSeconds(15) }, paths, sp.GetRequiredService<ILogger<TrackerListService>>()));
 		services.AddSingleton(sp => new HistoryService(paths, sp.GetRequiredService<ILogger<HistoryService>>()));
@@ -98,6 +107,7 @@ public partial class App : Application {
 		Log.LogInformation("Aria2NET {Version} starting", AboutViewModel.AppVersion);
 		_ = Services.GetRequiredService<NoticeCenter>(); // created on the UI thread so any thread can post to it
 		_window = new MainWindow();
+		ApplyTheme(Services.GetRequiredService<SettingsStore<AppSettings>>().Load().Theme);
 		Services.GetRequiredService<PersistenceCoordinator>().Start();
 		Services.GetRequiredService<WhenFinishedService>().Start(_window);
 		Services.GetRequiredService<PowerService>().Start(_window);
@@ -122,8 +132,7 @@ public partial class App : Application {
 			if (Services.GetRequiredService<StartupRegistration>().Refresh()) {
 				Log.LogInformation("Updated the start-with-Windows entry to {Path}", Environment.ProcessPath);
 			}
-		}
-		catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException) {
+		} catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException) {
 			Log.LogWarning(ex, "Could not update the start-with-Windows entry");
 		}
 	}
@@ -131,14 +140,14 @@ public partial class App : Application {
 	private static async Task StartEngineAsync() {
 		try {
 			var engine = Services.GetRequiredService<IAria2Engine>();
+			Services.GetRequiredService<SettingsApplier>().Start();
 			await engine.StartAsync();
 			if (engine.State == EngineState.Running && Services.GetRequiredService<SettingsStore<AppSettings>>().Load().StartPaused) {
 				await Services.GetRequiredService<DownloadOperations>().PauseAllAsync();
 				Log.LogInformation("Paused everything at start, as the settings ask");
 			}
 			_ = RefreshTrackerListAsync(engine);
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			Log.LogError(ex, "Engine start threw");
 		}
 	}
@@ -147,14 +156,14 @@ public partial class App : Application {
 	private static async Task RefreshTrackerListAsync(IAria2Engine engine) {
 		try {
 			var trackers = Services.GetRequiredService<TrackerListService>();
-			if (!trackers.IsStale(DateTime.UtcNow)) {
-				return;
+			var url = TrackerListService.SourceUrl(Services.GetRequiredService<SettingsStore<AppSettings>>().Load());
+			if (url is null || !trackers.IsStale(DateTime.UtcNow)) {
+				return; // extra trackers are switched off, or the cached list is fresh
 			}
-			if (await trackers.RefreshAsync() is { } list && engine.Rpc is { } rpc) {
+			if (await trackers.RefreshAsync(url) is { } list && engine.Rpc is { } rpc) {
 				await rpc.ChangeGlobalOptionAsync(new Dictionary<string, string> { ["bt-tracker"] = Aria2Config.TrackerOptionValue(list) });
 			}
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			Log.LogWarning(ex, "Tracker list refresh failed");
 		}
 	}
@@ -182,6 +191,17 @@ public partial class App : Application {
 		});
 	}
 
+	/// <summary>Applies the theme setting to the whole window (dialogs and flyouts follow it). Callable only on the UI thread.</summary>
+	public static void ApplyTheme(AppTheme theme) {
+		if (_window?.Content is FrameworkElement root) {
+			root.RequestedTheme = theme switch {
+				AppTheme.Light => ElementTheme.Light,
+				AppTheme.Dark => ElementTheme.Dark,
+				_ => ElementTheme.Default,
+			};
+		}
+	}
+
 	/// <summary>Called when a second launch is redirected to this instance.</summary>
 	public static void ActivateMainWindow() => _window?.DispatcherQueue.TryEnqueue(_window.BringToFront);
 
@@ -193,12 +213,10 @@ public partial class App : Application {
 		}
 		_showingError = true;
 		try {
-			await _window.ShowErrorAsync("Something went wrong", e.Exception?.Message ?? e.Message);
-		}
-		catch (Exception ex) {
+			await _window.ShowErrorAsync(Loc.S("App_ErrorTitle", "Something went wrong"), e.Exception?.Message ?? e.Message);
+		} catch (Exception ex) {
 			Log.LogError(ex, "Could not show error dialog");
-		}
-		finally {
+		} finally {
 			_showingError = false;
 		}
 	}

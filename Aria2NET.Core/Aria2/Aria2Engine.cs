@@ -1,19 +1,21 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using Aria2NET.Core.Settings;
 using Aria2NET.Core.Torrents;
 using Microsoft.Extensions.Logging;
 
 namespace Aria2NET.Core.Aria2;
 
 /// <summary>Owns a hidden aria2c child process and the RPC connection to it.</summary>
-public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria2Engine> logger) : IAria2Engine {
+public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria2Engine> logger, Func<AppSettings>? settings = null) : IAria2Engine {
 	private const int MaxStartAttempts = 3;
 	private static readonly TimeSpan ReadyTimeout = TimeSpan.FromSeconds(10);
 	private static readonly TimeSpan ExitTimeout = TimeSpan.FromSeconds(5);
 
 	private readonly AppPaths _paths = paths;
-	private readonly string _downloadDir = downloadDir;
+	private readonly Func<AppSettings>? _settings = settings;
 	private readonly ILogger<Aria2Engine> _logger = logger;
+	private string _downloadDir = downloadDir;
 	private readonly SemaphoreSlim _gate = new(1, 1);
 	private readonly HttpClient _http = new(new SocketsHttpHandler { UseProxy = false }) { Timeout = TimeSpan.FromSeconds(5) };
 
@@ -36,8 +38,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 			}
 			SetState(EngineState.Starting);
 			await StartCoreAsync(ct);
-		}
-		finally {
+		} finally {
 			_gate.Release();
 		}
 	}
@@ -48,8 +49,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 			SetState(EngineState.Stopping);
 			await StopCoreAsync();
 			SetState(EngineState.Stopped);
-		}
-		finally {
+		} finally {
 			_gate.Release();
 		}
 	}
@@ -60,8 +60,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 			SetState(EngineState.Restarting);
 			await StopCoreAsync();
 			await StartCoreAsync(ct);
-		}
-		finally {
+		} finally {
 			_gate.Release();
 		}
 	}
@@ -74,6 +73,11 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 
 	private async Task StartCoreAsync(CancellationToken ct) {
 		LastError = null;
+		// Read on every start so a restart picks up a changed default folder and the other options.
+		var userSettings = _settings?.Invoke();
+		if (userSettings is not null) {
+			_downloadDir = DefaultFolderResolver.ForEngine(userSettings);
+		}
 		var exe = Path.GetFullPath(_paths.Aria2Exe);
 		if (!File.Exists(exe)) {
 			Fail($"aria2c.exe not found at {exe}. Run tools/get-aria2.ps1.");
@@ -89,8 +93,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 					? "The list of unfinished downloads was damaged and could not be recovered, so it starts empty."
 					: "The list of unfinished downloads was damaged and was restored from a backup. The newest changes may be missing."));
 			}
-		}
-		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
+		} catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
 			Fail($"Cannot prepare data folders: {ex.Message}");
 			return;
 		}
@@ -99,14 +102,15 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 
 		for (var attempt = 1; attempt <= MaxStartAttempts; attempt++) {
 			ct.ThrowIfCancellationRequested();
-			var config = Aria2Config.CreateRandom(_downloadDir, Environment.ProcessId, TrackerListService.ReadCache(_paths));
+			var config = Aria2Config.CreateRandom(_downloadDir, Environment.ProcessId,
+				userSettings?.Trackers == TrackerSource.Off ? null : TrackerListService.ReadCache(_paths),
+				userSettings is null ? null : EngineOptions.ToGlobalOptions(userSettings));
 			File.WriteAllText(_paths.Aria2ConfFile, config.Render(_paths));
 
 			Process process;
 			try {
 				process = LaunchProcess(exe);
-			}
-			catch (Exception ex) when (ex is Win32Exception or InvalidOperationException) {
+			} catch (Exception ex) when (ex is Win32Exception or InvalidOperationException) {
 				Fail($"Could not launch aria2c: {ex.Message}");
 				return;
 			}
@@ -168,8 +172,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 		while (!process.HasExited) {
 			try {
 				return await rpc.GetVersionAsync(timeout.Token);
-			}
-			catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or Aria2RpcException) {
+			} catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or Aria2RpcException) {
 				if (timeout.IsCancellationRequested) {
 					ct.ThrowIfCancellationRequested();
 					return null;
@@ -177,8 +180,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 			}
 			try {
 				await Task.Delay(150, timeout.Token);
-			}
-			catch (OperationCanceledException) {
+			} catch (OperationCanceledException) {
 				ct.ThrowIfCancellationRequested();
 				return null;
 			}
@@ -205,22 +207,19 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 						using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
 						await rpc.SaveSessionAsync(cts.Token);
 						await rpc.ShutdownAsync(cts.Token);
-					}
-					catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or Aria2RpcException) {
+					} catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or Aria2RpcException) {
 						_logger.LogWarning(ex, "Graceful aria2 shutdown failed; killing the process");
 					}
 				}
 				try {
 					using var cts = new CancellationTokenSource(ExitTimeout);
 					await process.WaitForExitAsync(cts.Token);
-				}
-				catch (OperationCanceledException) {
+				} catch (OperationCanceledException) {
 					KillQuietly(process);
 				}
 			}
 			_logger.LogInformation("aria2 stopped");
-		}
-		finally {
+		} finally {
 			process.Dispose();
 		}
 	}
@@ -232,8 +231,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 		int code;
 		try {
 			code = process.ExitCode;
-		}
-		catch (InvalidOperationException) {
+		} catch (InvalidOperationException) {
 			code = -1;
 		}
 		_logger.LogError("aria2c exited unexpectedly with code {Code}", code);
@@ -251,11 +249,9 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 					p.Kill(entireProcessTree: true);
 					p.WaitForExit(2000);
 				}
-			}
-			catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or NotSupportedException) {
+			} catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or NotSupportedException) {
 				// Process exited or is not ours to inspect.
-			}
-			finally {
+			} finally {
 				p.Dispose();
 			}
 		}
@@ -267,8 +263,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 				process.Kill(entireProcessTree: true);
 				process.WaitForExit(2000);
 			}
-		}
-		catch (Exception ex) when (ex is Win32Exception or InvalidOperationException) {
+		} catch (Exception ex) when (ex is Win32Exception or InvalidOperationException) {
 			// Already gone.
 		}
 	}

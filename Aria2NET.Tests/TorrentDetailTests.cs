@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Aria2NET.Core.Downloads;
 using Aria2NET.Core.Torrents;
 using Microsoft.Extensions.Logging.Abstractions;
 

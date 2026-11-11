@@ -26,8 +26,8 @@ public class ControlIntegrationTests(ITestOutputHelper output) {
 			}
 			ctx.Response.ContentLength64 = payload.Length - start;
 			for (var pos = start; pos < payload.Length; pos += Chunk) {
-				var n = (int)Math.Min(Chunk, payload.Length - pos);
-				await ctx.Response.OutputStream.WriteAsync(payload.AsMemory((int)pos, n));
+				var n = (int) Math.Min(Chunk, payload.Length - pos);
+				await ctx.Response.OutputStream.WriteAsync(payload.AsMemory((int) pos, n));
 				await ctx.Response.OutputStream.FlushAsync();
 				await Task.Delay(delayMs);
 			}

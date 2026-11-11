@@ -82,8 +82,8 @@ public sealed partial class MainWindow : Window {
 		BringToFrontIfHidden(); // a dialog on a hidden window would wait there unseen
 		var dialog = new ContentDialog {
 			Title = title,
-			Content = message + "\n\nDetails were written to the log file.",
-			CloseButtonText = "OK",
+			Content = message + Loc.S("Main_ErrorDetails", "\n\nDetails were written to the log file."),
+			CloseButtonText = Loc.S("Common_OK", "OK"),
 			XamlRoot = Content.XamlRoot,
 		};
 		await dialog.ShowAsync();
@@ -96,14 +96,13 @@ public sealed partial class MainWindow : Window {
 			Title = title,
 			Content = message,
 			PrimaryButtonText = confirmText,
-			CloseButtonText = "Cancel",
+			CloseButtonText = Loc.S("Common_Cancel", "Cancel"),
 			DefaultButton = ContentDialogButton.Close,
 			XamlRoot = Content.XamlRoot,
 		};
 		try {
 			return await dialog.ShowAsync() == ContentDialogResult.Primary;
-		}
-		catch (InvalidOperationException) {
+		} catch (InvalidOperationException) {
 			return false; // WinUI allows one open dialog at a time
 		}
 	}
@@ -143,8 +142,7 @@ public sealed partial class MainWindow : Window {
 		Notices.Dismiss();
 		try {
 			await action.Run();
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			_logger.LogWarning(ex, "Notice action {Action} failed", action.Text);
 		}
 	}
@@ -162,8 +160,7 @@ public sealed partial class MainWindow : Window {
 				var screen = new ScreenRect(rect.X, rect.Y, rect.Width, rect.Height);
 				if (areas[i].IsPrimary) {
 					displays.Insert(0, screen);
-				}
-				else {
+				} else {
 					displays.Add(screen);
 				}
 			}
@@ -171,8 +168,7 @@ public sealed partial class MainWindow : Window {
 				_savedFit = fit;
 				ApplyPlacement(fit);
 			}
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			_logger.LogWarning(ex, "Could not restore the window position");
 		}
 		_lastRestored = CurrentPlacement();
@@ -191,15 +187,17 @@ public sealed partial class MainWindow : Window {
 		if (_savedFit is { } fit) {
 			try {
 				ApplyPlacement(fit);
-			}
-			catch (Exception ex) {
+			} catch (Exception ex) {
 				_logger.LogWarning(ex, "Could not restore the window position");
 			}
 		}
 	}
 
 	private WindowPlacement CurrentPlacement() => new() {
-		X = AppWindow.Position.X, Y = AppWindow.Position.Y, Width = AppWindow.Size.Width, Height = AppWindow.Size.Height,
+		X = AppWindow.Position.X,
+		Y = AppWindow.Position.Y,
+		Width = AppWindow.Size.Width,
+		Height = AppWindow.Size.Height,
 	};
 
 	// While maximized or minimized the window reports the wrong rectangle, so only remember the normal one.
@@ -222,8 +220,7 @@ public sealed partial class MainWindow : Window {
 			var settings = _settings.Load();
 			settings.Window = placement;
 			_settings.Save(settings);
-		}
-		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
+		} catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
 			_logger.LogWarning(ex, "Could not save the window position");
 		}
 	}
@@ -243,8 +240,7 @@ public sealed partial class MainWindow : Window {
 				await _monitor.StopAsync();
 				await _engine.StopAsync();
 			}).Wait(TimeSpan.FromSeconds(4));
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			_logger.LogError(ex, "Engine stop threw while Windows was ending the session");
 		}
 		_toasts.Dispose();
@@ -268,9 +264,9 @@ public sealed partial class MainWindow : Window {
 		if (settings.ConfirmExitWithActive && !_skipExitConfirm && _background.ActiveDownloads is > 0 and var running) {
 			BringToFront();
 			var message = running == 1
-				? "A download is still running. Exiting stops it; it continues the next time you open Aria2NET."
-				: $"{running} downloads are still running. Exiting stops them; they continue the next time you open Aria2NET.";
-			if (!await ConfirmAsync("Exit Aria2NET?", message, "Exit")) {
+				? Loc.S("Main_ExitOne", "A download is still running. Exiting stops it; it continues the next time you open Aria2NET.")
+				: Loc.F("Main_ExitMany", "{0} downloads are still running. Exiting stops them; they continue the next time you open Aria2NET.", running);
+			if (!await ConfirmAsync(Loc.S("Main_ExitTitle", "Exit Aria2NET?"), message, Loc.S("Main_ExitConfirm", "Exit"))) {
 				_exitRequested = false;
 				return;
 			}
@@ -281,8 +277,7 @@ public sealed partial class MainWindow : Window {
 			_supervisor.Dispose();                   // stopping on purpose must not look like a crash to restart
 			await _monitor.StopAsync();
 			await _engine.StopAsync();
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			_logger.LogError(ex, "Engine stop threw during shutdown");
 		}
 		_toasts.Dispose();

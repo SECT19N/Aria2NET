@@ -34,8 +34,7 @@ public sealed class Database(string path, string backupsDir, ILogger? logger = n
 			pragma.CommandText = "PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;";
 			pragma.ExecuteNonQuery();
 			return connection;
-		}
-		catch {
+		} catch {
 			connection.Dispose();
 			throw;
 		}
@@ -45,8 +44,7 @@ public sealed class Database(string path, string backupsDir, ILogger? logger = n
 	public DatabaseOpenResult EnsureReady() {
 		try {
 			return Prepare(movedTo: null);
-		}
-		catch (SqliteException ex) when (IsCorrupt(ex)) {
+		} catch (SqliteException ex) when (IsCorrupt(ex)) {
 			var moved = MoveAside();
 			logger?.LogError(ex, "History database unreadable; moved to {Path} and starting a new one", moved);
 			return Prepare(moved);

@@ -1,0 +1,1625 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- Strings for the UI. The XAML keeps the same English text as a fallback; the resource wins when it loads. -->
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="MainWindow_AppTitleBar.Title" xml:space="preserve">
+    <value>Aria2NET</value>
+  </data>
+  <data name="MainWindow_InfoBar1.Title" xml:space="preserve">
+    <value>aria2 engine problem</value>
+  </data>
+  <data name="MainWindow_Button1.Content" xml:space="preserve">
+    <value>Restart engine</value>
+  </data>
+  <data name="MainWindow_NavigationViewItem1.Content" xml:space="preserve">
+    <value>Downloads</value>
+  </data>
+  <data name="MainWindow_NavigationViewItem2.Content" xml:space="preserve">
+    <value>History</value>
+  </data>
+  <data name="MainWindow_NavigationViewItem3.Content" xml:space="preserve">
+    <value>About</value>
+  </data>
+  <data name="AboutPage_TextBlock1.Text" xml:space="preserve">
+    <value>About</value>
+  </data>
+  <data name="AboutPage_TextBlock2.Text" xml:space="preserve">
+    <value>Aria2NET</value>
+  </data>
+  <data name="AboutPage_TextBlock3.Text" xml:space="preserve">
+    <value>A Windows front end for aria2: downloads, torrents, magnets and metalinks.</value>
+  </data>
+  <data name="AboutPage_HyperlinkButton1.Content" xml:space="preserve">
+    <value>Project page</value>
+  </data>
+  <data name="AboutPage_HyperlinkButton2.Content" xml:space="preserve">
+    <value>Report a problem</value>
+  </data>
+  <data name="AboutPage_HyperlinkButton3.Content" xml:space="preserve">
+    <value>Releases</value>
+  </data>
+  <data name="AboutPage_HyperlinkButton4.Content" xml:space="preserve">
+    <value>aria2</value>
+  </data>
+  <data name="AboutPage_Button1.Content" xml:space="preserve">
+    <value>View license</value>
+  </data>
+  <data name="AboutPage_Button2.Content" xml:space="preserve">
+    <value>Third-party notices</value>
+  </data>
+  <data name="AboutPage_TextBlock4.Text" xml:space="preserve">
+    <value>Peer country codes in the torrent details use the IP to Country Lite database by DB-IP.com (CC BY 4.0), looked up on this computer only.</value>
+  </data>
+  <data name="AddDownloadDialog_ContentDialog1.Title" xml:space="preserve">
+    <value>Add downloads</value>
+  </data>
+  <data name="AddDownloadDialog_ContentDialog1.PrimaryButtonText" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="AddDownloadDialog_ContentDialog1.CloseButtonText" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="AddDownloadDialog_UrlsBox.Header" xml:space="preserve">
+    <value>Links and files (one per line)</value>
+  </data>
+  <data name="AddDownloadDialog_UrlsBox.PlaceholderText" xml:space="preserve">
+    <value>https://example.com/file.zip, magnet:?xt=..., or the path of a .torrent file</value>
+  </data>
+  <data name="AddDownloadDialog_Button1.Content" xml:space="preserve">
+    <value>Add .torrent / .metalink…</value>
+  </data>
+  <data name="AddDownloadDialog_FolderBox.Header" xml:space="preserve">
+    <value>Save to</value>
+  </data>
+  <data name="AddDownloadDialog_Button2.Content" xml:space="preserve">
+    <value>Browse…</value>
+  </data>
+  <data name="AddDownloadDialog_FileNameBox.Header" xml:space="preserve">
+    <value>File name (optional, single link only)</value>
+  </data>
+  <data name="AddDownloadDialog_FileNameBox.PlaceholderText" xml:space="preserve">
+    <value>Use the name from the server</value>
+  </data>
+  <data name="AddDownloadDialog_MoreOptions.Header" xml:space="preserve">
+    <value>More options</value>
+  </data>
+  <data name="AddDownloadDialog_PresetBox.Header" xml:space="preserve">
+    <value>Site preset</value>
+  </data>
+  <data name="AddDownloadDialog_PresetBox.PlaceholderText" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="AddDownloadDialog_SavePresetButton.Content" xml:space="preserve">
+    <value>Save as…</value>
+  </data>
+  <data name="AddDownloadDialog_DeletePresetButton.Content" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="AddDownloadDialog_PresetNameBox.Header" xml:space="preserve">
+    <value>Preset name</value>
+  </data>
+  <data name="AddDownloadDialog_PresetNameBox.PlaceholderText" xml:space="preserve">
+    <value>Press Enter to save</value>
+  </data>
+  <data name="AddDownloadDialog_HeadersBox.Header" xml:space="preserve">
+    <value>Headers (one per line, Name: value)</value>
+  </data>
+  <data name="AddDownloadDialog_HeadersBox.PlaceholderText" xml:space="preserve">
+    <value>Authorization: Bearer …</value>
+  </data>
+  <data name="AddDownloadDialog_RefererBox.Header" xml:space="preserve">
+    <value>Referer</value>
+  </data>
+  <data name="AddDownloadDialog_RefererBox.PlaceholderText" xml:space="preserve">
+    <value>https://example.com/page</value>
+  </data>
+  <data name="AddDownloadDialog_CookieBox.Header" xml:space="preserve">
+    <value>Cookie</value>
+  </data>
+  <data name="AddDownloadDialog_CookieBox.PlaceholderText" xml:space="preserve">
+    <value>name=value; other=value</value>
+  </data>
+  <data name="AddDownloadDialog_UserBox.Header" xml:space="preserve">
+    <value>User name (HTTP / FTP)</value>
+  </data>
+  <data name="AddDownloadDialog_PasswordBox.Header" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="AddDownloadDialog_ChecksumBox.Header" xml:space="preserve">
+    <value>Checksum (verified when done)</value>
+  </data>
+  <data name="AddDownloadDialog_ChecksumBox.PlaceholderText" xml:space="preserve">
+    <value>sha-256=…</value>
+  </data>
+  <data name="AddDownloadDialog_DownLimitBox.Header" xml:space="preserve">
+    <value>Download limit (KiB/s)</value>
+  </data>
+  <data name="AddDownloadDialog_UpLimitBox.Header" xml:space="preserve">
+    <value>Upload limit (KiB/s)</value>
+  </data>
+  <data name="AddDownloadDialog_TextBlock1.Text" xml:space="preserve">
+    <value>0 means no limit. These apply to this add only. Passwords and cookies are not saved, except a cookie inside a preset, which is stored encrypted for your Windows account. While a download is unfinished, aria2 keeps its login in its own session file.</value>
+  </data>
+  <data name="DownloadsPage_AddButton.Label" xml:space="preserve">
+    <value>Add URL</value>
+  </data>
+  <data name="DownloadsPage_AddButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Add downloads (Ctrl+V pastes links)</value>
+  </data>
+  <data name="DownloadsPage_AppBarButton1.Label" xml:space="preserve">
+    <value>Pause</value>
+  </data>
+  <data name="DownloadsPage_AppBarButton1.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Pause the selected downloads (Space)</value>
+  </data>
+  <data name="DownloadsPage_AppBarButton2.Label" xml:space="preserve">
+    <value>Resume</value>
+  </data>
+  <data name="DownloadsPage_AppBarButton2.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Resume the selected downloads (Space)</value>
+  </data>
+  <data name="DownloadsPage_AppBarButton3.Label" xml:space="preserve">
+    <value>Retry</value>
+  </data>
+  <data name="DownloadsPage_AppBarButton3.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Start failed downloads again</value>
+  </data>
+  <data name="DownloadsPage_AppBarButton4.Label" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="DownloadsPage_AppBarButton4.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Remove the selected downloads (Del)</value>
+  </data>
+  <data name="DownloadsPage_MenuFlyoutItem1.Text" xml:space="preserve">
+    <value>Remove from list</value>
+  </data>
+  <data name="DownloadsPage_MenuFlyoutItem2.Text" xml:space="preserve">
+    <value>Remove and delete file</value>
+  </data>
+  <data name="DownloadsPage_AppBarButton5.Label" xml:space="preserve">
+    <value>Open folder</value>
+  </data>
+  <data name="DownloadsPage_AppBarButton5.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Show the file in its folder</value>
+  </data>
+  <data name="DownloadsPage_AltSpeedButton.Label" xml:space="preserve">
+    <value>Alt speed</value>
+  </data>
+  <data name="DownloadsPage_AppBarButton6.Label" xml:space="preserve">
+    <value>Pause all</value>
+  </data>
+  <data name="DownloadsPage_AppBarButton7.Label" xml:space="preserve">
+    <value>Resume all</value>
+  </data>
+  <data name="DownloadsPage_AppBarButton8.Label" xml:space="preserve">
+    <value>Clear completed</value>
+  </data>
+  <data name="DownloadsPage_AppBarButton9.Label" xml:space="preserve">
+    <value>Clear failed</value>
+  </data>
+  <data name="DownloadsPage_InfoBar1.Title" xml:space="preserve">
+    <value>Download engine is not running</value>
+  </data>
+  <data name="DownloadsPage_InfoBar1.Message" xml:space="preserve">
+    <value>Adding downloads is disabled until aria2 is running. Use the status bar message or Restart engine.</value>
+  </data>
+  <data name="DownloadsPage_InfoBar2.Title" xml:space="preserve">
+    <value>That did not work</value>
+  </data>
+  <data name="DownloadsPage_MenuFlyoutItem3.Text" xml:space="preserve">
+    <value>Pause</value>
+  </data>
+  <data name="DownloadsPage_MenuFlyoutItem4.Text" xml:space="preserve">
+    <value>Resume</value>
+  </data>
+  <data name="DownloadsPage_MenuFlyoutItem5.Text" xml:space="preserve">
+    <value>Retry</value>
+  </data>
+  <data name="DownloadsPage_MenuFlyoutItem6.Text" xml:space="preserve">
+    <value>Open file</value>
+  </data>
+  <data name="DownloadsPage_MenuFlyoutItem7.Text" xml:space="preserve">
+    <value>Open folder</value>
+  </data>
+  <data name="DownloadsPage_MenuFlyoutItem8.Text" xml:space="preserve">
+    <value>Copy URL</value>
+  </data>
+  <data name="DownloadsPage_MenuFlyoutItem9.Text" xml:space="preserve">
+    <value>Speed limit…</value>
+  </data>
+  <data name="DownloadsPage_MenuFlyoutItem10.Text" xml:space="preserve">
+    <value>Rename…</value>
+  </data>
+  <data name="DownloadsPage_MenuFlyoutItem11.Text" xml:space="preserve">
+    <value>Change folder…</value>
+  </data>
+  <data name="DownloadsPage_MenuFlyoutItem12.Text" xml:space="preserve">
+    <value>Torrent details…</value>
+  </data>
+  <data name="DownloadsPage_MenuFlyoutItem13.Text" xml:space="preserve">
+    <value>Check files again</value>
+  </data>
+  <data name="DownloadsPage_MenuFlyoutItem13.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Verify the files against the torrent and download whatever is damaged or missing</value>
+  </data>
+  <data name="DownloadsPage_MenuFlyoutItem14.Text" xml:space="preserve">
+    <value>Seeding…</value>
+  </data>
+  <data name="DownloadsPage_MenuFlyoutSubItem1.Text" xml:space="preserve">
+    <value>Queue</value>
+  </data>
+  <data name="DownloadsPage_MenuFlyoutItem15.Text" xml:space="preserve">
+    <value>Start now</value>
+  </data>
+  <data name="DownloadsPage_MenuFlyoutItem16.Text" xml:space="preserve">
+    <value>Move to top</value>
+  </data>
+  <data name="DownloadsPage_MenuFlyoutItem17.Text" xml:space="preserve">
+    <value>Move up</value>
+  </data>
+  <data name="DownloadsPage_MenuFlyoutItem18.Text" xml:space="preserve">
+    <value>Move down</value>
+  </data>
+  <data name="DownloadsPage_MenuFlyoutItem19.Text" xml:space="preserve">
+    <value>Move to bottom</value>
+  </data>
+  <data name="DownloadsPage_MenuFlyoutItem20.Text" xml:space="preserve">
+    <value>Remove from list</value>
+  </data>
+  <data name="DownloadsPage_MenuFlyoutItem21.Text" xml:space="preserve">
+    <value>Remove and delete file</value>
+  </data>
+  <data name="DownloadsPage_MenuFlyoutItem22.Text" xml:space="preserve">
+    <value>Properties</value>
+  </data>
+  <data name="DownloadsPage_TextBlock1.Text" xml:space="preserve">
+    <value>No downloads match this filter.</value>
+  </data>
+  <data name="DownloadsPage_TextBlock2.Text" xml:space="preserve">
+    <value>Paste a link to start</value>
+  </data>
+  <data name="DownloadsPage_TextBlock3.Text" xml:space="preserve">
+    <value>Press Ctrl+V anywhere on this page, or use the button.</value>
+  </data>
+  <data name="DownloadsPage_Button1.Content" xml:space="preserve">
+    <value>Add URL</value>
+  </data>
+  <data name="DownloadsPage_Button2.Content" xml:space="preserve">
+    <value>Undo</value>
+  </data>
+  <data name="HistoryPage_AppBarButton1.Label" xml:space="preserve">
+    <value>Download again</value>
+  </data>
+  <data name="HistoryPage_AppBarButton1.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Download the selected links again as new copies</value>
+  </data>
+  <data name="HistoryPage_AppBarButton2.Label" xml:space="preserve">
+    <value>Download to…</value>
+  </data>
+  <data name="HistoryPage_AppBarButton2.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Download the selected links again into a folder you choose</value>
+  </data>
+  <data name="HistoryPage_AppBarButton3.Label" xml:space="preserve">
+    <value>Open file</value>
+  </data>
+  <data name="HistoryPage_AppBarButton4.Label" xml:space="preserve">
+    <value>Open folder</value>
+  </data>
+  <data name="HistoryPage_AppBarButton5.Label" xml:space="preserve">
+    <value>Copy URL</value>
+  </data>
+  <data name="HistoryPage_AppBarButton6.Label" xml:space="preserve">
+    <value>Remove from history</value>
+  </data>
+  <data name="HistoryPage_AppBarButton6.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Forget the selected entries (files are not deleted)</value>
+  </data>
+  <data name="HistoryPage_AppBarButton7.Label" xml:space="preserve">
+    <value>Export</value>
+  </data>
+  <data name="HistoryPage_MenuFlyoutItem1.Text" xml:space="preserve">
+    <value>Export as CSV…</value>
+  </data>
+  <data name="HistoryPage_MenuFlyoutItem2.Text" xml:space="preserve">
+    <value>Export as JSON…</value>
+  </data>
+  <data name="HistoryPage_AppBarButton8.Label" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="HistoryPage_AppBarButton8.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Reload the list (F5)</value>
+  </data>
+  <data name="HistoryPage_AppBarButton9.Label" xml:space="preserve">
+    <value>Clear history…</value>
+  </data>
+  <data name="HistoryPage_InfoBar1.Title" xml:space="preserve">
+    <value>History is not available</value>
+  </data>
+  <data name="HistoryPage_SearchBox.PlaceholderText" xml:space="preserve">
+    <value>Search name, link or path (Ctrl+F)</value>
+  </data>
+  <data name="HistoryPage_ComboBox1.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Sort by</value>
+  </data>
+  <data name="HistoryPage_ComboBox2.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="HistoryPage_ComboBox3.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>File type</value>
+  </data>
+  <data name="HistoryPage_ComboBox4.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Website</value>
+  </data>
+  <data name="HistoryPage_CalendarDatePicker1.PlaceholderText" xml:space="preserve">
+    <value>Added from</value>
+  </data>
+  <data name="HistoryPage_CalendarDatePicker2.PlaceholderText" xml:space="preserve">
+    <value>Added until</value>
+  </data>
+  <data name="HistoryPage_Button1.Content" xml:space="preserve">
+    <value>Clear filters</value>
+  </data>
+  <data name="HistoryPage_InfoBar2.Title" xml:space="preserve">
+    <value>That did not work</value>
+  </data>
+  <data name="HistoryPage_TextBlock1.Text" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="HistoryPage_TextBlock2.Text" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="HistoryPage_TextBlock3.Text" xml:space="preserve">
+    <value>Size</value>
+  </data>
+  <data name="HistoryPage_TextBlock4.Text" xml:space="preserve">
+    <value>Added</value>
+  </data>
+  <data name="HistoryPage_TextBlock5.Text" xml:space="preserve">
+    <value>Finished</value>
+  </data>
+  <data name="HistoryPage_TextBlock6.Text" xml:space="preserve">
+    <value>Folder</value>
+  </data>
+  <data name="HistoryPage_MenuFlyoutItem3.Text" xml:space="preserve">
+    <value>Download again</value>
+  </data>
+  <data name="HistoryPage_MenuFlyoutItem4.Text" xml:space="preserve">
+    <value>Download to…</value>
+  </data>
+  <data name="HistoryPage_MenuFlyoutItem5.Text" xml:space="preserve">
+    <value>Open file</value>
+  </data>
+  <data name="HistoryPage_MenuFlyoutItem6.Text" xml:space="preserve">
+    <value>Open folder</value>
+  </data>
+  <data name="HistoryPage_MenuFlyoutItem7.Text" xml:space="preserve">
+    <value>Copy URL</value>
+  </data>
+  <data name="HistoryPage_MenuFlyoutItem8.Text" xml:space="preserve">
+    <value>Remove from history</value>
+  </data>
+  <data name="HistoryPage_TextBlock7.Text" xml:space="preserve">
+    <value>Nothing matches these filters.</value>
+  </data>
+  <data name="HistoryPage_TextBlock8.Text" xml:space="preserve">
+    <value>No history yet</value>
+  </data>
+  <data name="HistoryPage_TextBlock9.Text" xml:space="preserve">
+    <value>Downloads you add are recorded here and stay after you close the app.</value>
+  </data>
+  <data name="PropertiesDialog_ContentDialog1.Title" xml:space="preserve">
+    <value>Properties</value>
+  </data>
+  <data name="PropertiesDialog_ContentDialog1.CloseButtonText" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="RenameDialog_ContentDialog1.Title" xml:space="preserve">
+    <value>Rename download</value>
+  </data>
+  <data name="RenameDialog_ContentDialog1.PrimaryButtonText" xml:space="preserve">
+    <value>Rename</value>
+  </data>
+  <data name="RenameDialog_ContentDialog1.CloseButtonText" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="RenameDialog_NameBox.Header" xml:space="preserve">
+    <value>File name</value>
+  </data>
+  <data name="SeedingDialog_ContentDialog1.Title" xml:space="preserve">
+    <value>Seeding</value>
+  </data>
+  <data name="SeedingDialog_ContentDialog1.PrimaryButtonText" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="SeedingDialog_ContentDialog1.CloseButtonText" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="SeedingDialog_TextBlock1.Text" xml:space="preserve">
+    <value>Choose when the selected torrents stop uploading to other people.</value>
+  </data>
+  <data name="SeedingDialog_RatioBox.Header" xml:space="preserve">
+    <value>Ratio (uploaded ÷ downloaded)</value>
+  </data>
+  <data name="SettingsPage_TextBlock1.Text" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="SettingsPage_SearchBox.PlaceholderText" xml:space="preserve">
+    <value>Search settings</value>
+  </data>
+  <data name="SettingsPage_SearchBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Search settings</value>
+  </data>
+  <data name="SettingsPage_JumpBox.PlaceholderText" xml:space="preserve">
+    <value>Jump to…</value>
+  </data>
+  <data name="SettingsPage_JumpBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Jump to a section</value>
+  </data>
+  <data name="SettingsPage_SearchEmpty.Text" xml:space="preserve">
+    <value>No settings match your search.</value>
+  </data>
+  <data name="SettingsPage_RestartBar.Title" xml:space="preserve">
+    <value>Restart the engine to apply</value>
+  </data>
+  <data name="SettingsPage_RestartBar.Message" xml:space="preserve">
+    <value>Some changes (default folder, ports and DHT, certificate check, IPv6, hand-typed options) apply when the download engine restarts. Downloads in progress resume.</value>
+  </data>
+  <data name="SettingsPage_Button1.Content" xml:space="preserve">
+    <value>Restart engine</value>
+  </data>
+  <data name="SettingsPage_TextBlock2.Text" xml:space="preserve">
+    <value>Appearance</value>
+  </data>
+  <data name="SettingsPage_ThemeBox.Header" xml:space="preserve">
+    <value>Theme</value>
+  </data>
+  <data name="SettingsPage_LanguageBox.Header" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="SettingsPage_LanguageBox.ToolTipService.ToolTip" xml:space="preserve">
+    <value>More languages will be added later</value>
+  </data>
+  <data name="SettingsPage_TextBlock3.Text" xml:space="preserve">
+    <value>Downloads</value>
+  </data>
+  <data name="SettingsPage_ConfirmDeleteBox.Content" xml:space="preserve">
+    <value>Ask before deleting files (Remove and delete file)</value>
+  </data>
+  <data name="SettingsPage_ConflictBox.Header" xml:space="preserve">
+    <value>When a file with the same name already exists</value>
+  </data>
+  <data name="SettingsPage_TextBlock4.Text" xml:space="preserve">
+    <value>Checked against the file name in the link or the one you typed; a name chosen by the server cannot be known beforehand. Applies to new downloads.</value>
+  </data>
+  <data name="SettingsPage_FolderBox.Header" xml:space="preserve">
+    <value>Default download folder</value>
+  </data>
+  <data name="SettingsPage_FolderBox.PlaceholderText" xml:space="preserve">
+    <value>Your Downloads folder</value>
+  </data>
+  <data name="SettingsPage_Button2.Content" xml:space="preserve">
+    <value>Browse…</value>
+  </data>
+  <data name="SettingsPage_TextBlock5.Text" xml:space="preserve">
+    <value>New downloads go here unless you pick another folder in the Add dialog. Changing it needs an engine restart.</value>
+  </data>
+  <data name="SettingsPage_ConcurrentBox.Header" xml:space="preserve">
+    <value>Downloads at once</value>
+  </data>
+  <data name="SettingsPage_ConnectionsBox.Header" xml:space="preserve">
+    <value>Connections per server</value>
+  </data>
+  <data name="SettingsPage_SplitBox.Header" xml:space="preserve">
+    <value>Split (pieces per file)</value>
+  </data>
+  <data name="SettingsPage_MinSplitBox.Header" xml:space="preserve">
+    <value>Min split size (MiB)</value>
+  </data>
+  <data name="SettingsPage_TextBlock6.Text" xml:space="preserve">
+    <value>More connections can be faster but some servers refuse more than a few. Applies to new downloads.</value>
+  </data>
+  <data name="SettingsPage_TriesBox.Header" xml:space="preserve">
+    <value>Retries (0 = keep trying)</value>
+  </data>
+  <data name="SettingsPage_RetryWaitBox.Header" xml:space="preserve">
+    <value>Wait between tries (s)</value>
+  </data>
+  <data name="SettingsPage_ConnectTimeoutBox.Header" xml:space="preserve">
+    <value>Connect timeout (s)</value>
+  </data>
+  <data name="SettingsPage_TimeoutBox.Header" xml:space="preserve">
+    <value>Timeout (s)</value>
+  </data>
+  <data name="SettingsPage_UserAgentBox.Header" xml:space="preserve">
+    <value>User agent</value>
+  </data>
+  <data name="SettingsPage_UserAgentText.Header" xml:space="preserve">
+    <value>Custom user agent</value>
+  </data>
+  <data name="SettingsPage_AllocationBox.Header" xml:space="preserve">
+    <value>File allocation</value>
+  </data>
+  <data name="SettingsPage_TextBlock7.Text" xml:space="preserve">
+    <value>None grows files as data arrives (fast to start). Prealloc and Falloc reserve the full size first; Falloc is slow for big files unless Windows lets the app skip zero-filling.</value>
+  </data>
+  <data name="SettingsPage_Button3.Content" xml:space="preserve">
+    <value>Reset download settings to defaults</value>
+  </data>
+  <data name="SettingsPage_TextBlock8.Text" xml:space="preserve">
+    <value>Speed</value>
+  </data>
+  <data name="SettingsPage_DownLimitBox.Header" xml:space="preserve">
+    <value>Download limit (KiB/s)</value>
+  </data>
+  <data name="SettingsPage_UpLimitBox.Header" xml:space="preserve">
+    <value>Upload limit (KiB/s)</value>
+  </data>
+  <data name="SettingsPage_TextBlock9.Text" xml:space="preserve">
+    <value>Alternative speeds</value>
+  </data>
+  <data name="SettingsPage_AltDownLimitBox.Header" xml:space="preserve">
+    <value>Alt download limit (KiB/s)</value>
+  </data>
+  <data name="SettingsPage_AltUpLimitBox.Header" xml:space="preserve">
+    <value>Alt upload limit (KiB/s)</value>
+  </data>
+  <data name="SettingsPage_AltSpeedSwitch.Header" xml:space="preserve">
+    <value>Use alternative speeds</value>
+  </data>
+  <data name="SettingsPage_TextBlock10.Text" xml:space="preserve">
+    <value>0 means no limit. Flip alternative speeds from the Downloads toolbar to throttle quickly (say, during a video call) and back.</value>
+  </data>
+  <data name="SettingsPage_Button4.Content" xml:space="preserve">
+    <value>Reset speed settings to defaults</value>
+  </data>
+  <data name="SettingsPage_TextBlock11.Text" xml:space="preserve">
+    <value>Network</value>
+  </data>
+  <data name="SettingsPage_ProxyModeBox.Header" xml:space="preserve">
+    <value>Proxy</value>
+  </data>
+  <data name="SettingsPage_ProxyAddressBox.Header" xml:space="preserve">
+    <value>Proxy address</value>
+  </data>
+  <data name="SettingsPage_ProxyAddressBox.PlaceholderText" xml:space="preserve">
+    <value>proxy.example.com:8080</value>
+  </data>
+  <data name="SettingsPage_ProxyUserBox.Header" xml:space="preserve">
+    <value>User name (optional)</value>
+  </data>
+  <data name="SettingsPage_ProxyPasswordBox.Header" xml:space="preserve">
+    <value>Password (optional)</value>
+  </data>
+  <data name="SettingsPage_TextBlock12.Text" xml:space="preserve">
+    <value>The password is stored encrypted for your Windows account.</value>
+  </data>
+  <data name="SettingsPage_CertSwitch.Header" xml:space="preserve">
+    <value>Check server certificates</value>
+  </data>
+  <data name="SettingsPage_TextBlock13.Text" xml:space="preserve">
+    <value>Turn this off only for a server you trust that has a broken certificate: downloads become open to tampering. Applies after an engine restart.</value>
+  </data>
+  <data name="SettingsPage_Ipv6Switch.Header" xml:space="preserve">
+    <value>Use IPv6 (applies after an engine restart)</value>
+  </data>
+  <data name="SettingsPage_Button5.Content" xml:space="preserve">
+    <value>Reset network settings to defaults</value>
+  </data>
+  <data name="SettingsPage_TextBlock14.Text" xml:space="preserve">
+    <value>General: startup and tray</value>
+  </data>
+  <data name="SettingsPage_CloseToTrayBox.Content" xml:space="preserve">
+    <value>Closing the window keeps Aria2NET running in the tray</value>
+  </data>
+  <data name="SettingsPage_MinimizeToTrayBox.Content" xml:space="preserve">
+    <value>Minimizing the window hides it to the tray</value>
+  </data>
+  <data name="SettingsPage_ConfirmExitBox.Content" xml:space="preserve">
+    <value>Ask before exiting while downloads are running</value>
+  </data>
+  <data name="SettingsPage_StartWithWindowsBox.Content" xml:space="preserve">
+    <value>Start Aria2NET when I sign in to Windows</value>
+  </data>
+  <data name="SettingsPage_StartMinimizedBox.Content" xml:space="preserve">
+    <value>Start in the tray, without opening the window</value>
+  </data>
+  <data name="SettingsPage_StartPausedBox.Content" xml:space="preserve">
+    <value>Start with all downloads paused</value>
+  </data>
+  <data name="SettingsPage_TextBlock15.Text" xml:space="preserve">
+    <value>Power</value>
+  </data>
+  <data name="SettingsPage_PreventSleepBox.Content" xml:space="preserve">
+    <value>Keep Windows awake while downloading</value>
+  </data>
+  <data name="SettingsPage_PauseBatteryBox.Content" xml:space="preserve">
+    <value>Pause downloads while on battery power</value>
+  </data>
+  <data name="SettingsPage_PauseMeteredBox.Content" xml:space="preserve">
+    <value>Pause downloads on a metered connection</value>
+  </data>
+  <data name="SettingsPage_TextBlock16.Text" xml:space="preserve">
+    <value>When downloads finish</value>
+  </data>
+  <data name="SettingsPage_FinishBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>When downloads finish</value>
+  </data>
+  <data name="SettingsPage_TextBlock17.Text" xml:space="preserve">
+    <value>Applies once, for this run only, and then resets. Also in the tray menu.</value>
+  </data>
+  <data name="SettingsPage_TextBlock18.Text" xml:space="preserve">
+    <value>Shortcuts and recovery</value>
+  </data>
+  <data name="SettingsPage_HotkeysBox.Content" xml:space="preserve">
+    <value>Global hotkeys: Ctrl+Alt+A shows or hides the window, Ctrl+Alt+N adds a download</value>
+  </data>
+  <data name="SettingsPage_RestartBox.Content" xml:space="preserve">
+    <value>Start again in the tray if Aria2NET crashes or stops responding</value>
+  </data>
+  <data name="SettingsPage_TextBlock19.Text" xml:space="preserve">
+    <value>Notifications</value>
+  </data>
+  <data name="SettingsPage_NotifyCompleteBox.Content" xml:space="preserve">
+    <value>When a download completes</value>
+  </data>
+  <data name="SettingsPage_NotifyFailedBox.Content" xml:space="preserve">
+    <value>When a download fails</value>
+  </data>
+  <data name="SettingsPage_NotifyTorrentBox.Content" xml:space="preserve">
+    <value>When a torrent has finished downloading</value>
+  </data>
+  <data name="SettingsPage_NotifySoundBox.Content" xml:space="preserve">
+    <value>Play a sound</value>
+  </data>
+  <data name="SettingsPage_NotifyUnfocusedBox.Content" xml:space="preserve">
+    <value>Only when the Aria2NET window is not in front</value>
+  </data>
+  <data name="SettingsPage_TextBlock20.Text" xml:space="preserve">
+    <value>Windows holds notifications back while Focus assist (Do not disturb) is on.</value>
+  </data>
+  <data name="SettingsPage_TextBlock21.Text" xml:space="preserve">
+    <value>Torrents</value>
+  </data>
+  <data name="SettingsPage_AssociationBox.Content" xml:space="preserve">
+    <value>Open .torrent files and magnet links with Aria2NET</value>
+  </data>
+  <data name="SettingsPage_DefaultAppsLink.Content" xml:space="preserve">
+    <value>Choose Aria2NET in Windows default apps…</value>
+  </data>
+  <data name="SettingsPage_Button6.Content" xml:space="preserve">
+    <value>Update public tracker list</value>
+  </data>
+  <data name="SettingsPage_TrackerSourceBox.Header" xml:space="preserve">
+    <value>Extra trackers</value>
+  </data>
+  <data name="SettingsPage_TrackerUrlBox.Header" xml:space="preserve">
+    <value>Tracker list address (https)</value>
+  </data>
+  <data name="SettingsPage_PortStartBox.Header" xml:space="preserve">
+    <value>First listen port</value>
+  </data>
+  <data name="SettingsPage_PortEndBox.Header" xml:space="preserve">
+    <value>Last listen port</value>
+  </data>
+  <data name="SettingsPage_DhtPortBox.Header" xml:space="preserve">
+    <value>DHT port (UDP)</value>
+  </data>
+  <data name="SettingsPage_TextBlock22.Text" xml:space="preserve">
+    <value>Open these ports in your router or firewall for more peers. Ports and DHT apply after an engine restart.</value>
+  </data>
+  <data name="SettingsPage_DhtBox.Content" xml:space="preserve">
+    <value>Use DHT (find peers without a tracker; applies after an engine restart)</value>
+  </data>
+  <data name="SettingsPage_PexBox.Content" xml:space="preserve">
+    <value>Peer exchange (peers share other peers with you)</value>
+  </data>
+  <data name="SettingsPage_LpdBox.Content" xml:space="preserve">
+    <value>Local peer discovery (find peers on your own network)</value>
+  </data>
+  <data name="SettingsPage_EncryptionBox.Header" xml:space="preserve">
+    <value>Encryption</value>
+  </data>
+  <data name="SettingsPage_SeedRatioBox.Header" xml:space="preserve">
+    <value>Stop seeding at ratio (0 = no limit)</value>
+  </data>
+  <data name="SettingsPage_SeedTimeBox.Header" xml:space="preserve">
+    <value>Stop seeding after (minutes, 0 = no limit)</value>
+  </data>
+  <data name="SettingsPage_TextBlock23.Text" xml:space="preserve">
+    <value>Seeding stops when either limit is reached. Applies to torrents added from now on; use Seeding… on a torrent to change one that already exists.</value>
+  </data>
+  <data name="SettingsPage_Button7.Content" xml:space="preserve">
+    <value>Reset torrent settings to defaults</value>
+  </data>
+  <data name="SettingsPage_TextBlock24.Text" xml:space="preserve">
+    <value>History</value>
+  </data>
+  <data name="SettingsPage_TextBlock25.Text" xml:space="preserve">
+    <value>Keep finished downloads in History for</value>
+  </data>
+  <data name="SettingsPage_RetentionBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>History retention</value>
+  </data>
+  <data name="SettingsPage_Button8.Content" xml:space="preserve">
+    <value>Clear history…</value>
+  </data>
+  <data name="SettingsPage_TextBlock26.Text" xml:space="preserve">
+    <value>Advanced and data</value>
+  </data>
+  <data name="SettingsPage_LogLevelBox.Header" xml:space="preserve">
+    <value>Log detail</value>
+  </data>
+  <data name="SettingsPage_TextBlock27.Text" xml:space="preserve">
+    <value>Applies to Aria2NET's own log and to aria2's. Debug writes a lot; use it to find a problem, then set it back.</value>
+  </data>
+  <data name="SettingsPage_RawOptionsBox.Header" xml:space="preserve">
+    <value>aria2 options (one name=value per line)</value>
+  </data>
+  <data name="SettingsPage_RawOptionsBox.PlaceholderText" xml:space="preserve">
+    <value>bt-max-peers=80</value>
+  </data>
+  <data name="SettingsPage_TextBlock28.Text" xml:space="preserve">
+    <value>For experts. These are applied last, so they override the settings above. Options Aria2NET manages (connection, files, programs to run) are refused. Changes may need an engine restart.</value>
+  </data>
+  <data name="SettingsPage_Button9.Content" xml:space="preserve">
+    <value>Export settings…</value>
+  </data>
+  <data name="SettingsPage_Button10.Content" xml:space="preserve">
+    <value>Import settings…</value>
+  </data>
+  <data name="SettingsPage_Button11.Content" xml:space="preserve">
+    <value>Reset all settings…</value>
+  </data>
+  <data name="SettingsPage_TextBlock29.Text" xml:space="preserve">
+    <value>Exported files leave out the proxy password, the window position and the last folder. Importing keeps those of this PC.</value>
+  </data>
+  <data name="SettingsPage_Button12.Content" xml:space="preserve">
+    <value>Open data folder</value>
+  </data>
+  <data name="SettingsPage_Button13.Content" xml:space="preserve">
+    <value>Open logs folder</value>
+  </data>
+  <data name="SpeedLimitDialog_ContentDialog1.Title" xml:space="preserve">
+    <value>Speed limit</value>
+  </data>
+  <data name="SpeedLimitDialog_ContentDialog1.PrimaryButtonText" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="SpeedLimitDialog_ContentDialog1.CloseButtonText" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="SpeedLimitDialog_LimitBox.Header" xml:space="preserve">
+    <value>Maximum speed</value>
+  </data>
+  <data name="SpeedLimitDialog_ComboBoxItem1.Content" xml:space="preserve">
+    <value>KiB/s</value>
+  </data>
+  <data name="SpeedLimitDialog_ComboBoxItem2.Content" xml:space="preserve">
+    <value>MiB/s</value>
+  </data>
+  <data name="SpeedLimitDialog_TextBlock1.Text" xml:space="preserve">
+    <value>0 means no limit.</value>
+  </data>
+  <data name="TorrentDetailDialog_ContentDialog1.CloseButtonText" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="TorrentDetailDialog_PivotItem1.Header" xml:space="preserve">
+    <value>Overview</value>
+  </data>
+  <data name="TorrentDetailDialog_TextBlock1.Text" xml:space="preserve">
+    <value>Transfer</value>
+  </data>
+  <data name="TorrentDetailDialog_TextBlock2.Text" xml:space="preserve">
+    <value>Swarm</value>
+  </data>
+  <data name="TorrentDetailDialog_TextBlock3.Text" xml:space="preserve">
+    <value>Saved to</value>
+  </data>
+  <data name="TorrentDetailDialog_TextBlock4.Text" xml:space="preserve">
+    <value>Info hash</value>
+  </data>
+  <data name="TorrentDetailDialog_TextBlock5.Text" xml:space="preserve">
+    <value>Pieces</value>
+  </data>
+  <data name="TorrentDetailDialog_TextBlock6.Text" xml:space="preserve">
+    <value>Created</value>
+  </data>
+  <data name="TorrentDetailDialog_TextBlock7.Text" xml:space="preserve">
+    <value>Comment</value>
+  </data>
+  <data name="TorrentDetailDialog_PivotItem2.Header" xml:space="preserve">
+    <value>Files</value>
+  </data>
+  <data name="TorrentDetailDialog_TextBlock8.Text" xml:space="preserve">
+    <value>Address</value>
+  </data>
+  <data name="TorrentDetailDialog_TextBlock9.Text" xml:space="preserve">
+    <value>Client</value>
+  </data>
+  <data name="TorrentDetailDialog_TextBlock10.Text" xml:space="preserve">
+    <value>Country</value>
+  </data>
+  <data name="TorrentDetailDialog_TextBlock11.Text" xml:space="preserve">
+    <value>Down</value>
+  </data>
+  <data name="TorrentDetailDialog_TextBlock12.Text" xml:space="preserve">
+    <value>Up</value>
+  </data>
+  <data name="TorrentDetailDialog_TextBlock13.Text" xml:space="preserve">
+    <value>Has</value>
+  </data>
+  <data name="TorrentDetailDialog_TextBlock14.Text" xml:space="preserve">
+    <value>Flags</value>
+  </data>
+  <data name="TorrentDetailDialog_PivotItem3.Header" xml:space="preserve">
+    <value>Trackers</value>
+  </data>
+  <data name="TorrentDetailDialog_TextBlock15.Text" xml:space="preserve">
+    <value>aria2 does not report tracker status and cannot change the trackers of a torrent that is already added. Public trackers from the cached list are added when a torrent is first added.</value>
+  </data>
+  <data name="TorrentDetailDialog_PivotItem4.Header" xml:space="preserve">
+    <value>Pieces</value>
+  </data>
+  <data name="TorrentDetailDialog_TextBlock16.Text" xml:space="preserve">
+    <value>What you have</value>
+  </data>
+  <data name="TorrentDetailDialog_Rectangle1.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Pieces downloaded</value>
+  </data>
+  <data name="TorrentDetailDialog_TextBlock17.Text" xml:space="preserve">
+    <value>Where it can be had (connected peers)</value>
+  </data>
+  <data name="TorrentDetailDialog_Rectangle2.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Piece availability among connected peers</value>
+  </data>
+  <data name="TorrentDetailDialog_TextBlock18.Text" xml:space="preserve">
+    <value>Green: downloaded. Teal: how many of the connected peers have that part (grey means none of them). Each slice is a share of the whole torrent.</value>
+  </data>
+  <data name="TorrentFilesDialog_ContentDialog1.Title" xml:space="preserve">
+    <value>Choose what to download</value>
+  </data>
+  <data name="TorrentFilesDialog_ContentDialog1.PrimaryButtonText" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="TorrentFilesDialog_ContentDialog1.CloseButtonText" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="TorrentFilesDialog_Button1.Content" xml:space="preserve">
+    <value>Select all</value>
+  </data>
+  <data name="TorrentFilesDialog_Button2.Content" xml:space="preserve">
+    <value>Select none</value>
+  </data>
+  <data name="TorrentFilesDialog_Button3.Content" xml:space="preserve">
+    <value>Expand all</value>
+  </data>
+  <data name="TorrentFilesDialog_Button4.Content" xml:space="preserve">
+    <value>Collapse all</value>
+  </data>
+  <data name="TorrentFilesDialog_TextBlock1.Text" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="TorrentFilesDialog_TextBlock2.Text" xml:space="preserve">
+    <value>Size</value>
+  </data>
+  <data name="TorrentFilesDialog_FileList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Files in this torrent</value>
+  </data>
+  <data name="TorrentFilesDialog_Button5.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Expand or collapse</value>
+  </data>
+  <data name="TorrentFilesDialog_FolderBox.Header" xml:space="preserve">
+    <value>Save to</value>
+  </data>
+  <data name="TorrentFilesDialog_BrowseButton.Content" xml:space="preserve">
+    <value>Browse…</value>
+  </data>
+  <data name="TorrentFilesDialog_SeedBox.Header" xml:space="preserve">
+    <value>After downloading</value>
+  </data>
+  <data name="TorrentFilesDialog_ComboBoxItem1.Content" xml:space="preserve">
+    <value>Seed until ratio 1.0 (default)</value>
+  </data>
+  <data name="TorrentFilesDialog_ComboBoxItem2.Content" xml:space="preserve">
+    <value>Seed forever</value>
+  </data>
+  <data name="TorrentFilesDialog_ComboBoxItem3.Content" xml:space="preserve">
+    <value>Seed until a ratio I choose</value>
+  </data>
+  <data name="TorrentFilesDialog_ComboBoxItem4.Content" xml:space="preserve">
+    <value>Don't seed</value>
+  </data>
+  <data name="TorrentFilesDialog_AllocationBox.Header" xml:space="preserve">
+    <value>Disk space</value>
+  </data>
+  <data name="TorrentFilesDialog_ComboBoxItem5.Content" xml:space="preserve">
+    <value>Grow files as data arrives (default)</value>
+  </data>
+  <data name="TorrentFilesDialog_ComboBoxItem6.Content" xml:space="preserve">
+    <value>Reserve the full size first (slow without admin rights)</value>
+  </data>
+  <data name="TorrentFilesDialog_RatioBox.Header" xml:space="preserve">
+    <value>Stop seeding at ratio</value>
+  </data>
+  <data name="App_ErrorTitle" xml:space="preserve">
+    <value>Something went wrong</value>
+  </data>
+  <data name="Main_ErrorDetails" xml:space="preserve">
+    <value>
+
+Details were written to the log file.</value>
+  </data>
+  <data name="Common_OK" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="Common_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Main_ExitOne" xml:space="preserve">
+    <value>A download is still running. Exiting stops it; it continues the next time you open Aria2NET.</value>
+  </data>
+  <data name="Main_ExitMany" xml:space="preserve">
+    <value>{0} downloads are still running. Exiting stops them; they continue the next time you open Aria2NET.</value>
+  </data>
+  <data name="Main_ExitTitle" xml:space="preserve">
+    <value>Exit Aria2NET?</value>
+  </data>
+  <data name="Main_ExitConfirm" xml:space="preserve">
+    <value>Exit</value>
+  </data>
+  <data name="About_LicenseTitle" xml:space="preserve">
+    <value>License</value>
+  </data>
+  <data name="About_NoticesTitle" xml:space="preserve">
+    <value>Third-party notices</value>
+  </data>
+  <data name="Common_Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Add_NothingUsable" xml:space="preserve">
+    <value>Nothing usable. Use http, https, ftp, sftp, a magnet link or a .torrent/.metalink file. Not recognized: {0}</value>
+  </data>
+  <data name="Add_OneLinkReady" xml:space="preserve">
+    <value>1 link ready</value>
+  </data>
+  <data name="Add_LinksReady" xml:space="preserve">
+    <value>{0} links ready</value>
+  </data>
+  <data name="Add_OneLinkReadySkip" xml:space="preserve">
+    <value>1 link ready; {0} not recognized and will be skipped</value>
+  </data>
+  <data name="Add_LinksReadySkip" xml:space="preserve">
+    <value>{0} links ready; {1} not recognized and will be skipped</value>
+  </data>
+  <data name="Downloads_AssocTitle" xml:space="preserve">
+    <value>Open torrents with Aria2NET?</value>
+  </data>
+  <data name="Downloads_AssocBody" xml:space="preserve">
+    <value>Aria2NET can open .torrent files and magnet links when you click them. Windows will ask you to confirm Aria2NET as the default app. You can change this later in Settings.</value>
+  </data>
+  <data name="Downloads_AssocSetUp" xml:space="preserve">
+    <value>Set up</value>
+  </data>
+  <data name="Downloads_AssocNotNow" xml:space="preserve">
+    <value>Not now</value>
+  </data>
+  <data name="Downloads_AddFailedTitle" xml:space="preserve">
+    <value>Some downloads could not be added</value>
+  </data>
+  <data name="Downloads_ConflictTitle" xml:space="preserve">
+    <value>File already exists</value>
+  </data>
+  <data name="Downloads_ConflictBody" xml:space="preserve">
+    <value>{0}
+
+Keep both files (the new one gets a number), or replace the existing file?</value>
+  </data>
+  <data name="Downloads_KeepBoth" xml:space="preserve">
+    <value>Keep both</value>
+  </data>
+  <data name="Downloads_Replace" xml:space="preserve">
+    <value>Replace</value>
+  </data>
+  <data name="Downloads_Skip" xml:space="preserve">
+    <value>Skip</value>
+  </data>
+  <data name="Downloads_DontAsk" xml:space="preserve">
+    <value>Don't ask me again</value>
+  </data>
+  <data name="Downloads_DeleteOne" xml:space="preserve">
+    <value>Remove this download and delete its file?</value>
+  </data>
+  <data name="Downloads_DeleteMany" xml:space="preserve">
+    <value>Remove these {0} downloads and delete their files?</value>
+  </data>
+  <data name="Downloads_DeleteTitle" xml:space="preserve">
+    <value>Delete files?</value>
+  </data>
+  <data name="Common_Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="About_NotRunning" xml:space="preserve">
+    <value>not running</value>
+  </data>
+  <data name="About_Version" xml:space="preserve">
+    <value>Version {0}</value>
+  </data>
+  <data name="About_Aria2Version" xml:space="preserve">
+    <value>aria2 engine: {0}</value>
+  </data>
+  <data name="About_FileMissing" xml:space="preserve">
+    <value>{0} was not found next to the app. It is also in the project repository.</value>
+  </data>
+  <data name="About_FileUnreadable" xml:space="preserve">
+    <value>{0} could not be read: {1}</value>
+  </data>
+  <data name="About_License" xml:space="preserve">
+    <value>Aria2NET is free software under the GNU General Public License v3. It bundles aria2 (GPL-2.0-or-later with OpenSSL exception).</value>
+  </data>
+  <data name="Status_FetchingMetadata" xml:space="preserve">
+    <value>Fetching metadata…</value>
+  </data>
+  <data name="Status_Downloading" xml:space="preserve">
+    <value>Downloading</value>
+  </data>
+  <data name="Status_Seeding" xml:space="preserve">
+    <value>Seeding</value>
+  </data>
+  <data name="Status_Queued" xml:space="preserve">
+    <value>Queued</value>
+  </data>
+  <data name="Status_Paused" xml:space="preserve">
+    <value>Paused</value>
+  </data>
+  <data name="Status_Error" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="Status_Complete" xml:space="preserve">
+    <value>Complete</value>
+  </data>
+  <data name="Status_Removed" xml:space="preserve">
+    <value>Removed</value>
+  </data>
+  <data name="Row_Uploaded" xml:space="preserve">
+    <value>Uploaded {0} · ratio {1:0.00}</value>
+  </data>
+  <data name="Row_Accessible" xml:space="preserve">
+    <value>{0}, {1}, {2:0} percent</value>
+  </data>
+  <data name="Downloads_FilterAll" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="Downloads_FilterWaiting" xml:space="preserve">
+    <value>Waiting</value>
+  </data>
+  <data name="Status_Completed" xml:space="preserve">
+    <value>Completed</value>
+  </data>
+  <data name="Status_Failed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="Downloads_FilterTorrents" xml:space="preserve">
+    <value>Torrents</value>
+  </data>
+  <data name="Downloads_ColName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Downloads_ColSize" xml:space="preserve">
+    <value>Size</value>
+  </data>
+  <data name="Downloads_ColProgress" xml:space="preserve">
+    <value>Progress</value>
+  </data>
+  <data name="Downloads_ColSpeed" xml:space="preserve">
+    <value>Speed</value>
+  </data>
+  <data name="Downloads_ColEta" xml:space="preserve">
+    <value>ETA</value>
+  </data>
+  <data name="Downloads_ColStatus" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Downloads_Unlimited" xml:space="preserve">
+    <value>unlimited</value>
+  </data>
+  <data name="Downloads_AltSpeedOn" xml:space="preserve">
+    <value>Alternative speeds are on. Click to go back to the normal limits.</value>
+  </data>
+  <data name="Downloads_AltSpeedTip" xml:space="preserve">
+    <value>Switch to alternative speeds (download {0}, upload {1}). Set them in Settings.</value>
+  </data>
+  <data name="Downloads_EngineNotRunning" xml:space="preserve">
+    <value>The download engine is not running.</value>
+  </data>
+  <data name="Downloads_OpenFailed" xml:space="preserve">
+    <value>Could not open it: {0}</value>
+  </data>
+  <data name="Downloads_RemovedOne" xml:space="preserve">
+    <value>Removed “{0}”</value>
+  </data>
+  <data name="Downloads_RemovedMany" xml:space="preserve">
+    <value>Removed {0} downloads</value>
+  </data>
+  <data name="Downloads_RemoveFailed" xml:space="preserve">
+    <value>Could not remove: {0}</value>
+  </data>
+  <data name="Downloads_Stats" xml:space="preserve">
+    <value>↓ {0}  ·  {1} active  ·  {2} waiting</value>
+  </data>
+  <data name="Downloads_Busy" xml:space="preserve">
+    <value>aria2 is busy preparing files and did not answer in time. Try again in a moment.</value>
+  </data>
+  <data name="Torrent_AddedBefore" xml:space="preserve">
+    <value>You added this torrent before ({0:d}).</value>
+  </data>
+  <data name="Torrent_MagnetFailed" xml:space="preserve">
+    <value>Could not finish adding a magnet link</value>
+  </data>
+  <data name="Torrent_AlreadyTitle" xml:space="preserve">
+    <value>Already in the list</value>
+  </data>
+  <data name="Torrent_AlreadyBody" xml:space="preserve">
+    <value>{0} is already being downloaded.</value>
+  </data>
+  <data name="Torrent_NoSpaceTitle" xml:space="preserve">
+    <value>Not enough disk space</value>
+  </data>
+  <data name="Torrent_NoSpaceBody" xml:space="preserve">
+    <value>{0} needs {1} more, but {2} is free in {3}.</value>
+  </data>
+  <data name="Status_Interrupted" xml:space="preserve">
+    <value>Interrupted</value>
+  </data>
+  <data name="History_InterruptedTip" xml:space="preserve">
+    <value>The app stopped before this download finished and aria2 no longer has it.</value>
+  </data>
+  <data name="History_Accessible" xml:space="preserve">
+    <value>{0}, {1}, {2}, added {3}{4}</value>
+  </data>
+  <data name="History_AccessibleMissing" xml:space="preserve">
+    <value>, file missing</value>
+  </data>
+  <data name="History_FileMissing" xml:space="preserve">
+    <value>File missing</value>
+  </data>
+  <data name="History_Descending" xml:space="preserve">
+    <value>Descending</value>
+  </data>
+  <data name="History_Ascending" xml:space="preserve">
+    <value>Ascending</value>
+  </data>
+  <data name="History_CountOne" xml:space="preserve">
+    <value>1 download</value>
+  </data>
+  <data name="History_CountMany" xml:space="preserve">
+    <value>{0} downloads</value>
+  </data>
+  <data name="History_CountOf" xml:space="preserve">
+    <value>{0} of {1} downloads</value>
+  </data>
+  <data name="History_ReadFailed" xml:space="preserve">
+    <value>History could not be read. Details are in the log file.</value>
+  </data>
+  <data name="History_WriteFailed" xml:space="preserve">
+    <value>Could not write the file: {0}</value>
+  </data>
+  <data name="Settings_UaDefault" xml:space="preserve">
+    <value>aria2 default</value>
+  </data>
+  <data name="Settings_UaCustom" xml:space="preserve">
+    <value>Custom</value>
+  </data>
+  <data name="Settings_SaveFailed" xml:space="preserve">
+    <value>Could not save the settings: {0}</value>
+  </data>
+  <data name="Settings_FolderNotWritable" xml:space="preserve">
+    <value>Cannot write to this folder: {0}</value>
+  </data>
+  <data name="Settings_FreeSpace" xml:space="preserve">
+    <value>{0} free</value>
+  </data>
+  <data name="Settings_KeepForever" xml:space="preserve">
+    <value>Keep forever</value>
+  </data>
+  <data name="Settings_Days30" xml:space="preserve">
+    <value>30 days</value>
+  </data>
+  <data name="Settings_Days90" xml:space="preserve">
+    <value>90 days</value>
+  </data>
+  <data name="Settings_Year1" xml:space="preserve">
+    <value>1 year</value>
+  </data>
+  <data name="Shell_Starting" xml:space="preserve">
+    <value>Engine: starting…</value>
+  </data>
+  <data name="Shell_Running" xml:space="preserve">
+    <value>aria2 {0} · Running</value>
+  </data>
+  <data name="Shell_Restarting" xml:space="preserve">
+    <value>Engine: restarting…</value>
+  </data>
+  <data name="Shell_Stopping" xml:space="preserve">
+    <value>Engine: stopping…</value>
+  </data>
+  <data name="Shell_Stopped" xml:space="preserve">
+    <value>Engine: stopped</value>
+  </data>
+  <data name="Shell_CrashRestarting" xml:space="preserve">
+    <value>Engine: restarting after a crash…</value>
+  </data>
+  <data name="Shell_Crashed" xml:space="preserve">
+    <value>Engine: crashed</value>
+  </data>
+  <data name="Shell_Failed" xml:space="preserve">
+    <value>Engine: failed to start</value>
+  </data>
+  <data name="Detail_Peers" xml:space="preserve">
+    <value>Peers</value>
+  </data>
+  <data name="Detail_Summary" xml:space="preserve">
+    <value>{0} · {1} of {2} ({3:0.#}%) · ratio {4:0.00}</value>
+  </data>
+  <data name="Detail_Transfer" xml:space="preserve">
+    <value>↓ {0}   ↑ {1}   uploaded {2}</value>
+  </data>
+  <data name="Detail_Swarm" xml:space="preserve">
+    <value>{0} seeders · {1} connections</value>
+  </data>
+  <data name="Detail_Pieces" xml:space="preserve">
+    <value>{0:N0} pieces of {1}</value>
+  </data>
+  <data name="Detail_NoPieces" xml:space="preserve">
+    <value>No piece information yet</value>
+  </data>
+  <data name="Detail_PeersCount" xml:space="preserve">
+    <value>Peers ({0})</value>
+  </data>
+  <data name="Detail_Skipped" xml:space="preserve">
+    <value>skipped</value>
+  </data>
+  <data name="Detail_Tier" xml:space="preserve">
+    <value>Tier {0}</value>
+  </data>
+  <data name="Downloads_DragCaption" xml:space="preserve">
+    <value>Add to Aria2NET</value>
+  </data>
+  <data name="History_StartedOne" xml:space="preserve">
+    <value>Download started</value>
+  </data>
+  <data name="History_StartedMany" xml:space="preserve">
+    <value>{0} downloads started</value>
+  </data>
+  <data name="History_FollowOnDownloads" xml:space="preserve">
+    <value>You can follow it on the Downloads page.</value>
+  </data>
+  <data name="History_RemoveTitle" xml:space="preserve">
+    <value>Remove from history?</value>
+  </data>
+  <data name="History_RemoveOne" xml:space="preserve">
+    <value>1 entry will be forgotten. Downloaded files are not deleted.</value>
+  </data>
+  <data name="History_RemoveMany" xml:space="preserve">
+    <value>{0} entries will be forgotten. Downloaded files are not deleted.</value>
+  </data>
+  <data name="Common_Remove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="History_ClearTitle" xml:space="preserve">
+    <value>Clear all history?</value>
+  </data>
+  <data name="History_ClearBody" xml:space="preserve">
+    <value>Every finished, failed and removed entry is forgotten. Downloads still in progress stay. Downloaded files are not deleted.</value>
+  </data>
+  <data name="History_ClearConfirm" xml:space="preserve">
+    <value>Clear history</value>
+  </data>
+  <data name="Props_Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Props_Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Props_Url" xml:space="preserve">
+    <value>URL</value>
+  </data>
+  <data name="Props_Referer" xml:space="preserve">
+    <value>Referer</value>
+  </data>
+  <data name="Props_Size" xml:space="preserve">
+    <value>Size</value>
+  </data>
+  <data name="Props_SizeBytes" xml:space="preserve">
+    <value>{0} ({1:N0} bytes)</value>
+  </data>
+  <data name="Props_Unknown" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
+  <data name="Props_Downloaded" xml:space="preserve">
+    <value>Downloaded</value>
+  </data>
+  <data name="Props_SavedTo" xml:space="preserve">
+    <value>Saved to</value>
+  </data>
+  <data name="Props_Connections" xml:space="preserve">
+    <value>Connections</value>
+  </data>
+  <data name="Props_SpeedLimit" xml:space="preserve">
+    <value>Speed limit</value>
+  </data>
+  <data name="Props_None" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="Props_InfoHash" xml:space="preserve">
+    <value>Info hash</value>
+  </data>
+  <data name="Props_Checksum" xml:space="preserve">
+    <value>Checksum</value>
+  </data>
+  <data name="Props_Added" xml:space="preserve">
+    <value>Added</value>
+  </data>
+  <data name="Props_Finished" xml:space="preserve">
+    <value>Finished</value>
+  </data>
+  <data name="Props_Error" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="Rename_Empty" xml:space="preserve">
+    <value>Enter a file name.</value>
+  </data>
+  <data name="Rename_Invalid" xml:space="preserve">
+    <value>A file name cannot contain \ / : * ? " &lt; &gt; |</value>
+  </data>
+  <data name="Settings_ProxyNone" xml:space="preserve">
+    <value>No proxy</value>
+  </data>
+  <data name="Settings_ProxySystem" xml:space="preserve">
+    <value>Use the Windows proxy</value>
+  </data>
+  <data name="Settings_ProxyManual" xml:space="preserve">
+    <value>Manual</value>
+  </data>
+  <data name="Settings_ThemeSystem" xml:space="preserve">
+    <value>Use the Windows setting</value>
+  </data>
+  <data name="Settings_ThemeLight" xml:space="preserve">
+    <value>Light</value>
+  </data>
+  <data name="Settings_ThemeDark" xml:space="preserve">
+    <value>Dark</value>
+  </data>
+  <data name="Settings_ConflictRename" xml:space="preserve">
+    <value>Keep both (rename the new one)</value>
+  </data>
+  <data name="Settings_ConflictOverwrite" xml:space="preserve">
+    <value>Replace the existing file</value>
+  </data>
+  <data name="Settings_ConflictAsk" xml:space="preserve">
+    <value>Ask me</value>
+  </data>
+  <data name="Settings_TrackersDefault" xml:space="preserve">
+    <value>Public list (built in)</value>
+  </data>
+  <data name="Settings_TrackersCustom" xml:space="preserve">
+    <value>Custom list address</value>
+  </data>
+  <data name="Settings_TrackersOff" xml:space="preserve">
+    <value>Off (only the torrent's own trackers)</value>
+  </data>
+  <data name="Settings_EncAllow" xml:space="preserve">
+    <value>Allow (encrypted or plain)</value>
+  </data>
+  <data name="Settings_EncPrefer" xml:space="preserve">
+    <value>Prefer encrypted</value>
+  </data>
+  <data name="Settings_EncRequire" xml:space="preserve">
+    <value>Require encrypted (fewer peers)</value>
+  </data>
+  <data name="Settings_LogWarnings" xml:space="preserve">
+    <value>Warnings only</value>
+  </data>
+  <data name="Settings_LogNormal" xml:space="preserve">
+    <value>Normal</value>
+  </data>
+  <data name="Settings_LogDebug" xml:space="preserve">
+    <value>Debug (very detailed)</value>
+  </data>
+  <data name="Settings_ProxyUsing" xml:space="preserve">
+    <value>Using {0} from Windows settings (read when settings are applied or the engine starts).</value>
+  </data>
+  <data name="Settings_ProxyNoneSet" xml:space="preserve">
+    <value>Windows has no proxy set, so downloads connect directly.</value>
+  </data>
+  <data name="Settings_Exported" xml:space="preserve">
+    <value>Exported to {0}.</value>
+  </data>
+  <data name="Settings_ExportFailed" xml:space="preserve">
+    <value>Could not export: {0}</value>
+  </data>
+  <data name="Settings_TooLarge" xml:space="preserve">
+    <value>This file is too large to be a settings file.</value>
+  </data>
+  <data name="Settings_NotImported" xml:space="preserve">
+    <value>Nothing was imported. {0}</value>
+  </data>
+  <data name="Settings_ImportFailed" xml:space="preserve">
+    <value>Could not import: {0}</value>
+  </data>
+  <data name="Settings_ResetTitle" xml:space="preserve">
+    <value>Reset all settings?</value>
+  </data>
+  <data name="Settings_ResetBody" xml:space="preserve">
+    <value>Every setting on this page goes back to its default, including the proxy and any hand-typed aria2 options. Downloads and history are not touched.</value>
+  </data>
+  <data name="Settings_ResetConfirm" xml:space="preserve">
+    <value>Reset</value>
+  </data>
+  <data name="Settings_HotkeysTaken" xml:space="preserve">
+    <value>Another program already uses one of these shortcuts, so it is not active.</value>
+  </data>
+  <data name="Settings_AssocDefault" xml:space="preserve">
+    <value>Aria2NET is the default app for .torrent files and magnet links.</value>
+  </data>
+  <data name="Settings_AssocOffered" xml:space="preserve">
+    <value>Aria2NET is offered to Windows. Windows lets only you choose the default app: pick Aria2NET for .torrent files and for the MAGNET link type.</value>
+  </data>
+  <data name="Settings_NoTrackerList" xml:space="preserve">
+    <value>No list downloaded yet.</value>
+  </data>
+  <data name="Settings_TrackersCached" xml:space="preserve">
+    <value>{0} trackers cached; refreshed automatically every week.</value>
+  </data>
+  <data name="Settings_TrackersSwitchedOff" xml:space="preserve">
+    <value>Extra trackers are switched off.</value>
+  </data>
+  <data name="Settings_TrackersNeedUrl" xml:space="preserve">
+    <value>Enter a valid https:// address first.</value>
+  </data>
+  <data name="Settings_Downloading" xml:space="preserve">
+    <value>Downloading…</value>
+  </data>
+  <data name="Settings_TrackerDownloadFailed" xml:space="preserve">
+    <value>Could not download the list; keeping the old one.</value>
+  </data>
+  <data name="Files_TotalOne" xml:space="preserve">
+    <value>1 file · {0}</value>
+  </data>
+  <data name="Files_TotalMany" xml:space="preserve">
+    <value>{0} files · {1}</value>
+  </data>
+  <data name="Files_FolderFixed" xml:space="preserve">
+    <value>The folder was fixed when the magnet link was added.</value>
+  </data>
+  <data name="Files_Selected" xml:space="preserve">
+    <value>{0} of {1} selected · {2}</value>
+  </data>
+  <data name="Files_Free" xml:space="preserve">
+    <value>{0} free in this folder.</value>
+  </data>
+  <data name="Files_NoSpace" xml:space="preserve">
+    <value>Not enough space: this needs {0} but only {1} is free.</value>
+  </data>
+  <data name="Tray_PauseAll" xml:space="preserve">
+    <value>Pause all</value>
+  </data>
+  <data name="Tray_ResumeAll" xml:space="preserve">
+    <value>Resume all</value>
+  </data>
+  <data name="Persist_RepairedTitle" xml:space="preserve">
+    <value>Unfinished downloads list repaired</value>
+  </data>
+  <data name="Persist_RestartedTitle" xml:space="preserve">
+    <value>The download engine restarted</value>
+  </data>
+  <data name="Persist_RestartedBody" xml:space="preserve">
+    <value>aria2 stopped unexpectedly and was started again. Your unfinished downloads were picked up where the last save left them.</value>
+  </data>
+  <data name="Persist_HistoryOff" xml:space="preserve">
+    <value>History is off</value>
+  </data>
+  <data name="Persist_HistoryDamagedTitle" xml:space="preserve">
+    <value>History was damaged</value>
+  </data>
+  <data name="Persist_HistoryDamagedBody" xml:space="preserve">
+    <value>The history file could not be read, so a new one was started. The old file was kept as {0}.</value>
+  </data>
+  <data name="Persist_LeftoverOne" xml:space="preserve">
+    <value>1 partly downloaded file was left behind by an earlier session.</value>
+  </data>
+  <data name="Persist_LeftoverMany" xml:space="preserve">
+    <value>{0} partly downloaded files were left behind by an earlier session.</value>
+  </data>
+  <data name="Persist_CanResume" xml:space="preserve">
+    <value> {0} can be resumed.</value>
+  </data>
+  <data name="Persist_CannotResume" xml:space="preserve">
+    <value> They cannot be resumed because their links are not known.</value>
+  </data>
+  <data name="Persist_FoundTitle" xml:space="preserve">
+    <value>Unfinished downloads found</value>
+  </data>
+  <data name="Persist_Resume" xml:space="preserve">
+    <value>Resume {0}</value>
+  </data>
+  <data name="Persist_DeleteLeftovers" xml:space="preserve">
+    <value>Delete leftovers</value>
+  </data>
+  <data name="Persist_DeleteTitle" xml:space="preserve">
+    <value>Delete leftover files?</value>
+  </data>
+  <data name="Persist_DeleteOne" xml:space="preserve">
+    <value>This permanently deletes 1 partly downloaded file and its .aria2 control file. Finished downloads are not touched.</value>
+  </data>
+  <data name="Persist_DeleteMany" xml:space="preserve">
+    <value>This permanently deletes {0} partly downloaded files and their .aria2 control files. Finished downloads are not touched.</value>
+  </data>
+  <data name="Toast_Retry" xml:space="preserve">
+    <value>Retry</value>
+  </data>
+  <data name="Toast_Open" xml:space="preserve">
+    <value>Open</value>
+  </data>
+  <data name="Toast_ShowInFolder" xml:space="preserve">
+    <value>Show in folder</value>
+  </data>
+  <data name="Tray_Open" xml:space="preserve">
+    <value>Open Aria2NET</value>
+  </data>
+  <data name="Tray_OpenFolder" xml:space="preserve">
+    <value>Open download folder</value>
+  </data>
+  <data name="Tray_WhenFinished" xml:space="preserve">
+    <value>When downloads finish</value>
+  </data>
+  <data name="Tray_Exit" xml:space="preserve">
+    <value>Exit</value>
+  </data>
+  <data name="Finish_VerbSleep" xml:space="preserve">
+    <value>go to sleep</value>
+  </data>
+  <data name="Finish_VerbHibernate" xml:space="preserve">
+    <value>hibernate</value>
+  </data>
+  <data name="Finish_VerbShutDown" xml:space="preserve">
+    <value>shut down</value>
+  </data>
+  <data name="Finish_Countdown" xml:space="preserve">
+    <value>All downloads are finished. The computer will {0} in {1} seconds.</value>
+  </data>
+  <data name="Finish_Title" xml:space="preserve">
+    <value>Downloads finished</value>
+  </data>
+  <data name="Finish_Now" xml:space="preserve">
+    <value>{0} now</value>
+  </data>
+  <data name="History_AllStatuses" xml:space="preserve">
+    <value>All statuses</value>
+  </data>
+  <data name="History_InProgress" xml:space="preserve">
+    <value>In progress</value>
+  </data>
+  <data name="History_SortAdded" xml:space="preserve">
+    <value>Date added</value>
+  </data>
+  <data name="History_SortFinished" xml:space="preserve">
+    <value>Date finished</value>
+  </data>
+  <data name="History_AllSites" xml:space="preserve">
+    <value>All sites</value>
+  </data>
+  <data name="History_AllTypes" xml:space="preserve">
+    <value>All types</value>
+  </data>
+</root>

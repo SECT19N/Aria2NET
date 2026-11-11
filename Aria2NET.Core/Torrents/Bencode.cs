@@ -49,50 +49,50 @@ public static class Bencode {
 		if (pos >= data.Length) {
 			throw new FormatException("Unexpected end of bencode data.");
 		}
-		var c = (char)data[pos];
+		var c = (char) data[pos];
 		switch (c) {
 			case 'i': {
-				pos++;
-				var end = data[pos..].IndexOf((byte)'e');
-				if (end < 0) {
-					throw new FormatException("Unterminated integer.");
+					pos++;
+					var end = data[pos..].IndexOf((byte) 'e');
+					if (end < 0) {
+						throw new FormatException("Unterminated integer.");
+					}
+					var text = Encoding.ASCII.GetString(data.Slice(pos, end));
+					if (!long.TryParse(text, System.Globalization.NumberStyles.AllowLeadingSign, System.Globalization.CultureInfo.InvariantCulture, out var n)) {
+						throw new FormatException("Bad integer.");
+					}
+					pos += end + 1;
+					return n;
 				}
-				var text = Encoding.ASCII.GetString(data.Slice(pos, end));
-				if (!long.TryParse(text, System.Globalization.NumberStyles.AllowLeadingSign, System.Globalization.CultureInfo.InvariantCulture, out var n)) {
-					throw new FormatException("Bad integer.");
-				}
-				pos += end + 1;
-				return n;
-			}
 			case 'l': {
-				pos++;
-				var list = new List<object>();
-				while (true) {
-					if (pos >= data.Length) {
-						throw new FormatException("Unterminated list.");
+					pos++;
+					var list = new List<object>();
+					while (true) {
+						if (pos >= data.Length) {
+							throw new FormatException("Unterminated list.");
+						}
+						if (data[pos] == 'e') {
+							pos++;
+							return list;
+						}
+						list.Add(ReadValue(data, ref pos, depth + 1));
 					}
-					if (data[pos] == 'e') {
-						pos++;
-						return list;
-					}
-					list.Add(ReadValue(data, ref pos, depth + 1));
 				}
-			}
 			case 'd': {
-				pos++;
-				var dict = new Dictionary<string, object>(StringComparer.Ordinal);
-				while (true) {
-					if (pos >= data.Length) {
-						throw new FormatException("Unterminated dictionary.");
+					pos++;
+					var dict = new Dictionary<string, object>(StringComparer.Ordinal);
+					while (true) {
+						if (pos >= data.Length) {
+							throw new FormatException("Unterminated dictionary.");
+						}
+						if (data[pos] == 'e') {
+							pos++;
+							return dict;
+						}
+						var key = Encoding.Latin1.GetString(ReadString(data, ref pos));
+						dict[key] = ReadValue(data, ref pos, depth + 1);
 					}
-					if (data[pos] == 'e') {
-						pos++;
-						return dict;
-					}
-					var key = Encoding.Latin1.GetString(ReadString(data, ref pos));
-					dict[key] = ReadValue(data, ref pos, depth + 1);
 				}
-			}
 			default:
 				if (c is >= '0' and <= '9') {
 					return ReadString(data, ref pos);
@@ -102,7 +102,7 @@ public static class Bencode {
 	}
 
 	private static byte[] ReadString(ReadOnlySpan<byte> data, ref int pos) {
-		var colon = data[pos..].IndexOf((byte)':');
+		var colon = data[pos..].IndexOf((byte) ':');
 		if (colon <= 0 || !int.TryParse(Encoding.ASCII.GetString(data.Slice(pos, colon)), out var length) || length < 0) {
 			throw new FormatException("Bad string length.");
 		}
@@ -130,20 +130,20 @@ public static class Bencode {
 				WriteBytes(s, bytes);
 				break;
 			case IEnumerable<object> list:
-				s.WriteByte((byte)'l');
+				s.WriteByte((byte) 'l');
 				foreach (var item in list) {
 					Write(s, item);
 				}
-				s.WriteByte((byte)'e');
+				s.WriteByte((byte) 'e');
 				break;
 			case IDictionary<string, object> dict:
-				s.WriteByte((byte)'d');
+				s.WriteByte((byte) 'd');
 				// Keys are sorted by their raw bytes, as the spec requires.
 				foreach (var (key, item) in dict.OrderBy(p => p.Key, StringComparer.Ordinal)) {
 					WriteBytes(s, Encoding.Latin1.GetBytes(key));
 					Write(s, item);
 				}
-				s.WriteByte((byte)'e');
+				s.WriteByte((byte) 'e');
 				break;
 			default:
 				throw new ArgumentException($"Cannot bencode {value.GetType().Name}.", nameof(value));

@@ -21,7 +21,7 @@ public sealed partial class DownloadsViewModel {
 	/// <summary>Set by the page: shows the file picker and returns the choice (no files chosen means the user cancelled). Without it, everything is downloaded.</summary>
 	public Func<TorrentPrompt, Task<TorrentChoice>>? PromptTorrent { get; set; }
 
-	private async Task<bool> AddTorrentFileAsync(string path, string folder) {
+	private async Task<bool> AddTorrentFileAsync(string path, string folder, AddOptions? extra = null) {
 		var info = new FileInfo(path);
 		if (!info.Exists) {
 			throw new FileNotFoundException("The file does not exist.");
@@ -38,20 +38,20 @@ public sealed partial class DownloadsViewModel {
 			return false;
 		}
 
-		var note = duplicate?.Past is { } past ? $"You added this torrent before ({past.AddedUtc.ToLocalTime():d})." : null;
+		var note = duplicate?.Past is { } past ? Loc.F("Torrent_AddedBefore", "You added this torrent before ({0:d}).", past.AddedUtc.ToLocalTime()) : null;
 		var choice = await AskAsync(new TorrentPrompt(meta.Name, meta.Files, folder, FolderEditable: true, note))
 			?? DefaultChoice(folder, meta.Files);
 		if (choice.Files.Count == 0) {
 			return false; // cancelled
 		}
 
-		var gid = await _torrents.AddTorrentAsync(bytes, new TorrentAddRequest(choice.Folder, choice.Files, meta.Files.Count, choice.Seeding, choice.Allocation));
+		var gid = await _torrents.AddTorrentAsync(bytes, new TorrentAddRequest(choice.Folder, choice.Files, meta.Files.Count, choice.Seeding, choice.Allocation, extra));
 		_added[gid] = DateTimeOffset.Now;
 		SaveSettings(s => s.LastUsedFolder = choice.Folder);
 		return true;
 	}
 
-	private async Task AddMetalinkFileAsync(string path, string folder) {
+	private async Task AddMetalinkFileAsync(string path, string folder, AddOptions? extra = null) {
 		var info = new FileInfo(path);
 		if (!info.Exists) {
 			throw new FileNotFoundException("The file does not exist.");
@@ -59,12 +59,12 @@ public sealed partial class DownloadsViewModel {
 		if (info.Length > TorrentMetadata.MaxFileBytes) {
 			throw new FormatException("This does not look like a metalink file (it is far too large).");
 		}
-		foreach (var gid in await _torrents.AddMetalinkAsync(await File.ReadAllBytesAsync(path), folder)) {
+		foreach (var gid in await _torrents.AddMetalinkAsync(await File.ReadAllBytesAsync(path), folder, extra)) {
 			_added[gid] = DateTimeOffset.Now;
 		}
 	}
 
-	private async Task<bool> AddMagnetAsync(string magnet, string folder) {
+	private async Task<bool> AddMagnetAsync(string magnet, string folder, AddOptions? extra = null) {
 		if (MagnetLink.TryGetInfoHash(magnet, out var hash)
 			&& TorrentOperations.FindDuplicate(hash, _items, null) is { LiveGid: { } existing }) {
 			AlreadyAdded(MagnetLink.DisplayName(magnet) ?? hash, existing);
@@ -72,12 +72,12 @@ public sealed partial class DownloadsViewModel {
 		}
 		var gid = await _torrents.AddMagnetAsync(magnet, folder);
 		_added[gid] = DateTimeOffset.Now;
-		_ = ResolveMagnetAsync(gid, folder);
+		_ = ResolveMagnetAsync(gid, folder, extra);
 		return true;
 	}
 
 	/// <summary>Runs after a magnet was added: waits for its metadata, asks which files to download, then starts it.</summary>
-	private async Task ResolveMagnetAsync(string metadataGid, string folder) {
+	private async Task ResolveMagnetAsync(string metadataGid, string folder, AddOptions? extra = null) {
 		string? followerGid = null;
 		try {
 			var resolved = await _torrents.WaitForMetadataAsync(metadataGid);
@@ -93,13 +93,12 @@ public sealed partial class DownloadsViewModel {
 				await ForgetAsync(metadataGid);
 				return;
 			}
-			await _torrents.StartAsync(resolved.Gid, new TorrentAddRequest(folder, choice.Files, files.Count, choice.Seeding, choice.Allocation));
+			await _torrents.StartAsync(resolved.Gid, new TorrentAddRequest(folder, choice.Files, files.Count, choice.Seeding, choice.Allocation, extra));
 			await ForgetAsync(metadataGid);
-		}
-		catch (Exception ex) when (ex is not OperationCanceledException) {
+		} catch (Exception ex) when (ex is not OperationCanceledException) {
 			// Typically the engine stopped while we waited; the paused follower (if any) stays in aria2's session.
 			_logger.LogWarning(ex, "Finishing magnet {Gid} failed (follower {Follower})", metadataGid, followerGid);
-			_notices.Post(new Notice("Could not finish adding a magnet link", ex.Message, InfoBarSeverity.Warning));
+			_notices.Post(new Notice(Loc.S("Torrent_MagnetFailed", "Could not finish adding a magnet link"), ex.Message, InfoBarSeverity.Warning));
 		}
 	}
 
@@ -116,7 +115,7 @@ public sealed partial class DownloadsViewModel {
 		new(folder, files.Select(f => f.Index).ToList(), SeedingOverride.Default, AllocationChoice.Default);
 
 	private void AlreadyAdded(string name, string gid) {
-		_notices.Post(new Notice("Already in the list", $"{name} is already being downloaded.", InfoBarSeverity.Informational));
+		_notices.Post(new Notice(Loc.S("Torrent_AlreadyTitle", "Already in the list"), Loc.F("Torrent_AlreadyBody", "{0} is already being downloaded.", name), InfoBarSeverity.Informational));
 		_logger.LogInformation("Torrent {Name} already present as {Gid}", name, gid);
 	}
 
@@ -138,8 +137,8 @@ public sealed partial class DownloadsViewModel {
 			}
 			var needed = item.TotalBytes - item.CompletedBytes;
 			if (!DiskSpace.Fits(needed, item.Dir)) {
-				_notices.Post(new Notice("Not enough disk space",
-					$"{item.Name} needs {ByteFormat.Size(needed)} more, but {ByteFormat.Size(DiskSpace.FreeBytes(item.Dir) ?? 0)} is free in {item.Dir}.",
+				_notices.Post(new Notice(Loc.S("Torrent_NoSpaceTitle", "Not enough disk space"),
+					Loc.F("Torrent_NoSpaceBody", "{0} needs {1} more, but {2} is free in {3}.", item.Name, ByteFormat.Size(needed), ByteFormat.Size(DiskSpace.FreeBytes(item.Dir) ?? 0), item.Dir),
 					InfoBarSeverity.Warning));
 			}
 		}

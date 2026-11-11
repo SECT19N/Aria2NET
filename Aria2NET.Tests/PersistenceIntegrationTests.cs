@@ -76,8 +76,8 @@ public class PersistenceIntegrationTests {
 			}
 			ctx.Response.ContentLength64 = to - from + 1;
 			for (var pos = from; pos <= to; pos += 16 * 1024) {
-				var count = (int)Math.Min(16 * 1024, to - pos + 1);
-				await ctx.Response.OutputStream.WriteAsync(payload.AsMemory((int)pos, count));
+				var count = (int) Math.Min(16 * 1024, to - pos + 1);
+				await ctx.Response.OutputStream.WriteAsync(payload.AsMemory((int) pos, count));
 				await ctx.Response.OutputStream.FlushAsync();
 				await Task.Delay(40);
 			}
