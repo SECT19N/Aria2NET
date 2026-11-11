@@ -12,9 +12,13 @@ public class DownloadIntegrationTests {
 	internal static async Task<DownloadItem> WaitForAsync(Aria2RpcClient rpc, string gid, Func<DownloadItem, bool> done) {
 		var deadline = DateTime.UtcNow.AddSeconds(30);
 		while (DateTime.UtcNow < deadline) {
-			var item = await rpc.TellStatusAsync(gid);
-			if (done(item)) {
-				return item;
+			try {
+				var item = await rpc.TellStatusAsync(gid);
+				if (done(item)) {
+					return item;
+				}
+			} catch (TaskCanceledException) {
+				// aria2 can be too busy (hashing, allocating, a slow CI disk) to answer within the client's 5 second timeout. Ask again until the deadline.
 			}
 			await Task.Delay(100);
 		}
