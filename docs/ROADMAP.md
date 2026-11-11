@@ -26,8 +26,8 @@ A WinUI 3 download manager (IDM-style) on top of aria2c. aria2 does the transfer
 | 0.5 | Torrents | Magnet links, .torrent files, pick files |
 | 0.6 | Lives in background | Tray, notifications, start with Windows |
 | 0.7 | Settings | Speed limits, folders, connections, proxy |
-| **0.8 = MVP** | Daily-usable | Use it instead of the browser's downloader for pasted links and torrents |
-| 0.9 | Hardening | Bug fixing, tests, polish, installer and auto-update |
+| **0.8 = MVP** | Daily-usable | Install it with a Setup.exe, keep it updated from GitHub, and use it instead of the browser's downloader for pasted links and torrents |
+| 0.9 | Hardening | Bug fixing, tests, polish, signing |
 | **1.0** | Full feature release | Everything below the 1.0 section |
 | 1.x | Post-1.0 polish | Smaller extras |
 | **2.0** | Browser capture | Chrome/Edge/Firefox send downloads to Aria2NET |
@@ -141,7 +141,7 @@ A WinUI 3 download manager (IDM-style) on top of aria2c. aria2 does the transfer
 - Pre-allocation choice for torrents (sparse vs full) shown with free-space check.
 - Free disk space check before starting any download, with a warning if the file will not fit.
 - Duplicate torrent detection by info hash (open the existing one instead of adding twice).
-- Torrent file association via the first-run prompt (and the installer once Velopack lands in 0.9).
+- Torrent file association via the first-run prompt (and the installer, which Velopack provides from 0.8).
 - Display of DHT status (node count) and connectability (port open or not) in the footer.
 - Verify / recheck existing data ("I already have the files, check them") using `check-integrity`.
 - Sequential-ish mode for streaming isn't supported by aria2 — document it as a limitation.
@@ -189,14 +189,23 @@ A WinUI 3 download manager (IDM-style) on top of aria2c. aria2 does the transfer
 - About page: version, aria2 version, licenses (GPL, third-party notices), links.
 
 ### 0.8 = MVP
-Nothing new except stabilization. MVP definition: **you can install it, paste links/magnets/torrents, it downloads reliably, survives restarts, lives in the tray, and notifies you.** Fix everything that bites during a week of daily use.
+MVP definition: **you can install it, paste links/magnets/torrents, it downloads reliably, survives restarts, lives in the tray, notifies you, and keeps itself up to date.** Besides that it is stabilization: fix everything that bites during a week of daily use.
+
+Installer and auto-update with [Velopack](https://velopack.io), using GitHub Releases as the update feed:
+- Per-user `SECT19N.Aria2NET-<rid>-Setup.exe` (no admin rights, no certificate needed; SmartScreen still warns until the exe is signed, see 0.9). It installs to `%LocalAppData%\SECT19N.Aria2NET`, which is deliberately not the data folder (`%LocalAppData%\Aria2NET`), so uninstalling never touches user data. The package id is permanent.
+- Portable zip (`...-Portable.zip`) from the same `vpk pack`, for people who do not want an installer. It never updates itself (`IsInstalled` is false).
+- `VelopackApp.Build().Run()` is the first thing in `Program.cs`, before the single-instance check, so install/update/uninstall hooks cannot be redirected to a running copy. The uninstall hook removes the start-with-Windows entry and the torrent/magnet registration.
+- `UpdateService` (app layer, Core stays UI-free): checks 30 seconds after start and then every 12 hours, downloads in the background, shows a banner "Restart to update". Installing asks first when downloads run, exits through the normal shutdown (aria2 stops and saves its session, so `aria2c.exe` no longer locks the files) and lets Velopack's updater swap the files and start the new version.
+- "Updates" group in Settings: automatic check on/off, include pre-releases (on, because every version below 1.0 is a pre-release on GitHub), check now, restart to update.
+- Separate Velopack channels `win-x64` and `win-arm64`; an installed copy only sees packages for its own processor.
+- A newer copy no longer hands its launch to an older running one: it asks the old copy to exit (a named event; copies from before 0.8 do not listen, so it offers to close them) and becomes the main instance.
+- `release.yml`: `vpk download github` first (delta packages), `vpk pack` per processor, then after the atomic branch+tag push `vpk upload github --merge` for both processors.
 
 ### 0.9 Hardening
 - Unit tests (RPC client, parser, models), integration tests (real aria2c against a local test server).
 - Crash handling: global exception logging, "Copy diagnostics" button.
 - Accessibility pass (keyboard nav, screen reader names, high contrast).
 - DPI/ARM64 checks (x64 aria2 runs under emulation on ARM).
-- Installer and auto-update with [Velopack](https://velopack.io), using GitHub Releases as the update feed: per-user `Setup.exe` (no admin), delta updates, `VelopackApp.Build().Run()` first in `Program.cs`, an update service in the app layer (Core stays UI-free), an "Updates" group in Settings (automatic check, check now, stable or pre-release channel), and "restart to update" only after downloads are paused and the engine is stopped cleanly. `release.yml` switches from zipping to `vpk pack` / `vpk upload github` for `win-x64` and `win-arm64` (with `vpk download github` first so deltas can be built). The plain zip stays as the portable download; the update check does nothing when the app is not installed (`IsInstalled` is false, e.g. `dotnet run` or the zip). Spike first: pack the current build locally and check that install and start work with the custom WinUI entry point.
 - Telemetry-free "what's new" screen after an update (Velopack's post-update hook).
 - README with screenshots, install guide, user docs.
 - Soak test: 100+ simultaneous downloads, 10 GB+ files, 1000+ history rows, a week of uptime.
@@ -253,7 +262,7 @@ Everything that makes it a complete IDM-class manager without a browser extensio
 
 **Polish**
 - Backup/restore all settings, categories, queues.
-- Update checker for the aria2 binary (the app itself updates through Velopack, see 0.9).
+- Update checker for the aria2 binary (the app itself updates through Velopack, see 0.8).
 - Localization infrastructure, first extra languages.
 - Onboarding (TeachingTips), keyboard shortcut reference, in-app help.
 

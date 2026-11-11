@@ -106,6 +106,12 @@ public sealed class AppSettings {
 	/// <summary>What to do when a download would overwrite a file that is already there.</summary>
 	public ConflictPolicy Conflict { get; set; } = ConflictPolicy.AutoRename;
 
+	// Updates. Only an installed copy (Setup.exe) can update itself; the portable zip never does.
+	/// <summary>Look for a new version in the background a little after start and then twice a day, and download it so it is ready to install.</summary>
+	public bool AutoCheckUpdates { get; set; } = true;
+	/// <summary>Offer pre-release versions too. Every release below 1.0 is marked as a pre-release on GitHub, so this has to stay on until 1.0.</summary>
+	public bool IncludePreReleases { get; set; } = true;
+
 	// Advanced.
 	public AppLogLevel LogLevel { get; set; } = AppLogLevel.Information;
 	/// <summary>aria2 options typed in by hand (<see cref="RawOptionRules"/>). They are applied last, so they override the settings above.</summary>

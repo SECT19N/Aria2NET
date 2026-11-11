@@ -78,6 +78,45 @@ public sealed partial class SettingsPage : Page {
 		EventHandler onSpeed = (_, _) => DispatcherQueue.TryEnqueue(LoadEngineSettings);
 		Loaded += (_, _) => applier.SpeedChanged += onSpeed;
 		Unloaded += (_, _) => applier.SpeedChanged -= onSpeed;
+
+		AutoUpdateBox.IsChecked = ViewModel.AutoCheckUpdates;
+		PreReleaseBox.IsChecked = ViewModel.IncludePreReleases;
+		var updates = App.Services.GetRequiredService<UpdateService>();
+		EventHandler onUpdate = (_, _) => DispatcherQueue.TryEnqueue(RefreshUpdateStatus);
+		Loaded += (_, _) => {
+			updates.Changed += onUpdate;
+			RefreshUpdateStatus();
+		};
+		Unloaded += (_, _) => updates.Changed -= onUpdate;
+	}
+
+	// ---------------------------------------------------------------- updates
+
+	private static UpdateService Updates => App.Services.GetRequiredService<UpdateService>();
+
+	private void AutoUpdate_Click(object sender, RoutedEventArgs e) => ViewModel.AutoCheckUpdates = AutoUpdateBox.IsChecked == true;
+
+	private void PreRelease_Click(object sender, RoutedEventArgs e) => ViewModel.IncludePreReleases = PreReleaseBox.IsChecked == true;
+
+	private async void CheckUpdates_Click(object sender, RoutedEventArgs e) => await Updates.CheckAsync(manual: true);
+
+	private async void RestartUpdate_Click(object sender, RoutedEventArgs e) => await Updates.RestartAsync();
+
+	private void RefreshUpdateStatus() {
+		var updates = Updates;
+		var installed = updates.State != UpdateState.NotInstalled && updates.IsInstalled;
+		CheckUpdatesButton.IsEnabled = installed && updates.State is not (UpdateState.Checking or UpdateState.Downloading);
+		RestartUpdateButton.Visibility = updates.State == UpdateState.Ready ? Visibility.Visible : Visibility.Collapsed;
+		UpdateStatus.Text = !installed
+			? Loc.S("Update_NotInstalled", "This copy was not installed with Setup.exe (portable copy or a build from source), so it cannot update itself. Download a newer version from the Releases page.")
+			: updates.State switch {
+				UpdateState.Checking => Loc.S("Update_Checking", "Checking for updates…"),
+				UpdateState.UpToDate => Loc.F("Update_UpToDate", "Aria2NET {0} is up to date.", AboutViewModel.AppVersion),
+				UpdateState.Downloading => Loc.F("Update_Downloading", "Downloading version {0}…", updates.NewVersion ?? ""),
+				UpdateState.Ready => Loc.F("Update_Ready", "Version {0} is ready. Restart to install it.", updates.NewVersion ?? ""),
+				UpdateState.Failed => Loc.F("Update_Failed", "Could not check for updates: {0}", updates.Error ?? ""),
+				_ => "",
+			};
 	}
 
 	// ---------------------------------------------------------------- downloads and speed

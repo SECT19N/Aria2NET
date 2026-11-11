@@ -82,6 +82,7 @@ public partial class App : Application {
 		services.AddSingleton(sp => new HistoryService(paths, sp.GetRequiredService<ILogger<HistoryService>>()));
 		services.AddSingleton(sp => new EngineSupervisor(sp.GetRequiredService<IAria2Engine>(), new RestartPolicy(), sp.GetRequiredService<ILogger<EngineSupervisor>>()));
 		services.AddSingleton<NoticeCenter>();
+		services.AddSingleton<UpdateService>();
 		services.AddSingleton<TorrentAssociation>();
 		services.AddSingleton<PersistenceCoordinator>();
 		services.AddSingleton<BackgroundCoordinator>();
@@ -115,6 +116,11 @@ public partial class App : Application {
 		background.Start(_window);
 		Services.GetRequiredService<ToastService>().Start(_window);
 		RefreshStartupEntry();
+		// A newer copy asks this one to leave instead of being handed over to it (see InstanceTakeover).
+		InstanceTakeover.ListenForReplaceRequest(_window.DispatcherQueue, () => _window.RequestExit(confirm: false));
+		var updates = Services.GetRequiredService<UpdateService>();
+		updates.RestartRequested = _window.RestartToUpdateAsync;
+		updates.StartAutoCheck();
 		// A sign-in start stays in the tray when asked to, but never without a tray icon: the window would then be unreachable.
 		var hidden = StartedAtSignIn && background.TrayAvailable && Services.GetRequiredService<SettingsStore<AppSettings>>().Load().StartMinimized;
 		if (!hidden) {

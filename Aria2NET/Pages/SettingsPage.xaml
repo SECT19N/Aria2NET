@@ -166,6 +166,15 @@
             <Button x:Uid="SettingsPage_Button8" Content="Clear history…" Click="ClearHistory_Click"/>
         </StackPanel>
 
+        <TextBlock x:Uid="SettingsPage_UpdatesHeader" Text="Updates" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" Tag="section"/>
+        <CheckBox x:Uid="SettingsPage_AutoUpdateBox" x:Name="AutoUpdateBox" Content="Check for updates automatically and download them in the background" Click="AutoUpdate_Click"/>
+        <CheckBox x:Uid="SettingsPage_PreReleaseBox" x:Name="PreReleaseBox" Content="Include pre-releases (every version before 1.0 is one)" Click="PreRelease_Click"/>
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button x:Uid="SettingsPage_CheckUpdatesButton" x:Name="CheckUpdatesButton" Content="Check for updates now" Click="CheckUpdates_Click"/>
+            <Button x:Uid="SettingsPage_RestartUpdateButton" x:Name="RestartUpdateButton" Content="Restart to update" Click="RestartUpdate_Click" Visibility="Collapsed"/>
+        </StackPanel>
+        <TextBlock x:Name="UpdateStatus" TextWrapping="Wrap" />
+
         <TextBlock x:Uid="SettingsPage_TextBlock26" Text="Advanced and data" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" Tag="section"/>
         <ComboBox x:Uid="SettingsPage_LogLevelBox" x:Name="LogLevelBox" Header="Log detail" MinWidth="260" SelectionChanged="LogLevel_Changed"/>
         <TextBlock x:Uid="SettingsPage_TextBlock27" Text="Applies to Aria2NET's own log and to aria2's. Debug writes a lot; use it to find a problem, then set it back." Opacity="0.7" TextWrapping="Wrap"/>

@@ -263,6 +263,16 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 		set => Change(s => s.NotifyOnlyWhenUnfocused = value);
 	}
 
+	public bool AutoCheckUpdates {
+		get => settings.Load().AutoCheckUpdates;
+		set => Change(s => s.AutoCheckUpdates = value);
+	}
+
+	public bool IncludePreReleases {
+		get => settings.Load().IncludePreReleases;
+		set => Change(s => s.IncludePreReleases = value);
+	}
+
 	public bool PreventSleep {
 		get => settings.Load().PreventSleep;
 		set => Change(s => s.PreventSleep = value);
