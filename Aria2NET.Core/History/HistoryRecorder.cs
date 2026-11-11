@@ -28,8 +28,7 @@ public sealed class HistoryRecorder(HistoryStore store, ILogger? logger = null, 
 			lock (_gate) {
 				Record(snapshot.Items);
 			}
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			logger?.LogError(ex, "Recording history failed");
 		}
 	}

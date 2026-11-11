@@ -24,9 +24,9 @@ public partial class LocalizationTests {
 
 	private static Dictionary<string, string> Resw() {
 		var doc = XDocument.Load(Path.Combine(AppDir, "Strings", "en-US", "Resources.resw"));
-		var names = doc.Root!.Elements("data").Select(d => (string)d.Attribute("name")!).ToList();
+		var names = doc.Root!.Elements("data").Select(d => (string) d.Attribute("name")!).ToList();
 		Assert.Equal(names.Count, names.Distinct(StringComparer.Ordinal).Count()); // no key twice
-		return doc.Root.Elements("data").ToDictionary(d => (string)d.Attribute("name")!, d => d.Element("value")!.Value);
+		return doc.Root.Elements("data").ToDictionary(d => (string) d.Attribute("name")!, d => d.Element("value")!.Value);
 	}
 
 	private static IEnumerable<string> Files(string pattern) =>
@@ -87,6 +87,14 @@ public partial class LocalizationTests {
 	}
 
 	[Fact]
+	public void No_xaml_uid_sits_on_a_window_because_it_is_not_a_dependency_object() {
+		// A Window cannot take resource properties: loading the XAML fails with "Failed to assign to property 'Window.Title'".
+		foreach (var file in Files("*.xaml")) {
+			Assert.DoesNotMatch(@"<Window\b[^>]*x:Uid", File.ReadAllText(file));
+		}
+	}
+
+	[Fact]
 	public void Xaml_defaults_equal_the_resource_text() {
 		var resw = Resw();
 		foreach (var (file, uid, attrs) in XamlUids()) {
@@ -126,14 +134,10 @@ public partial class LocalizationTests {
 				var depth = 0;
 				var inString = false;
 				foreach (var c in call.Groups["rest"].Value) {
-					if (c == '"') { inString = !inString; }
-					else if (inString) { continue; }
-					else if (c is '(' or '[' or '{') { depth++; }
-					else if (c is ')' or ']' or '}') {
+					if (c == '"') { inString = !inString; } else if (inString) { continue; } else if (c is '(' or '[' or '{') { depth++; } else if (c is ')' or ']' or '}') {
 						if (depth == 0) { break; }
 						depth--;
-					}
-					else if (c == ',' && depth == 0) { args++; }
+					} else if (c == ',' && depth == 0) { args++; }
 				}
 				Assert.True(args >= highest + 1, $"{Path.GetFileName(file)}: \"{call.Groups["text"].Value}\" uses {{{highest}}} but the call passes {args} argument(s)");
 			}

@@ -98,13 +98,11 @@ public sealed partial class TorrentDetailViewModel : ObservableObject {
 			HasGeoIp = geo.RangeCount > 0;
 			Apply(await TorrentDetailLoader.LoadAsync(rpc, _gid, geo));
 			Problem = "";
-		}
-		catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException or TaskCanceledException) {
+		} catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException or TaskCanceledException) {
 			// The download was removed, or the engine is restarting; keep showing the last data.
 			_logger.LogDebug(ex, "Refreshing torrent details failed");
 			Problem = ex is Aria2RpcException ? "This torrent is no longer in the list." : "Waiting for the download engine…";
-		}
-		finally {
+		} finally {
 			_busy = false;
 		}
 	}
@@ -169,9 +167,9 @@ public sealed partial class TorrentDetailViewModel : ObservableObject {
 		for (var i = 0; i < values.Length; i++) {
 			var v = Math.Clamp(values[i], 0, 1);
 			var color = Color.FromArgb(
-				(byte)(empty.A + (full.A - empty.A) * v), (byte)(empty.R + (full.R - empty.R) * v),
-				(byte)(empty.G + (full.G - empty.G) * v), (byte)(empty.B + (full.B - empty.B) * v));
-			brush.GradientStops.Add(new GradientStop { Color = color, Offset = (double)i / values.Length });
+				(byte) (empty.A + (full.A - empty.A) * v), (byte) (empty.R + (full.R - empty.R) * v),
+				(byte) (empty.G + (full.G - empty.G) * v), (byte) (empty.B + (full.B - empty.B) * v));
+			brush.GradientStops.Add(new GradientStop { Color = color, Offset = (double) i / values.Length });
 			brush.GradientStops.Add(new GradientStop { Color = color, Offset = (i + 1.0) / values.Length });
 		}
 		return brush;

@@ -28,20 +28,18 @@ public static class SessionFile {
 		byte[] bytes;
 		try {
 			bytes = File.ReadAllBytes(path);
-		}
-		catch (IOException) {
+		} catch (IOException) {
 			return SessionHealth.Corrupt;
 		}
 		if (bytes.Length == 0) {
 			return SessionHealth.Empty;
 		}
-		if (Array.IndexOf(bytes, (byte)0) >= 0) {
+		if (Array.IndexOf(bytes, (byte) 0) >= 0) {
 			return SessionHealth.Corrupt;
 		}
 		try {
 			Strict.GetString(bytes);
-		}
-		catch (DecoderFallbackException) {
+		} catch (DecoderFallbackException) {
 			return SessionHealth.Corrupt;
 		}
 		return SessionHealth.Ok;
@@ -66,8 +64,7 @@ public static class SessionFile {
 				if (restored is not null) {
 					File.Copy(restored, file, overwrite: true);
 					logger?.LogWarning("aria2 session file was damaged; kept it as {Moved} and restored {Backup}", moved, restored);
-				}
-				else {
+				} else {
 					File.WriteAllBytes(file, []);
 					logger?.LogWarning("aria2 session file was damaged and no backup was usable; kept it as {Moved} and started empty", moved);
 				}

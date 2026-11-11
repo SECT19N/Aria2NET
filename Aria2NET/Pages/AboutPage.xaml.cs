@@ -30,8 +30,7 @@ public sealed partial class AboutPage : Page {
 		};
 		try {
 			await dialog.ShowAsync();
-		}
-		catch (InvalidOperationException) {
+		} catch (InvalidOperationException) {
 			// Another dialog is already open.
 		}
 	}

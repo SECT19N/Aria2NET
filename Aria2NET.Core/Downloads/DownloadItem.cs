@@ -38,7 +38,7 @@ public sealed record DownloadItem(
 	int FileCount = 1) {
 
 	/// <summary>Uploaded divided by downloaded; 0 until something was downloaded.</summary>
-	public double ShareRatio => CompletedBytes > 0 ? (double)UploadedBytes / CompletedBytes : 0;
+	public double ShareRatio => CompletedBytes > 0 ? (double) UploadedBytes / CompletedBytes : 0;
 
 	/// <summary>A magnet whose torrent file is still being fetched: aria2 lists it as a placeholder with a <c>[METADATA]</c> path.</summary>
 	public bool IsFetchingMetadata => IsMetadata && Status is DownloadStatus.Active or DownloadStatus.Waiting or DownloadStatus.Paused;
@@ -49,7 +49,7 @@ public sealed record DownloadItem(
 	/// <summary>Remaining time, or null when it cannot be estimated.</summary>
 	public TimeSpan? Eta =>
 		Status == DownloadStatus.Active && SpeedBytesPerSec > 0 && TotalBytes > CompletedBytes
-			? TimeSpan.FromSeconds((double)(TotalBytes - CompletedBytes) / SpeedBytesPerSec)
+			? TimeSpan.FromSeconds((double) (TotalBytes - CompletedBytes) / SpeedBytesPerSec)
 			: null;
 
 	/// <summary>aria2 names the path of a magnet's metadata download this way.</summary>
@@ -104,7 +104,7 @@ public sealed record DownloadItem(
 			int.TryParse(Str(e, "errorCode"), NumberStyles.None, CultureInfo.InvariantCulture, out var code) ? code : null,
 			string.IsNullOrEmpty(infoHash) ? null : infoHash.ToLowerInvariant(),
 			isTorrent,
-			Num(e, "uploadSpeed"), Num(e, "uploadLength"), (int)Num(e, "numSeeders"), (int)Num(e, "connections"),
+			Num(e, "uploadSpeed"), Num(e, "uploadLength"), (int) Num(e, "numSeeders"), (int) Num(e, "connections"),
 			followedBy, Str(e, "belongsTo"), isMetadata, fileCount);
 	}
 
@@ -144,7 +144,7 @@ public sealed record GlobalStats(long DownloadSpeed, int NumActive, int NumWaiti
 
 	public static GlobalStats FromJson(JsonElement e) {
 		long L(string n) => e.TryGetProperty(n, out var v) && long.TryParse(v.GetString(), NumberStyles.None, CultureInfo.InvariantCulture, out var r) ? r : 0;
-		return new GlobalStats(L("downloadSpeed"), (int)L("numActive"), (int)L("numWaiting"), (int)L("numStopped"), L("uploadSpeed"));
+		return new GlobalStats(L("downloadSpeed"), (int) L("numActive"), (int) L("numWaiting"), (int) L("numStopped"), L("uploadSpeed"));
 	}
 }
 

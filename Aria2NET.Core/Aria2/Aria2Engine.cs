@@ -38,8 +38,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 			}
 			SetState(EngineState.Starting);
 			await StartCoreAsync(ct);
-		}
-		finally {
+		} finally {
 			_gate.Release();
 		}
 	}
@@ -50,8 +49,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 			SetState(EngineState.Stopping);
 			await StopCoreAsync();
 			SetState(EngineState.Stopped);
-		}
-		finally {
+		} finally {
 			_gate.Release();
 		}
 	}
@@ -62,8 +60,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 			SetState(EngineState.Restarting);
 			await StopCoreAsync();
 			await StartCoreAsync(ct);
-		}
-		finally {
+		} finally {
 			_gate.Release();
 		}
 	}
@@ -96,8 +93,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 					? "The list of unfinished downloads was damaged and could not be recovered, so it starts empty."
 					: "The list of unfinished downloads was damaged and was restored from a backup. The newest changes may be missing."));
 			}
-		}
-		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
+		} catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
 			Fail($"Cannot prepare data folders: {ex.Message}");
 			return;
 		}
@@ -114,8 +110,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 			Process process;
 			try {
 				process = LaunchProcess(exe);
-			}
-			catch (Exception ex) when (ex is Win32Exception or InvalidOperationException) {
+			} catch (Exception ex) when (ex is Win32Exception or InvalidOperationException) {
 				Fail($"Could not launch aria2c: {ex.Message}");
 				return;
 			}
@@ -177,8 +172,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 		while (!process.HasExited) {
 			try {
 				return await rpc.GetVersionAsync(timeout.Token);
-			}
-			catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or Aria2RpcException) {
+			} catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or Aria2RpcException) {
 				if (timeout.IsCancellationRequested) {
 					ct.ThrowIfCancellationRequested();
 					return null;
@@ -186,8 +180,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 			}
 			try {
 				await Task.Delay(150, timeout.Token);
-			}
-			catch (OperationCanceledException) {
+			} catch (OperationCanceledException) {
 				ct.ThrowIfCancellationRequested();
 				return null;
 			}
@@ -214,22 +207,19 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 						using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
 						await rpc.SaveSessionAsync(cts.Token);
 						await rpc.ShutdownAsync(cts.Token);
-					}
-					catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or Aria2RpcException) {
+					} catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or Aria2RpcException) {
 						_logger.LogWarning(ex, "Graceful aria2 shutdown failed; killing the process");
 					}
 				}
 				try {
 					using var cts = new CancellationTokenSource(ExitTimeout);
 					await process.WaitForExitAsync(cts.Token);
-				}
-				catch (OperationCanceledException) {
+				} catch (OperationCanceledException) {
 					KillQuietly(process);
 				}
 			}
 			_logger.LogInformation("aria2 stopped");
-		}
-		finally {
+		} finally {
 			process.Dispose();
 		}
 	}
@@ -241,8 +231,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 		int code;
 		try {
 			code = process.ExitCode;
-		}
-		catch (InvalidOperationException) {
+		} catch (InvalidOperationException) {
 			code = -1;
 		}
 		_logger.LogError("aria2c exited unexpectedly with code {Code}", code);
@@ -260,11 +249,9 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 					p.Kill(entireProcessTree: true);
 					p.WaitForExit(2000);
 				}
-			}
-			catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or NotSupportedException) {
+			} catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or NotSupportedException) {
 				// Process exited or is not ours to inspect.
-			}
-			finally {
+			} finally {
 				p.Dispose();
 			}
 		}
@@ -276,8 +263,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 				process.Kill(entireProcessTree: true);
 				process.WaitForExit(2000);
 			}
-		}
-		catch (Exception ex) when (ex is Win32Exception or InvalidOperationException) {
+		} catch (Exception ex) when (ex is Win32Exception or InvalidOperationException) {
 			// Already gone.
 		}
 	}

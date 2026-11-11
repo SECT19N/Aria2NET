@@ -38,7 +38,7 @@ public sealed partial class SettingsPage : Page {
 		foreach (var action in Enum.GetValues<FinishAction>()) {
 			FinishBox.Items.Add(WhenFinishedMachine.Label(action));
 		}
-		FinishBox.SelectedIndex = (int)FinishService.Action;
+		FinishBox.SelectedIndex = (int) FinishService.Action;
 		foreach (var choice in SettingsViewModel.RetentionChoices) {
 			RetentionBox.Items.Add(choice.Label);
 		}
@@ -105,13 +105,13 @@ public sealed partial class SettingsPage : Page {
 			UserAgentBox.SelectedIndex = index;
 			UserAgentText.Visibility = index == presets.Count - 1 ? Visibility.Visible : Visibility.Collapsed;
 			UserAgentText.Text = index == presets.Count - 1 ? s.UserAgent ?? "" : "";
-			AllocationBox.SelectedIndex = (int)s.FileAllocation;
+			AllocationBox.SelectedIndex = (int) s.FileAllocation;
 			DownLimitBox.Value = s.DownloadLimitKiBps;
 			UpLimitBox.Value = s.UploadLimitKiBps;
 			AltDownLimitBox.Value = s.AltDownloadLimitKiBps;
 			AltUpLimitBox.Value = s.AltUploadLimitKiBps;
 			AltSpeedSwitch.IsOn = s.AltSpeedActive;
-			ProxyModeBox.SelectedIndex = (int)s.Proxy;
+			ProxyModeBox.SelectedIndex = (int) s.Proxy;
 			ProxyFields.Visibility = s.Proxy == ProxyMode.Manual ? Visibility.Visible : Visibility.Collapsed;
 			ProxyAddressBox.Text = s.ProxyAddress ?? "";
 			ProxyUserBox.Text = s.ProxyUser ?? "";
@@ -119,11 +119,11 @@ public sealed partial class SettingsPage : Page {
 			CertSwitch.IsOn = s.CheckCertificates;
 			Ipv6Switch.IsOn = s.UseIPv6;
 			ProxyStatus.Text = ProxyStatusText(s);
-			LogLevelBox.SelectedIndex = (int)s.LogLevel;
+			LogLevelBox.SelectedIndex = (int) s.LogLevel;
 			RawOptionsBox.Text = ViewModel.RawOptionsText;
-			ThemeBox.SelectedIndex = (int)s.Theme;
-			ConflictBox.SelectedIndex = (int)s.Conflict;
-			TrackerSourceBox.SelectedIndex = (int)s.Trackers;
+			ThemeBox.SelectedIndex = (int) s.Theme;
+			ConflictBox.SelectedIndex = (int) s.Conflict;
+			TrackerSourceBox.SelectedIndex = (int) s.Trackers;
 			TrackerUrlBox.Visibility = s.Trackers == TrackerSource.Custom ? Visibility.Visible : Visibility.Collapsed;
 			TrackerUrlBox.Text = s.TrackerUrl ?? "";
 			PortStartBox.Value = s.ListenPortStart;
@@ -132,19 +132,18 @@ public sealed partial class SettingsPage : Page {
 			DhtBox.IsChecked = s.EnableDht;
 			PexBox.IsChecked = s.EnablePex;
 			LpdBox.IsChecked = s.EnableLpd;
-			EncryptionBox.SelectedIndex = (int)s.Encryption;
+			EncryptionBox.SelectedIndex = (int) s.Encryption;
 			SeedRatioBox.Value = s.SeedRatio;
 			SeedTimeBox.Value = s.SeedTimeMinutes;
 			TorrentStatus.Text = EngineOptions.ValidateTorrent(s) ?? "";
 			RestartBar.IsOpen = ViewModel.RestartRequired;
-		}
-		finally {
+		} finally {
 			_loading = false;
 		}
 		_ = RefreshFolderStatusAsync();
 	}
 
-	private static int Int(NumberBox box) => (int)Math.Round(box.Value);
+	private static int Int(NumberBox box) => (int) Math.Round(box.Value);
 
 	private void Number_Changed(NumberBox sender, NumberBoxValueChangedEventArgs args) {
 		if (_loading) {
@@ -190,7 +189,7 @@ public sealed partial class SettingsPage : Page {
 
 	private void Allocation_Changed(object sender, SelectionChangedEventArgs e) {
 		if (!_loading && AllocationBox.SelectedIndex >= 0) {
-			ViewModel.Update(s => s.FileAllocation = (FileAllocationMode)AllocationBox.SelectedIndex);
+			ViewModel.Update(s => s.FileAllocation = (FileAllocationMode) AllocationBox.SelectedIndex);
 		}
 	}
 
@@ -212,7 +211,7 @@ public sealed partial class SettingsPage : Page {
 		if (_loading || ProxyModeBox.SelectedIndex < 0) {
 			return;
 		}
-		var mode = (ProxyMode)ProxyModeBox.SelectedIndex;
+		var mode = (ProxyMode) ProxyModeBox.SelectedIndex;
 		ProxyFields.Visibility = mode == ProxyMode.Manual ? Visibility.Visible : Visibility.Collapsed;
 		ViewModel.Update(s => s.Proxy = mode);
 		ProxyStatus.Text = ProxyStatusText(ViewModel.Current);
@@ -286,7 +285,7 @@ public sealed partial class SettingsPage : Page {
 
 	private void Encryption_Changed(object sender, SelectionChangedEventArgs e) {
 		if (EncryptionBox.SelectedIndex >= 0) {
-			TorrentChange(s => s.Encryption = (TorrentEncryption)EncryptionBox.SelectedIndex);
+			TorrentChange(s => s.Encryption = (TorrentEncryption) EncryptionBox.SelectedIndex);
 		}
 	}
 
@@ -294,7 +293,7 @@ public sealed partial class SettingsPage : Page {
 		if (_loading || TrackerSourceBox.SelectedIndex < 0) {
 			return;
 		}
-		var source = (TrackerSource)TrackerSourceBox.SelectedIndex;
+		var source = (TrackerSource) TrackerSourceBox.SelectedIndex;
 		TrackerUrlBox.Visibility = source == TrackerSource.Custom ? Visibility.Visible : Visibility.Collapsed;
 		TorrentChange(s => s.Trackers = source);
 		if (source != TrackerSource.Custom || EngineOptions.ValidateTorrent(ViewModel.Current) is null) {
@@ -330,7 +329,7 @@ public sealed partial class SettingsPage : Page {
 			PageRoot.Children.Remove(child);
 			if (IsSectionHeader(child)) {
 				current = new StackPanel { Spacing = 12 };
-				_sections.Add(new SettingsSection(((TextBlock)child).Text, current));
+				_sections.Add(new SettingsSection(((TextBlock) child).Text, current));
 			}
 			current!.Children.Add(child);
 		}
@@ -407,7 +406,7 @@ public sealed partial class SettingsPage : Page {
 
 	private void LogLevel_Changed(object sender, SelectionChangedEventArgs e) {
 		if (!_loading && LogLevelBox.SelectedIndex >= 0) {
-			var level = (AppLogLevel)LogLevelBox.SelectedIndex;
+			var level = (AppLogLevel) LogLevelBox.SelectedIndex;
 			ViewModel.Update(s => s.LogLevel = level);
 		}
 	}
@@ -433,8 +432,7 @@ public sealed partial class SettingsPage : Page {
 			}
 			await Windows.Storage.FileIO.WriteTextAsync(file, ViewModel.ExportJson());
 			TransferStatus.Text = Loc.F("Settings_Exported", "Exported to {0}.", file.Path);
-		}
-		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Runtime.InteropServices.COMException) {
+		} catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Runtime.InteropServices.COMException) {
 			TransferStatus.Text = Loc.F("Settings_ExportFailed", "Could not export: {0}", ex.Message);
 		}
 	}
@@ -457,8 +455,7 @@ public sealed partial class SettingsPage : Page {
 				return;
 			}
 			Frame.Navigate(typeof(SettingsPage), null, new Microsoft.UI.Xaml.Media.Animation.SuppressNavigationTransitionInfo()); // reload every control
-		}
-		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Runtime.InteropServices.COMException) {
+		} catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Runtime.InteropServices.COMException) {
 			TransferStatus.Text = Loc.F("Settings_ImportFailed", "Could not import: {0}", ex.Message);
 		}
 	}
@@ -478,14 +475,14 @@ public sealed partial class SettingsPage : Page {
 		if (_loading || ThemeBox.SelectedIndex < 0) {
 			return;
 		}
-		var theme = (AppTheme)ThemeBox.SelectedIndex;
+		var theme = (AppTheme) ThemeBox.SelectedIndex;
 		ViewModel.Update(s => s.Theme = theme);
 		App.ApplyTheme(theme);
 	}
 
 	private void Conflict_Changed(object sender, SelectionChangedEventArgs e) {
 		if (!_loading && ConflictBox.SelectedIndex >= 0) {
-			var policy = (ConflictPolicy)ConflictBox.SelectedIndex;
+			var policy = (ConflictPolicy) ConflictBox.SelectedIndex;
 			ViewModel.Update(s => s.Conflict = policy);
 		}
 	}
@@ -597,8 +594,8 @@ public sealed partial class SettingsPage : Page {
 	private void PauseMetered_Click(object sender, RoutedEventArgs e) => ViewModel.PauseOnMetered = PauseMeteredBox.IsChecked == true;
 
 	private void Finish_Changed(object sender, SelectionChangedEventArgs e) {
-		if (FinishBox.SelectedIndex >= 0 && FinishBox.SelectedIndex != (int)FinishService.Action) {
-			FinishService.Action = (FinishAction)FinishBox.SelectedIndex;
+		if (FinishBox.SelectedIndex >= 0 && FinishBox.SelectedIndex != (int) FinishService.Action) {
+			FinishService.Action = (FinishAction) FinishBox.SelectedIndex;
 		}
 	}
 
@@ -640,8 +637,7 @@ public sealed partial class SettingsPage : Page {
 				RefreshAssociation();
 				await TorrentAssociation.OpenDefaultAppsAsync();
 			}
-		}
-		else {
+		} else {
 			Association.Disable();
 		}
 		RefreshAssociation();
@@ -668,8 +664,7 @@ public sealed partial class SettingsPage : Page {
 		if (list is not null && App.Services.GetRequiredService<IAria2Engine>().Rpc is { } rpc) {
 			try {
 				await rpc.ChangeGlobalOptionAsync(new Dictionary<string, string> { ["bt-tracker"] = Aria2Config.TrackerOptionValue(list) });
-			}
-			catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException) {
+			} catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException) {
 				// The new list is cached and used at the next engine start.
 			}
 		}

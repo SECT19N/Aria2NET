@@ -37,8 +37,7 @@ public static class SettingsTransfer {
 		AppSettings? imported;
 		try {
 			imported = JsonSerializer.Deserialize(json, AppSettingsJsonContext.Default.AppSettings);
-		}
-		catch (JsonException) {
+		} catch (JsonException) {
 			return (null, "This is not a settings file from Aria2NET.");
 		}
 		if (imported is null) {

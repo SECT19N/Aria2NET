@@ -51,8 +51,7 @@ public sealed class TrackerListService(HttpClient http, AppPaths paths, ILogger<
 	public static IReadOnlyList<string> ReadCache(AppPaths paths) {
 		try {
 			return File.Exists(paths.TrackerListFile) ? Parse(File.ReadAllText(paths.TrackerListFile)) : [];
-		}
-		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
+		} catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
 			return [];
 		}
 	}
@@ -61,8 +60,7 @@ public sealed class TrackerListService(HttpClient http, AppPaths paths, ILogger<
 	public bool IsStale(DateTime nowUtc) {
 		try {
 			return !File.Exists(paths.TrackerListFile) || nowUtc - File.GetLastWriteTimeUtc(paths.TrackerListFile) > MaxAge;
-		}
-		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
+		} catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
 			return true;
 		}
 	}
@@ -91,7 +89,7 @@ public sealed class TrackerListService(HttpClient http, AppPaths paths, ILogger<
 				}
 			}
 
-			var list = Parse(System.Text.Encoding.UTF8.GetString(buffer.GetBuffer(), 0, (int)buffer.Length));
+			var list = Parse(System.Text.Encoding.UTF8.GetString(buffer.GetBuffer(), 0, (int) buffer.Length));
 			if (list.Count == 0) {
 				logger?.LogWarning("Tracker list at {Url} had no usable trackers; keeping the cached one", url);
 				return null;
@@ -102,8 +100,7 @@ public sealed class TrackerListService(HttpClient http, AppPaths paths, ILogger<
 			File.Move(temp, paths.TrackerListFile, overwrite: true);
 			logger?.LogInformation("Tracker list refreshed: {Count} trackers", list.Count);
 			return list;
-		}
-		catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or UnauthorizedAccessException && !ct.IsCancellationRequested) {
+		} catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or UnauthorizedAccessException && !ct.IsCancellationRequested) {
 			logger?.LogWarning("Could not refresh the tracker list: {Message}", ex.Message);
 			return null;
 		}

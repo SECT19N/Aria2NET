@@ -19,8 +19,7 @@ public static class DiskSpace {
 		string? probe;
 		try {
 			probe = Path.GetFullPath(folder);
-		}
-		catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException) {
+		} catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException) {
 			return null;
 		}
 		while (probe is not null && !Directory.Exists(probe)) {
@@ -29,7 +28,7 @@ public static class DiskSpace {
 		if (probe is null || !GetDiskFreeSpaceEx(probe, out var free, out _, out _)) {
 			return null;
 		}
-		return free > long.MaxValue ? long.MaxValue : (long)free;
+		return free > long.MaxValue ? long.MaxValue : (long) free;
 	}
 
 	/// <summary>False only when the free space is known and smaller than <paramref name="requiredBytes"/>; an unknown amount never blocks a download.</summary>

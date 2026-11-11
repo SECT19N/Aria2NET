@@ -5,7 +5,6 @@ using Aria2NET.Core.Aria2;
 using Aria2NET.Core.Downloads;
 using Aria2NET.Core.Settings;
 using Aria2NET.Core.Torrents;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Aria2NET.Tests;
 

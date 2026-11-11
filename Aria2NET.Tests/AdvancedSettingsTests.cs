@@ -103,7 +103,10 @@ public class LogLevelTests {
 
 public class SettingsTransferTests {
 	private static AppSettings Machine() => new() {
-		Window = new WindowPlacement(), LastUsedFolder = @"D:\here", TorrentAssociationPrompted = true, ProxyPasswordProtected = SecretProtector.Protect("pw"),
+		Window = new WindowPlacement(),
+		LastUsedFolder = @"D:\here",
+		TorrentAssociationPrompted = true,
+		ProxyPasswordProtected = SecretProtector.Protect("pw"),
 	};
 
 	[Fact]

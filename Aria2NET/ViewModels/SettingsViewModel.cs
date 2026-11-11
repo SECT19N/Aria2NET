@@ -45,8 +45,7 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 	private string? Replace(AppSettings next) {
 		try {
 			settings.Save(next);
-		}
-		catch (IOException ex) {
+		} catch (IOException ex) {
 			logger.LogWarning(ex, "Could not save settings");
 			return Loc.F("Settings_SaveFailed", "Could not save the settings: {0}", ex.Message);
 		}
@@ -141,8 +140,7 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 			File.WriteAllText(probe, "");
 			File.Delete(probe);
 			return null;
-		}
-		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) {
+		} catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) {
 			return Loc.F("Settings_FolderNotWritable", "Cannot write to this folder: {0}", ex.Message);
 		}
 	}
@@ -152,8 +150,7 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 		try {
 			var root = Path.GetPathRoot(Path.GetFullPath(path));
 			return root is null ? "" : Loc.F("Settings_FreeSpace", "{0} free", FormatBytes(new DriveInfo(root).AvailableFreeSpace));
-		}
-		catch (Exception ex) when (ex is IOException or ArgumentException or UnauthorizedAccessException or NotSupportedException) {
+		} catch (Exception ex) when (ex is IOException or ArgumentException or UnauthorizedAccessException or NotSupportedException) {
 			return "";
 		}
 	}
@@ -183,8 +180,7 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 				var s = settings.Load();
 				s.ConfirmDeleteFiles = value;
 				settings.Save(s);
-			}
-			catch (IOException ex) {
+			} catch (IOException ex) {
 				logger.LogWarning(ex, "Could not save settings");
 			}
 		}
@@ -213,8 +209,7 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 		get {
 			try {
 				return startup.IsEnabled;
-			}
-			catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException) {
+			} catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException) {
 				return false;
 			}
 		}
@@ -222,12 +217,10 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 			try {
 				if (value) {
 					startup.Enable();
-				}
-				else {
+				} else {
 					startup.Disable();
 				}
-			}
-			catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException) {
+			} catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException) {
 				logger.LogWarning(ex, "Could not change the start-with-Windows entry");
 			}
 		}
@@ -300,8 +293,7 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 			var s = settings.Load();
 			apply(s);
 			settings.Save(s);
-		}
-		catch (IOException ex) {
+		} catch (IOException ex) {
 			logger.LogWarning(ex, "Could not save settings");
 		}
 	}
@@ -321,8 +313,7 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 				s.HistoryRetentionDays = RetentionChoices[Math.Clamp(value, 0, RetentionChoices.Count - 1)].Days;
 				settings.Save(s);
 				history.ApplyRetention(s.HistoryRetentionDays);
-			}
-			catch (Exception ex) when (ex is IOException or Microsoft.Data.Sqlite.SqliteException) {
+			} catch (Exception ex) when (ex is IOException or Microsoft.Data.Sqlite.SqliteException) {
 				logger.LogWarning(ex, "Could not save the history setting");
 			}
 		}

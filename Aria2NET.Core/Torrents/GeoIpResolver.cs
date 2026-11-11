@@ -37,11 +37,10 @@ public sealed class GeoIpResolver {
 				return Empty;
 			}
 			using var file = File.OpenRead(path);
-			using var stream = path.EndsWith(".gz", StringComparison.OrdinalIgnoreCase) ? new GZipStream(file, CompressionMode.Decompress) : (Stream)file;
+			using var stream = path.EndsWith(".gz", StringComparison.OrdinalIgnoreCase) ? new GZipStream(file, CompressionMode.Decompress) : (Stream) file;
 			using var reader = new StreamReader(stream);
 			return FromCsv(reader);
-		}
-		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException) {
+		} catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException) {
 			return Empty;
 		}
 	}
@@ -58,8 +57,7 @@ public sealed class GeoIpResolver {
 			var country = parts[2].ToUpperInvariant();
 			if (start.AddressFamily == AddressFamily.InterNetwork && end.AddressFamily == AddressFamily.InterNetwork) {
 				v4.Add((ToUInt32(start), ToUInt32(end), country));
-			}
-			else if (start.AddressFamily == AddressFamily.InterNetworkV6 && end.AddressFamily == AddressFamily.InterNetworkV6) {
+			} else if (start.AddressFamily == AddressFamily.InterNetworkV6 && end.AddressFamily == AddressFamily.InterNetworkV6) {
 				v6.Add((ToUInt128(start), ToUInt128(end), country));
 			}
 		}
@@ -99,7 +97,7 @@ public sealed class GeoIpResolver {
 
 	private static uint ToUInt32(IPAddress a) {
 		var b = a.GetAddressBytes();
-		return ((uint)b[0] << 24) | ((uint)b[1] << 16) | ((uint)b[2] << 8) | b[3];
+		return ((uint) b[0] << 24) | ((uint) b[1] << 16) | ((uint) b[2] << 8) | b[3];
 	}
 
 	private static UInt128 ToUInt128(IPAddress a) {
@@ -118,8 +116,7 @@ public sealed class GeoIpResolver {
 		}
 		try {
 			return new RegionInfo(code).EnglishName;
-		}
-		catch (ArgumentException) {
+		} catch (ArgumentException) {
 			return code;
 		}
 	}

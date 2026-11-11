@@ -28,8 +28,7 @@ public sealed class DownloadMonitor(IAria2Engine engine, ILogger<DownloadMonitor
 		await _cts.CancelAsync();
 		try {
 			await _loop!;
-		}
-		catch (OperationCanceledException) {
+		} catch (OperationCanceledException) {
 			// Expected.
 		}
 		_cts.Dispose();
@@ -47,8 +46,7 @@ public sealed class DownloadMonitor(IAria2Engine engine, ILogger<DownloadMonitor
 	private static async Task<bool> WaitAsync(PeriodicTimer timer, CancellationToken ct) {
 		try {
 			return await timer.WaitForNextTickAsync(ct);
-		}
-		catch (OperationCanceledException) {
+		} catch (OperationCanceledException) {
 			return false;
 		}
 	}
@@ -62,11 +60,9 @@ public sealed class DownloadMonitor(IAria2Engine engine, ILogger<DownloadMonitor
 			var snapshot = await rpc.PollAsync(ct);
 			_lastTickFailed = false;
 			SnapshotReady?.Invoke(this, snapshot);
-		}
-		catch (OperationCanceledException) when (ct.IsCancellationRequested) {
+		} catch (OperationCanceledException) when (ct.IsCancellationRequested) {
 			// Shutting down.
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			// Log the first failure of a streak only; a dead engine would otherwise flood the log every second.
 			if (!_lastTickFailed) {
 				logger.LogWarning(ex, "Polling aria2 failed");

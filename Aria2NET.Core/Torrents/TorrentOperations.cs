@@ -118,8 +118,7 @@ public sealed class TorrentOperations(IAria2Engine engine, ILogger<TorrentOperat
 			DownloadItem item;
 			try {
 				item = await Rpc.TellStatusAsync(metadataGid, ct);
-			}
-			catch (Aria2RpcException) {
+			} catch (Aria2RpcException) {
 				return null; // removed and forgotten
 			}
 			if (item.Status is DownloadStatus.Error or DownloadStatus.Removed) {
@@ -172,8 +171,7 @@ public sealed class TorrentOperations(IAria2Engine engine, ILogger<TorrentOperat
 	private void EnsureFolder(string dir) {
 		try {
 			Directory.CreateDirectory(dir);
-		}
-		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException) {
+		} catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException) {
 			logger?.LogWarning(ex, "Could not create {Dir}", dir);
 			throw new IOException($"Cannot use the folder {dir}: {ex.Message}", ex);
 		}

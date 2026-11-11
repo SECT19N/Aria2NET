@@ -23,8 +23,7 @@ public static class BackupRotation {
 		foreach (var file in files) {
 			try {
 				File.Delete(file);
-			}
-			catch (IOException) {
+			} catch (IOException) {
 				// Still in use; the next prune gets it.
 			}
 		}

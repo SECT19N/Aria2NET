@@ -3,7 +3,6 @@ using Aria2NET.Core.Background;
 using Aria2NET.Core.Downloads;
 using Aria2NET.Core.Settings;
 using Microsoft.Extensions.Logging;
-using Microsoft.UI.Dispatching;
 using Windows.Networking.Connectivity;
 using Windows.System.Power;
 using WinRT.Interop;
@@ -64,13 +63,11 @@ internal sealed class PowerService(
 			if (decision.Action == AutoPauseAction.Pause) {
 				await operations.PauseAsync(decision.Items);
 				_logger.LogInformation("Paused {Count} downloads (battery or metered connection)", decision.Items.Count);
-			}
-			else {
+			} else {
 				await operations.ResumeAsync(decision.Items);
 				_logger.LogInformation("Resumed {Count} downloads", decision.Items.Count);
 			}
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			_logger.LogWarning(ex, "Automatic {Action} failed", decision.Action);
 		}
 	}
@@ -80,15 +77,13 @@ internal sealed class PowerService(
 			_onBattery = ReadOnBattery();
 			PowerManager.PowerSupplyStatusChanged += (_, _) => _onBattery = ReadOnBattery();
 			PowerManager.BatteryStatusChanged += (_, _) => _onBattery = ReadOnBattery();
-		}
-		catch (Exception ex) when (ex is COMException or InvalidOperationException) {
+		} catch (Exception ex) when (ex is COMException or InvalidOperationException) {
 			_logger.LogInformation(ex, "Battery status is not available");
 		}
 		try {
 			_metered = ReadMetered();
 			NetworkInformation.NetworkStatusChanged += _ => _metered = ReadMetered();
-		}
-		catch (Exception ex) when (ex is COMException or InvalidOperationException) {
+		} catch (Exception ex) when (ex is COMException or InvalidOperationException) {
 			_logger.LogInformation(ex, "Connection cost is not available");
 		}
 	}
@@ -101,8 +96,7 @@ internal sealed class PowerService(
 		try {
 			var cost = NetworkInformation.GetInternetConnectionProfile()?.GetConnectionCost();
 			return cost?.NetworkCostType is NetworkCostType.Fixed or NetworkCostType.Variable;
-		}
-		catch (Exception ex) when (ex is COMException or InvalidOperationException) {
+		} catch (Exception ex) when (ex is COMException or InvalidOperationException) {
 			return false;
 		}
 	}

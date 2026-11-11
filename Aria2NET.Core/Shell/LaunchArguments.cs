@@ -18,8 +18,7 @@ public static class LaunchArguments {
 			if (!arg.StartsWith("magnet:", StringComparison.OrdinalIgnoreCase) && !Path.IsPathFullyQualified(arg)) {
 				try {
 					token = Path.GetFullPath(arg, baseDirectory ?? Directory.GetCurrentDirectory());
-				}
-				catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException) {
+				} catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException) {
 					continue;
 				}
 			}
@@ -58,29 +57,24 @@ public static class LaunchArguments {
 					current.Append('\\', slashes / 2);
 					if (slashes % 2 == 1) {
 						current.Append('"');
-					}
-					else {
+					} else {
 						inQuotes = !inQuotes;
 					}
-				}
-				else {
+				} else {
 					current.Append('\\', slashes);
 					i--;
 				}
 				started = true;
-			}
-			else if (c == '"') {
+			} else if (c == '"') {
 				inQuotes = !inQuotes;
 				started = true;
-			}
-			else if (char.IsWhiteSpace(c) && !inQuotes) {
+			} else if (char.IsWhiteSpace(c) && !inQuotes) {
 				if (started) {
 					args.Add(current.ToString());
 					current.Clear();
 					started = false;
 				}
-			}
-			else {
+			} else {
 				current.Append(c);
 				started = true;
 			}

@@ -33,8 +33,7 @@ public static class FileConflicts {
 			}
 			var path = Path.Combine(folder, name);
 			return File.Exists(path) && !File.Exists(path + ".aria2") ? path : null;
-		}
-		catch (Exception ex) when (ex is ArgumentException or NotSupportedException or IOException or UriFormatException) {
+		} catch (Exception ex) when (ex is ArgumentException or NotSupportedException or IOException or UriFormatException) {
 			return null;
 		}
 	}

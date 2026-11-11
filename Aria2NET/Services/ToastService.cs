@@ -32,8 +32,7 @@ internal sealed class ToastService(
 			AppNotificationManager.Default.NotificationInvoked += OnInvoked;
 			AppNotificationManager.Default.Register();
 			_registered = true;
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			_logger.LogError(ex, "Could not register for toast notifications");
 			return;
 		}
@@ -64,8 +63,7 @@ internal sealed class ToastService(
 		foreach (var toast in due) {
 			try {
 				AppNotificationManager.Default.Show(Build(toast, sound));
-			}
-			catch (Exception ex) {
+			} catch (Exception ex) {
 				_logger.LogWarning(ex, "Could not show a toast");
 			}
 		}
@@ -91,14 +89,12 @@ internal sealed class ToastService(
 		}
 		if (toast.Single is not { } item) {
 			builder.AddArgument("action", "show");
-		}
-		else if (toast.Kind == NotificationKind.Failed) {
+		} else if (toast.Kind == NotificationKind.Failed) {
 			builder.AddArgument("action", "show");
 			if (DownloadCapabilities.CanRetry(item)) {
 				builder.AddButton(new AppNotificationButton(Loc.S("Toast_Retry", "Retry")).AddArgument("action", "retry").AddArgument("gid", item.Gid));
 			}
-		}
-		else {
+		} else {
 			var path = item.Path ?? "";
 			var dir = item.Dir ?? "";
 			builder.AddArgument("action", "folder").AddArgument("path", path).AddArgument("dir", dir);
@@ -136,8 +132,7 @@ internal sealed class ToastService(
 					_window?.DispatcherQueue.TryEnqueue(_window.BringToFront);
 					break;
 			}
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			_logger.LogWarning(ex, "Handling a toast click failed");
 		}
 	}
@@ -146,12 +141,10 @@ internal sealed class ToastService(
 		try {
 			if (_latest?.Items.FirstOrDefault(i => i.Gid == gid) is { } item) {
 				await operations.RetryAsync(item);
-			}
-			else {
+			} else {
 				_window?.DispatcherQueue.TryEnqueue(_window.BringToFront); // the download is gone from the list; let the user look
 			}
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			_logger.LogWarning(ex, "Retry from a toast failed");
 		}
 	}
@@ -164,8 +157,7 @@ internal sealed class ToastService(
 		try {
 			AppNotificationManager.Default.NotificationInvoked -= OnInvoked;
 			AppNotificationManager.Default.Unregister();
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			_logger.LogDebug(ex, "Unregistering from toast notifications failed");
 		}
 	}

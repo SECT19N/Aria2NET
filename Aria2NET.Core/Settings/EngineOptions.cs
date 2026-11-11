@@ -152,8 +152,7 @@ public static class EngineOptions {
 			var target = new Uri("https://example.com/");
 			var proxy = HttpClient.DefaultProxy;
 			return proxy.IsBypassed(target) ? null : proxy.GetProxy(target);
-		}
-		catch (Exception ex) when (ex is InvalidOperationException or UriFormatException or PlatformNotSupportedException) {
+		} catch (Exception ex) when (ex is InvalidOperationException or UriFormatException or PlatformNotSupportedException) {
 			return null;
 		}
 	}

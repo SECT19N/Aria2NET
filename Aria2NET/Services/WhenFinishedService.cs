@@ -53,8 +53,7 @@ internal sealed class WhenFinishedService(DownloadMonitor monitor, ILoggerFactor
 			if (await CountdownAsync(_window!, action)) {
 				Execute(action);
 			}
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			_logger.LogError(ex, "Carrying out '{Action}' failed", action);
 		}
 	}
@@ -88,8 +87,7 @@ internal sealed class WhenFinishedService(DownloadMonitor monitor, ILoggerFactor
 				expired = true;
 				timer.Stop();
 				dialog.Hide();
-			}
-			else {
+			} else {
 				Refresh();
 			}
 		};
@@ -97,11 +95,9 @@ internal sealed class WhenFinishedService(DownloadMonitor monitor, ILoggerFactor
 		try {
 			var result = await dialog.ShowAsync();
 			return expired || result == ContentDialogResult.Primary;
-		}
-		catch (InvalidOperationException) {
+		} catch (InvalidOperationException) {
 			return false; // another dialog is open; never power off without showing the warning
-		}
-		finally {
+		} finally {
 			timer.Stop();
 		}
 	}

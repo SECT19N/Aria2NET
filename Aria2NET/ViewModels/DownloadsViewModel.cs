@@ -291,8 +291,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 				var gid = await rpc.AddUriAsync([url], options);
 				_added[gid] = DateTimeOffset.Now;
 				accepted++;
-			}
-			catch (Exception ex) {
+			} catch (Exception ex) {
 				_logger.LogWarning(ex, "Adding {Url} failed", url);
 				failures.Add($"{url}: {ex.Message}");
 			}
@@ -419,8 +418,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		}
 		try {
 			return await _ops.GetDetailsAsync(item.Gid);
-		}
-		catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException or InvalidOperationException) {
+		} catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException or InvalidOperationException) {
 			ShowMessage(ex.Message);
 			return null;
 		}
@@ -432,8 +430,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 			if (_history.Store?.Get(gid) is { } entry) {
 				return (new DateTimeOffset(entry.AddedUtc), entry.FinishedUtc is { } f ? new DateTimeOffset(f) : null);
 			}
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			_logger.LogWarning(ex, "Could not read history for {Gid}", gid);
 		}
 		return (_added.TryGetValue(gid, out var a) ? a : null, _finished.TryGetValue(gid, out var fin) ? fin : null);
@@ -520,8 +517,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		}
 		try {
 			await _ops.RemoveAsync(pending, deleteFiles: false);
-		}
-		catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException or InvalidOperationException or TaskCanceledException) {
+		} catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException or InvalidOperationException or TaskCanceledException) {
 			_logger.LogWarning(ex, "Removal failed");
 			foreach (var item in pending) {
 				_hidden.Remove(item.Gid);
@@ -549,11 +545,9 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		if (SortColumn != column) {
 			SortColumn = column;
 			SortDescending = false;
-		}
-		else if (!SortDescending) {
+		} else if (!SortDescending) {
 			SortDescending = true;
-		}
-		else {
+		} else {
 			SortColumn = SortColumn.None;
 			SortDescending = false;
 		}
@@ -612,8 +606,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 	private async Task RestoreForcedLimitAsync(PollSnapshot snapshot) {
 		try {
 			await _ops.OnSnapshot(snapshot);
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			_logger.LogWarning(ex, "Could not update the force-start limit");
 		}
 	}
@@ -645,8 +638,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		foreach (var item in _items) {
 			if (_byGid.TryGetValue(item.Gid, out var row)) {
 				row.Update(item);
-			}
-			else {
+			} else {
 				_byGid[item.Gid] = new DownloadRowViewModel(item);
 			}
 		}
@@ -658,8 +650,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		_syncing = true;
 		try {
 			changed = SyncRows(desired);
-		}
-		finally {
+		} finally {
 			_syncing = false;
 		}
 		if (changed && before.Count > 0 && _restoring is null && SelectionRestoreNeeded is { } handler) {
@@ -702,8 +693,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 			var current = Rows.IndexOf(desired[i]);
 			if (current >= 0) {
 				Rows.Move(current, i);
-			}
-			else {
+			} else {
 				Rows.Insert(i, desired[i]);
 			}
 		}
@@ -739,8 +729,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 			var s = _settings.Load();
 			change(s);
 			_settings.Save(s);
-		}
-		catch (IOException ex) {
+		} catch (IOException ex) {
 			_logger.LogWarning(ex, "Could not save settings");
 		}
 	}

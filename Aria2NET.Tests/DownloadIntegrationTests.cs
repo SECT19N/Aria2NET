@@ -32,8 +32,7 @@ public class DownloadIntegrationTests {
 			try {
 				listener.Start();
 				break;
-			}
-			catch (HttpListenerException) {
+			} catch (HttpListenerException) {
 				// Port taken; try another.
 				listener.Close();
 			}
@@ -43,15 +42,13 @@ public class DownloadIntegrationTests {
 				HttpListenerContext ctx;
 				try {
 					ctx = await listener.GetContextAsync();
-				}
-				catch (Exception) {
+				} catch (Exception) {
 					return;
 				}
 				_ = Task.Run(async () => {
 					try {
 						await handle(ctx);
-					}
-					catch (Exception) {
+					} catch (Exception) {
 						// Client went away.
 					}
 				});

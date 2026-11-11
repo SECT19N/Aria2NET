@@ -37,12 +37,11 @@ internal sealed class TaskbarProgressBar(IntPtr hwnd) {
 			return false;
 		}
 		try {
-			var created = (ITaskbarList3)Activator.CreateInstance(Type.GetTypeFromCLSID(new Guid("56FDF344-FD6D-11d0-958A-006097C9A090"))!)!;
+			var created = (ITaskbarList3) Activator.CreateInstance(Type.GetTypeFromCLSID(new Guid("56FDF344-FD6D-11d0-958A-006097C9A090"))!)!;
 			created.HrInit();
 			_list = list = created;
 			return true;
-		}
-		catch (Exception ex) when (ex is COMException or InvalidCastException or NullReferenceException) {
+		} catch (Exception ex) when (ex is COMException or InvalidCastException or NullReferenceException) {
 			_unavailable = true; // no taskbar progress on this system; everything else works without it
 			return false;
 		}

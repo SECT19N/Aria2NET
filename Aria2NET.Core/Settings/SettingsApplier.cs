@@ -58,8 +58,7 @@ public sealed class SettingsApplier(IAria2Engine engine, SettingsStore<AppSettin
 			// The extra trackers come from the cached list (or none when switched off); the host refreshes the cache itself.
 			if (s.Trackers == TrackerSource.Off) {
 				options["bt-tracker"] = "";
-			}
-			else if (paths is not null) {
+			} else if (paths is not null) {
 				options["bt-tracker"] = Aria2Config.TrackerOptionValue(Torrents.TrackerListService.ReadCache(paths));
 			}
 			await rpc.ChangeGlobalOptionAsync(options, ct);
@@ -68,16 +67,14 @@ public sealed class SettingsApplier(IAria2Engine engine, SettingsStore<AppSettin
 			foreach (var (key, value) in raw) {
 				try {
 					await rpc.ChangeGlobalOptionAsync(new Dictionary<string, string> { [key] = value }, ct);
-				}
-				catch (Aria2RpcException ex) {
+				} catch (Aria2RpcException ex) {
 					allApplied = false;
 					logger.LogWarning("aria2 refused the option {Key}: {Message}", key, ex.Message);
 				}
 			}
 			SpeedChanged?.Invoke(this, EventArgs.Empty);
 			return allApplied;
-		}
-		catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException or TaskCanceledException) {
+		} catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException or TaskCanceledException) {
 			logger.LogWarning(ex, "Could not apply settings to the engine");
 			return false;
 		}
@@ -94,8 +91,7 @@ public sealed class SettingsApplier(IAria2Engine engine, SettingsStore<AppSettin
 		if (engine.Rpc is { } rpc) {
 			try {
 				await rpc.ChangeGlobalOptionAsync(EngineOptions.SpeedOptions(s), ct);
-			}
-			catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException or TaskCanceledException) {
+			} catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException or TaskCanceledException) {
 				logger.LogWarning(ex, "Could not apply the speed limits");
 			}
 		}

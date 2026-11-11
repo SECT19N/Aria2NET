@@ -17,14 +17,12 @@ public sealed class SettingsStore<T>(string path, JsonTypeInfo<T> typeInfo, ILog
 		try {
 			using var stream = File.OpenRead(_path);
 			return JsonSerializer.Deserialize(stream, _typeInfo) ?? new T();
-		}
-		catch (Exception ex) when (ex is JsonException or IOException) {
+		} catch (Exception ex) when (ex is JsonException or IOException) {
 			var backup = $"{_path}.corrupt-{DateTime.UtcNow:yyyyMMddHHmmss}.bak";
 			_logger?.LogWarning(ex, "Settings file unreadable; moving it to {Backup} and using defaults", backup);
 			try {
 				File.Move(_path, backup, overwrite: true);
-			}
-			catch (IOException) {
+			} catch (IOException) {
 				// Best effort; defaults still apply.
 			}
 			return new T();

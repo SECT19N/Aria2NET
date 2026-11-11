@@ -20,8 +20,7 @@ public sealed class TorrentAssociation(SettingsStore<AppSettings> settings, ILog
 			var s = settings.Load();
 			s.TorrentAssociationPrompted = true;
 			settings.Save(s);
-		}
-		catch (IOException ex) {
+		} catch (IOException ex) {
 			logger.LogWarning(ex, "Could not remember that the association was offered");
 		}
 	}
@@ -43,8 +42,7 @@ public sealed class TorrentAssociation(SettingsStore<AppSettings> settings, ILog
 	public static async Task OpenDefaultAppsAsync() {
 		try {
 			await Windows.System.Launcher.LaunchUriAsync(new Uri("ms-settings:defaultapps"));
-		}
-		catch (Exception ex) when (ex is InvalidOperationException or System.Runtime.InteropServices.COMException) {
+		} catch (Exception ex) when (ex is InvalidOperationException or System.Runtime.InteropServices.COMException) {
 			// Settings could not be opened; the user can still get there by hand.
 		}
 	}

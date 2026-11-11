@@ -2,7 +2,6 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
-using System.Text;
 using Aria2NET.Core.Torrents;
 
 namespace Aria2NET.Tests;
@@ -22,16 +21,15 @@ internal sealed record TestTorrent(string Name, byte[] TorrentFile, string InfoH
 
 		var info = new Dictionary<string, object> {
 			["name"] = name,
-			["piece length"] = (long)PieceLength,
+			["piece length"] = (long) PieceLength,
 			["pieces"] = pieces.ToArray(),
 		};
 		if (files.Length == 1) {
-			info["length"] = (long)files[0].Size;
-		}
-		else {
-			info["files"] = data.Select(f => (object)new Dictionary<string, object> {
-				["length"] = (long)f.Data.Length,
-				["path"] = f.Path.Split('/').Select(p => (object)p).ToList(),
+			info["length"] = (long) files[0].Size;
+		} else {
+			info["files"] = data.Select(f => (object) new Dictionary<string, object> {
+				["length"] = (long) f.Data.Length,
+				["path"] = f.Path.Split('/').Select(p => (object) p).ToList(),
 			}).ToList();
 		}
 
@@ -65,7 +63,7 @@ internal sealed class LocalTracker : IDisposable {
 		_listener = DownloadIntegrationTests.StartServer(out var prefix, async ctx => {
 			Announces++;
 			var peer = new List<byte>([127, 0, 0, 1]);
-			peer.AddRange([(byte)(seederPort >> 8), (byte)(seederPort & 0xFF)]);
+			peer.AddRange([(byte) (seederPort >> 8), (byte) (seederPort & 0xFF)]);
 			var body = Bencode.Encode(new Dictionary<string, object> {
 				["interval"] = 60L,
 				["complete"] = 1L,
@@ -92,7 +90,7 @@ internal sealed class SeederProcess : IDisposable {
 	public static int FreePort() {
 		using var probe = new TcpListener(IPAddress.Loopback, 0);
 		probe.Start();
-		return ((IPEndPoint)probe.LocalEndpoint).Port;
+		return ((IPEndPoint) probe.LocalEndpoint).Port;
 	}
 
 	/// <param name="torrentPath">The .torrent file on disk.</param>
@@ -131,8 +129,7 @@ internal sealed class SeederProcess : IDisposable {
 				_process.Kill(entireProcessTree: true);
 				_process.WaitForExit(5000);
 			}
-		}
-		catch (InvalidOperationException) {
+		} catch (InvalidOperationException) {
 			// Already gone.
 		}
 		_process.Dispose();

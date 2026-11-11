@@ -57,8 +57,7 @@ public sealed class HeaderPresets(SettingsStore<HeaderPresetFile> store) {
 			});
 			store.Save(file);
 			return null;
-		}
-		catch (IOException ex) {
+		} catch (IOException ex) {
 			return "Could not save the preset: " + ex.Message;
 		}
 	}
@@ -69,8 +68,7 @@ public sealed class HeaderPresets(SettingsStore<HeaderPresetFile> store) {
 			if (file.Presets.RemoveAll(p => string.Equals(p.Name, name, StringComparison.CurrentCultureIgnoreCase)) > 0) {
 				store.Save(file);
 			}
-		}
-		catch (IOException) {
+		} catch (IOException) {
 			// Leaving the preset in place is harmless.
 		}
 	}

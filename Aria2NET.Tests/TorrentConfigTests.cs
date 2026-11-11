@@ -120,7 +120,7 @@ public class TorrentConfigTests {
 		using var temp = new TempDir();
 		var paths = new AppPaths(temp.Path, @"C:\tools");
 		File.WriteAllText(paths.TrackerListFile, "udp://old:1/announce\n");
-		var service = Service(new FakeHandler((_, _) => Text(body, (HttpStatusCode)status)), paths);
+		var service = Service(new FakeHandler((_, _) => Text(body, (HttpStatusCode) status)), paths);
 
 		Assert.Null(await service.RefreshAsync("http://example/list.txt"));
 

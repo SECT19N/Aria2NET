@@ -38,7 +38,7 @@ public sealed partial class AddDownloadDialog : ContentDialog {
 	private static List<string> Lines(string text) =>
 		text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
-	private static int Limit(NumberBox box) => double.IsNaN(box.Value) ? 0 : (int)Math.Max(0, Math.Round(box.Value));
+	private static int Limit(NumberBox box) => double.IsNaN(box.Value) ? 0 : (int) Math.Max(0, Math.Round(box.Value));
 
 	public AddDownloadDialog(string initialFolder, string? prefilledText) {
 		InitializeComponent();
@@ -57,8 +57,7 @@ public sealed partial class AddDownloadDialog : ContentDialog {
 			}
 			PresetBox.SelectedItem = select;
 			DeletePresetButton.IsEnabled = select is not null;
-		}
-		finally {
+		} finally {
 			_loading = false;
 		}
 	}
@@ -86,8 +85,7 @@ public sealed partial class AddDownloadDialog : ContentDialog {
 		if (e.Key == Windows.System.VirtualKey.Escape) {
 			PresetNameBox.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
 			e.Handled = true;
-		}
-		else if (e.Key == Windows.System.VirtualKey.Enter) {
+		} else if (e.Key == Windows.System.VirtualKey.Enter) {
 			e.Handled = true; // keep Enter from pressing the dialog's Download button
 			var name = PresetNameBox.Text.Trim();
 			var error = _presets.Save(name, Lines(HeadersBox.Text), NullIfBlank(RefererBox.Text), NullIfBlank(CookieBox.Text));

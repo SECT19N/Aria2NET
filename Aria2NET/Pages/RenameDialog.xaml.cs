@@ -18,11 +18,9 @@ public sealed partial class RenameDialog : ContentDialog {
 		var name = NewName;
 		if (name.Length == 0) {
 			ErrorText.Text = Loc.S("Rename_Empty", "Enter a file name.");
-		}
-		else if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) {
+		} else if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) {
 			ErrorText.Text = Loc.S("Rename_Invalid", "A file name cannot contain \\ / : * ? \" < > |");
-		}
-		else {
+		} else {
 			ErrorText.Text = "";
 		}
 		IsPrimaryButtonEnabled = ErrorText.Text.Length == 0;

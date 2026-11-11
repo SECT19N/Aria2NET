@@ -1,5 +1,4 @@
 using Aria2NET.Core.Downloads;
-using Aria2NET.Core.Torrents;
 using Aria2NET.Services;
 using Aria2NET.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,7 +27,7 @@ public sealed partial class DownloadsPage : Page {
 	}
 
 	private void Page_Loaded(object sender, RoutedEventArgs e) {
-		FilterBar.SelectedItem = FilterBar.Items.FirstOrDefault(i => (string)i.Tag == ViewModel.Filter.ToString()) ?? FilterBar.Items[0];
+		FilterBar.SelectedItem = FilterBar.Items.FirstOrDefault(i => (string) i.Tag == ViewModel.Filter.ToString()) ?? FilterBar.Items[0];
 		DownloadList.SelectedItems.Clear();
 		ViewModel.SelectionRestoreNeeded += OnSelectionRestoreNeeded;
 		ViewModel.PromptTorrent = PromptTorrentAsync;
@@ -113,8 +112,7 @@ public sealed partial class DownloadsPage : Page {
 		string text;
 		try {
 			text = await LinksFromAsync(Clipboard.GetContent());
-		}
-		catch (Exception ex) when (ex is InvalidOperationException or System.Runtime.InteropServices.COMException) {
+		} catch (Exception ex) when (ex is InvalidOperationException or System.Runtime.InteropServices.COMException) {
 			return; // Clipboard busy or unavailable.
 		}
 		if (UrlParser.Parse(text).Valid.Count > 0) {
@@ -135,11 +133,9 @@ public sealed partial class DownloadsPage : Page {
 		var deferral = e.GetDeferral();
 		try {
 			text = await LinksFromAsync(e.DataView);
-		}
-		catch (Exception ex) when (ex is InvalidOperationException or System.Runtime.InteropServices.COMException) {
+		} catch (Exception ex) when (ex is InvalidOperationException or System.Runtime.InteropServices.COMException) {
 			return;
-		}
-		finally {
+		} finally {
 			deferral.Complete(); // the drag source must not wait for the dialog below
 		}
 		if (ViewModel.IsEngineUp && UrlParser.Parse(text).Valid.Count > 0) {
@@ -176,10 +172,9 @@ public sealed partial class DownloadsPage : Page {
 		}
 		_dialogOpen = true;
 		try {
-			dialog.XamlRoot = ((FrameworkElement)App.Window.Content).XamlRoot;
+			dialog.XamlRoot = ((FrameworkElement) App.Window.Content).XamlRoot;
 			return await dialog.ShowAsync();
-		}
-		finally {
+		} finally {
 			_dialogOpen = false;
 		}
 	}
@@ -224,8 +219,7 @@ public sealed partial class DownloadsPage : Page {
 		try {
 			dialog.XamlRoot = XamlRoot;
 			return await dialog.ShowAsync();
-		}
-		finally {
+		} finally {
 			_dialogOpen = false;
 		}
 	}
@@ -251,8 +245,7 @@ public sealed partial class DownloadsPage : Page {
 				DownloadList.SelectedItems.Add(hit);
 			}
 			menu.ShowAt(DownloadList, new FlyoutShowOptions { Position = point });
-		}
-		else {
+		} else {
 			menu.ShowAt(DownloadList);
 		}
 	}
@@ -278,8 +271,7 @@ public sealed partial class DownloadsPage : Page {
 	private void List_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e) {
 		if (ViewModel.CanOpenFile) {
 			ViewModel.OpenFile();
-		}
-		else if (ViewModel.CanShowTorrentDetails) {
+		} else if (ViewModel.CanShowTorrentDetails) {
 			TorrentDetails_Click(sender, new RoutedEventArgs());
 		}
 	}

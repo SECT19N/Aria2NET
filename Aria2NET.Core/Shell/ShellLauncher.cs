@@ -48,8 +48,7 @@ public static class ShellLauncher {
 	private static string? Normalize(string path) {
 		try {
 			return Path.GetFullPath(path);
-		}
-		catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException) {
+		} catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException) {
 			return null;
 		}
 	}
@@ -59,8 +58,7 @@ public static class ShellLauncher {
 			Process.Start(info);
 			error = "";
 			return true;
-		}
-		catch (Exception ex) when (ex is Win32Exception or InvalidOperationException) {
+		} catch (Exception ex) when (ex is Win32Exception or InvalidOperationException) {
 			error = ex.Message;
 			return false;
 		}

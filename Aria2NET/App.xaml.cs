@@ -132,8 +132,7 @@ public partial class App : Application {
 			if (Services.GetRequiredService<StartupRegistration>().Refresh()) {
 				Log.LogInformation("Updated the start-with-Windows entry to {Path}", Environment.ProcessPath);
 			}
-		}
-		catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException) {
+		} catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException) {
 			Log.LogWarning(ex, "Could not update the start-with-Windows entry");
 		}
 	}
@@ -148,8 +147,7 @@ public partial class App : Application {
 				Log.LogInformation("Paused everything at start, as the settings ask");
 			}
 			_ = RefreshTrackerListAsync(engine);
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			Log.LogError(ex, "Engine start threw");
 		}
 	}
@@ -165,8 +163,7 @@ public partial class App : Application {
 			if (await trackers.RefreshAsync(url) is { } list && engine.Rpc is { } rpc) {
 				await rpc.ChangeGlobalOptionAsync(new Dictionary<string, string> { ["bt-tracker"] = Aria2Config.TrackerOptionValue(list) });
 			}
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			Log.LogWarning(ex, "Tracker list refresh failed");
 		}
 	}
@@ -217,11 +214,9 @@ public partial class App : Application {
 		_showingError = true;
 		try {
 			await _window.ShowErrorAsync(Loc.S("App_ErrorTitle", "Something went wrong"), e.Exception?.Message ?? e.Message);
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			Log.LogError(ex, "Could not show error dialog");
-		}
-		finally {
+		} finally {
 			_showingError = false;
 		}
 	}

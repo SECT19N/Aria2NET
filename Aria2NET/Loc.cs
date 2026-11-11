@@ -13,12 +13,10 @@ public static class Loc {
 	private static ResourceLoader? Create() {
 		try {
 			return new ResourceLoader();
-		}
-		catch (Exception ex) when (ex is InvalidOperationException or System.Runtime.InteropServices.COMException or FileNotFoundException) {
+		} catch (Exception ex) when (ex is InvalidOperationException or System.Runtime.InteropServices.COMException or FileNotFoundException) {
 			try {
 				return new ResourceLoader(Path.Combine(AppContext.BaseDirectory, "Aria2NET.pri"));
-			}
-			catch (Exception inner) when (inner is InvalidOperationException or System.Runtime.InteropServices.COMException or FileNotFoundException) {
+			} catch (Exception inner) when (inner is InvalidOperationException or System.Runtime.InteropServices.COMException or FileNotFoundException) {
 				return null;
 			}
 		}
@@ -29,8 +27,7 @@ public static class Loc {
 		try {
 			var text = Loader.Value?.GetString(key);
 			return string.IsNullOrEmpty(text) ? english : text;
-		}
-		catch (Exception ex) when (ex is InvalidOperationException or System.Runtime.InteropServices.COMException) {
+		} catch (Exception ex) when (ex is InvalidOperationException or System.Runtime.InteropServices.COMException) {
 			return english;
 		}
 	}

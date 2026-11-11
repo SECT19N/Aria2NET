@@ -11,13 +11,13 @@ public sealed class FileLoggerProvider : ILoggerProvider {
 
 	/// <summary>The lowest level that is written. Can be changed while the app runs.</summary>
 	public LogLevel MinLevel {
-		get => (LogLevel)_minLevel;
-		set => _minLevel = (int)value;
+		get => (LogLevel) _minLevel;
+		set => _minLevel = (int) value;
 	}
 
 	public FileLoggerProvider(string logsDir, LogLevel minLevel = LogLevel.Information, int retainDays = 14) {
 		_dir = logsDir;
-		_minLevel = (int)minLevel;
+		_minLevel = (int) minLevel;
 		try {
 			Directory.CreateDirectory(_dir);
 			var cutoff = DateTime.UtcNow.AddDays(-retainDays);
@@ -26,8 +26,7 @@ public sealed class FileLoggerProvider : ILoggerProvider {
 					File.Delete(file);
 				}
 			}
-		}
-		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
+		} catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
 			// Logging must never take the app down.
 		}
 	}
@@ -50,8 +49,7 @@ public sealed class FileLoggerProvider : ILoggerProvider {
 		lock (_lock) {
 			try {
 				File.AppendAllText(path, sb.ToString());
-			}
-			catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
+			} catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
 				// Drop the line rather than crash.
 			}
 		}
@@ -60,7 +58,7 @@ public sealed class FileLoggerProvider : ILoggerProvider {
 	private sealed class FileLogger(FileLoggerProvider owner, string category) : ILogger {
 		public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 
-		public bool IsEnabled(LogLevel logLevel) => logLevel != LogLevel.None && (int)logLevel >= owner._minLevel;
+		public bool IsEnabled(LogLevel logLevel) => logLevel != LogLevel.None && (int) logLevel >= owner._minLevel;
 
 		public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) {
 			if (IsEnabled(logLevel)) {

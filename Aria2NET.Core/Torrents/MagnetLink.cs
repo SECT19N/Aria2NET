@@ -53,7 +53,7 @@ public static class MagnetLink {
 			bits += 5;
 			if (bits >= 8) {
 				bits -= 8;
-				bytes[index++] = (byte)(buffer >> bits);
+				bytes[index++] = (byte) (buffer >> bits);
 				buffer &= (1 << bits) - 1;
 			}
 		}

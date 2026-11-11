@@ -48,8 +48,7 @@ public sealed class PersistenceCoordinator(
 	private void ReportHistoryProblems() {
 		if (history.Problem is { } problem) {
 			notices.Post(new Notice(Loc.S("Persist_HistoryOff", "History is off"), problem, InfoBarSeverity.Warning));
-		}
-		else if (history.OpenResult is { Status: DatabaseStatus.Recovered, MovedTo: { } moved }) {
+		} else if (history.OpenResult is { Status: DatabaseStatus.Recovered, MovedTo: { } moved }) {
 			notices.Post(new Notice(Loc.S("Persist_HistoryDamagedTitle", "History was damaged"), Loc.F("Persist_HistoryDamagedBody", "The history file could not be read, so a new one was started. The old file was kept as {0}.", moved), InfoBarSeverity.Warning));
 		}
 	}
@@ -60,8 +59,7 @@ public sealed class PersistenceCoordinator(
 			if (removed > 0) {
 				logger.LogInformation("History retention removed {Count} old entries", removed);
 			}
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			logger.LogWarning(ex, "Applying the history retention setting failed");
 		}
 	}
@@ -101,8 +99,7 @@ public sealed class PersistenceCoordinator(
 			notices.Post(new Notice(Loc.S("Persist_FoundTitle", "Unfinished downloads found"), message, InfoBarSeverity.Informational,
 				resumable.Count == 0 ? null : new NoticeAction(Loc.F("Persist_Resume", "Resume {0}", resumable.Count), () => ResumeAsync(resumable)),
 				new NoticeAction(Loc.S("Persist_DeleteLeftovers", "Delete leftovers"), () => DeleteAsync(candidates.Select(c => c.Orphan).ToList()))));
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			logger.LogWarning(ex, "Scanning for leftover download files failed");
 		}
 	}
@@ -111,8 +108,7 @@ public sealed class PersistenceCoordinator(
 		foreach (var (orphan, entry) in resumable) {
 			try {
 				await operations.ResumeLeftoverAsync(entry!.Uri!, Path.GetDirectoryName(orphan.DataFile)!, Path.GetFileName(orphan.DataFile));
-			}
-			catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException or InvalidOperationException) {
+			} catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException or InvalidOperationException) {
 				logger.LogWarning(ex, "Could not resume {File}", orphan.DataFile);
 			}
 		}

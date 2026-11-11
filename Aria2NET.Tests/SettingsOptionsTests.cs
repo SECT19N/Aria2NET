@@ -159,7 +159,7 @@ public class NetworkApplyIntegrationTests {
 		Assert.True(await applier.ApplyAsync(s));
 		var global = await engine.Rpc!.GetGlobalOptionAsync();
 		Assert.Contains("127.0.0.1:3128", global["all-proxy"]); // aria2 normalizes it to http://127.0.0.1:3128/
-		// aria2 ignores these two on a running engine, so they are not sent live and need a restart.
+																// aria2 ignores these two on a running engine, so they are not sent live and need a restart.
 		Assert.Equal("true", global["check-certificate"]);
 		Assert.Equal("false", global["disable-ipv6"]);
 

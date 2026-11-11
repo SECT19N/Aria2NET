@@ -99,7 +99,7 @@ internal sealed class TrayIcon : IDisposable {
 	private IntPtr OnMessage(IntPtr hwnd, uint message, IntPtr wParam, IntPtr lParam, UIntPtr id, UIntPtr data) {
 		try {
 			if (message == CallbackMessage) {
-				switch ((uint)(lParam.ToInt64() & 0xFFFF)) {
+				switch ((uint) (lParam.ToInt64() & 0xFFFF)) {
 					case WmLButtonUp:
 						OpenRequested?.Invoke();
 						break;
@@ -110,17 +110,15 @@ internal sealed class TrayIcon : IDisposable {
 				return IntPtr.Zero;
 			}
 			if (message == 0x0312 /* WM_HOTKEY */) {
-				HotkeyPressed?.Invoke((int)wParam);
+				HotkeyPressed?.Invoke((int) wParam);
 				return IntPtr.Zero;
 			}
 			if (message == 0x0016 /* WM_ENDSESSION */ && wParam != IntPtr.Zero) {
 				SessionEnding?.Invoke();
-			}
-			else if (message == _taskbarCreated && _taskbarCreated != 0) {
+			} else if (message == _taskbarCreated && _taskbarCreated != 0) {
 				Add(); // Explorer restarted and dropped every icon
 			}
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			_logger.LogError(ex, "Tray message handling failed");
 		}
 		return DefSubclassProc(hwnd, message, wParam, lParam);
@@ -138,9 +136,9 @@ internal sealed class TrayIcon : IDisposable {
 			var finish = CreatePopupMenu(); // destroyed together with its parent
 			var current = CurrentFinishAction?.Invoke() ?? FinishAction.None;
 			foreach (var action in Enum.GetValues<FinishAction>()) {
-				AppendMenu(finish, action == current ? 0x8u /* MF_CHECKED */ : 0u, (nuint)(MenuFinishBase + (int)action), WhenFinishedMachine.Label(action));
+				AppendMenu(finish, action == current ? 0x8u /* MF_CHECKED */ : 0u, (nuint) (MenuFinishBase + (int) action), WhenFinishedMachine.Label(action));
 			}
-			AppendMenu(menu, 0x10 /* MF_POPUP */, (nuint)finish, Loc.S("Tray_WhenFinished", "When downloads finish"));
+			AppendMenu(menu, 0x10 /* MF_POPUP */, (nuint) finish, Loc.S("Tray_WhenFinished", "When downloads finish"));
 			AppendMenu(menu, 0x800, 0, null);
 			AppendMenu(menu, 0, MenuExit, Loc.S("Tray_Exit", "Exit"));
 			SetMenuDefaultItem(menu, MenuOpen, 0);
@@ -155,10 +153,9 @@ internal sealed class TrayIcon : IDisposable {
 				case MenuResumeAll: ResumeAllRequested?.Invoke(); break;
 				case MenuOpenFolder: OpenFolderRequested?.Invoke(); break;
 				case MenuExit: ExitRequested?.Invoke(); break;
-				case >= MenuFinishBase: FinishActionChosen?.Invoke((FinishAction)(command - MenuFinishBase)); break;
+				case >= MenuFinishBase: FinishActionChosen?.Invoke((FinishAction) (command - MenuFinishBase)); break;
 			}
-		}
-		finally {
+		} finally {
 			DestroyMenu(menu);
 		}
 	}
@@ -193,7 +190,7 @@ internal sealed class TrayIcon : IDisposable {
 			var pixels = new byte[size * size * 4];
 			var header = new BitmapInfoHeader { biSize = Marshal.SizeOf<BitmapInfoHeader>(), biWidth = size, biHeight = -size, biPlanes = 1, biBitCount = 32 };
 			var screen = GetDC(IntPtr.Zero);
-			var read = GetDIBits(screen, info.hbmColor, 0, (uint)size, pixels, ref header, 0);
+			var read = GetDIBits(screen, info.hbmColor, 0, (uint) size, pixels, ref header, 0);
 			ReleaseDC(IntPtr.Zero, screen);
 			if (read == 0) {
 				return icon;
@@ -208,8 +205,7 @@ internal sealed class TrayIcon : IDisposable {
 			}
 			DestroyIcon(icon);
 			return composed;
-		}
-		finally {
+		} finally {
 			if (info.hbmColor != IntPtr.Zero) {
 				DeleteObject(info.hbmColor);
 			}

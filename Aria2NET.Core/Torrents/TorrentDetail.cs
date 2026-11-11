@@ -7,12 +7,43 @@ namespace Aria2NET.Core.Torrents;
 /// <summary>Names the BitTorrent client behind a peer id (Azureus-style <c>-XX1234-</c> ids and a few older conventions).</summary>
 public static class PeerIdClient {
 	private static readonly Dictionary<string, string> Known = new(StringComparer.Ordinal) {
-		["AZ"] = "Vuze", ["BC"] = "BitComet", ["BI"] = "BiglyBT", ["BT"] = "BitTorrent", ["DE"] = "Deluge", ["FD"] = "Free Download Manager",
-		["KT"] = "KTorrent", ["LT"] = "libtorrent", ["lt"] = "libTorrent", ["qB"] = "qBittorrent", ["TR"] = "Transmission", ["UT"] = "µTorrent",
-		["UM"] = "µTorrent Mac", ["UW"] = "µTorrent Web", ["WW"] = "WebTorrent", ["WD"] = "WebTorrent Desktop", ["XL"] = "Xunlei", ["AR"] = "Arctic",
-		["BW"] = "BitWombat", ["LW"] = "LimeWire", ["MP"] = "MooPolice", ["SD"] = "Xunlei", ["SZ"] = "Shareaza", ["TL"] = "Tribler", ["TT"] = "TuoTu",
-		["PD"] = "Pando", ["RT"] = "Retriever", ["S3"] = "Amazon S3", ["SP"] = "BitSpirit", ["ST"] = "SymTorrent", ["XT"] = "XanTorrent",
-		["lp"] = "Lphant", ["mp"] = "MooPolice", ["NX"] = "Net Transport", ["OS"] = "OneSwarm", ["PT"] = "Popcorn Time", ["tT"] = "tTorrent",
+		["AZ"] = "Vuze",
+		["BC"] = "BitComet",
+		["BI"] = "BiglyBT",
+		["BT"] = "BitTorrent",
+		["DE"] = "Deluge",
+		["FD"] = "Free Download Manager",
+		["KT"] = "KTorrent",
+		["LT"] = "libtorrent",
+		["lt"] = "libTorrent",
+		["qB"] = "qBittorrent",
+		["TR"] = "Transmission",
+		["UT"] = "µTorrent",
+		["UM"] = "µTorrent Mac",
+		["UW"] = "µTorrent Web",
+		["WW"] = "WebTorrent",
+		["WD"] = "WebTorrent Desktop",
+		["XL"] = "Xunlei",
+		["AR"] = "Arctic",
+		["BW"] = "BitWombat",
+		["LW"] = "LimeWire",
+		["MP"] = "MooPolice",
+		["SD"] = "Xunlei",
+		["SZ"] = "Shareaza",
+		["TL"] = "Tribler",
+		["TT"] = "TuoTu",
+		["PD"] = "Pando",
+		["RT"] = "Retriever",
+		["S3"] = "Amazon S3",
+		["SP"] = "BitSpirit",
+		["ST"] = "SymTorrent",
+		["XT"] = "XanTorrent",
+		["lp"] = "Lphant",
+		["mp"] = "MooPolice",
+		["NX"] = "Net Transport",
+		["OS"] = "OneSwarm",
+		["PT"] = "Popcorn Time",
+		["tT"] = "tTorrent",
 		["A2"] = "aria2",
 	};
 
@@ -63,8 +94,8 @@ public static class Bitfield {
 			return result;
 		}
 		for (var b = 0; b < result.Length; b++) {
-			var from = (int)((long)b * perPiece.Count / result.Length);
-			var to = Math.Max(from + 1, (int)((long)(b + 1) * perPiece.Count / result.Length));
+			var from = (int) ((long) b * perPiece.Count / result.Length);
+			var to = Math.Max(from + 1, (int) ((long) (b + 1) * perPiece.Count / result.Length));
 			to = Math.Min(to, perPiece.Count);
 			var sum = 0.0;
 			for (var i = from; i < to; i++) {
@@ -106,7 +137,7 @@ public sealed record TorrentDetailSnapshot(
 	double[] HaveBar,
 	double[] AvailabilityBar) {
 
-	public double Ratio => CompletedBytes > 0 ? (double)UploadedBytes / CompletedBytes : 0;
+	public double Ratio => CompletedBytes > 0 ? (double) UploadedBytes / CompletedBytes : 0;
 	public double Progress => TotalBytes > 0 ? Math.Min(100.0, CompletedBytes * 100.0 / TotalBytes) : 0;
 }
 
@@ -122,7 +153,7 @@ public static class TorrentDetailLoader {
 	}
 
 	public static TorrentDetailSnapshot Build(JsonElement status, IReadOnlyList<DownloadFile> files, IReadOnlyList<PeerInfo> peers, GeoIpResolver geo) {
-		var pieceCount = (int)Num(status, "numPieces");
+		var pieceCount = (int) Num(status, "numPieces");
 		var have = Bitfield.Decode(Str(status, "bitfield"), pieceCount);
 
 		var availability = new double[pieceCount];
@@ -165,7 +196,7 @@ public static class TorrentDetailLoader {
 			comment, created,
 			total, completed, Num(status, "uploadLength"),
 			Num(status, "downloadSpeed"), Num(status, "uploadSpeed"),
-			(int)Num(status, "numSeeders"), (int)Num(status, "connections"),
+			(int) Num(status, "numSeeders"), (int) Num(status, "connections"),
 			pieceCount, Num(status, "pieceLength"),
 			files,
 			[.. peers.Select(p => new TorrentPeer(

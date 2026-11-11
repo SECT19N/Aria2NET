@@ -6,7 +6,7 @@ namespace Aria2NET.Core.Torrents;
 /// <summary>One file of a torrent or metalink download, from <c>aria2.getFiles</c>. <see cref="Index"/> is 1-based, as <c>select-file</c> expects.</summary>
 public sealed record DownloadFile(int Index, string Path, long Length, long CompletedLength, bool Selected) {
 	public static DownloadFile FromJson(JsonElement e) => new(
-		(int)Num(e, "index"), Str(e, "path") ?? "", Num(e, "length"), Num(e, "completedLength"), Str(e, "selected") == "true");
+		(int) Num(e, "index"), Str(e, "path") ?? "", Num(e, "length"), Num(e, "completedLength"), Str(e, "selected") == "true");
 
 	internal static string? Str(JsonElement e, string name) =>
 		e.ValueKind == JsonValueKind.Object && e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
@@ -30,7 +30,7 @@ public sealed record PeerInfo(
 	public static PeerInfo FromJson(JsonElement e) => new(
 		Uri.UnescapeDataString(DownloadFile.Str(e, "peerId") ?? ""),
 		DownloadFile.Str(e, "ip") ?? "",
-		(int)DownloadFile.Num(e, "port"),
+		(int) DownloadFile.Num(e, "port"),
 		DownloadFile.Str(e, "bitfield") ?? "",
 		DownloadFile.Str(e, "amChoking") == "true",
 		DownloadFile.Str(e, "peerChoking") == "true",

@@ -29,8 +29,7 @@ public static class SecretProtector {
 			return OperatingSystem.IsWindows()
 				? Encoding.UTF8.GetString(ProtectedData.Unprotect(Convert.FromBase64String(stored), Entropy, DataProtectionScope.CurrentUser))
 				: "";
-		}
-		catch (Exception ex) when (ex is CryptographicException or FormatException) {
+		} catch (Exception ex) when (ex is CryptographicException or FormatException) {
 			return "";
 		}
 	}

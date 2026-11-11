@@ -61,8 +61,7 @@ public sealed partial class HistoryPage : Page {
 				HistoryList.SelectedItems.Add(hit);
 			}
 			menu.ShowAt(HistoryList, new FlyoutShowOptions { Position = point });
-		}
-		else {
+		} else {
 			menu.ShowAt(HistoryList);
 		}
 	}

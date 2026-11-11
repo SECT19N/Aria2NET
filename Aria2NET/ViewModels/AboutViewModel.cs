@@ -23,8 +23,7 @@ public sealed class AboutViewModel {
 		try {
 			var path = Path.Combine(AppContext.BaseDirectory, fileName);
 			return File.Exists(path) ? File.ReadAllText(path) : Loc.F("About_FileMissing", "{0} was not found next to the app. It is also in the project repository.", fileName);
-		}
-		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
+		} catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
 			return Loc.F("About_FileUnreadable", "{0} could not be read: {1}", fileName, ex.Message);
 		}
 	}

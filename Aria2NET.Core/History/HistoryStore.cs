@@ -64,20 +64,20 @@ public sealed class HistoryStore(Database database, ILogger? logger = null) {
 			// aria2 does not keep a seeding torrent across a restart (its data is complete), so History calls it complete rather than leaving an "unfinished" row to be marked interrupted.
 			var statusText = item.Status == DownloadStatus.Seeding ? HistoryStatus.Complete : item.Status.ToString().ToLowerInvariant();
 			gid.Value = item.Gid;
-			uri.Value = (object?)item.FirstUri ?? DBNull.Value;
-			dir.Value = (object?)item.Dir ?? DBNull.Value;
-			path.Value = (object?)item.Path ?? DBNull.Value;
+			uri.Value = (object?) item.FirstUri ?? DBNull.Value;
+			dir.Value = (object?) item.Dir ?? DBNull.Value;
+			path.Value = (object?) item.Path ?? DBNull.Value;
 			name.Value = item.Name;
-			host.Value = (object?)HostOf(item.FirstUri) ?? DBNull.Value;
+			host.Value = (object?) HostOf(item.FirstUri) ?? DBNull.Value;
 			category.Value = FileCategory.FromName(item.Name);
 			total.Value = item.TotalBytes;
 			completed.Value = item.CompletedBytes;
 			status.Value = statusText;
 			code.Value = item.ErrorCode is { } c ? c : DBNull.Value;
-			message.Value = (object?)item.ErrorMessage ?? DBNull.Value;
+			message.Value = (object?) item.ErrorMessage ?? DBNull.Value;
 			now.Value = nowText;
 			finished.Value = HistoryStatus.IsTerminal(statusText) ? nowText : DBNull.Value;
-			hash.Value = (object?)item.InfoHash ?? DBNull.Value;
+			hash.Value = (object?) item.InfoHash ?? DBNull.Value;
 			torrent.Value = item.IsTorrent ? 1 : 0;
 			uploaded.Value = item.UploadedBytes;
 			command.ExecuteNonQuery();
@@ -141,8 +141,7 @@ public sealed class HistoryStore(Database database, ILogger? logger = null) {
 				update.CommandText = "UPDATE downloads SET gid = $new, updated_utc = $now WHERE id = $id";
 				update.Parameters.AddWithValue("$new", match.Gid);
 				relinked++;
-			}
-			else {
+			} else {
 				update.CommandText = "UPDATE downloads SET status = 'interrupted', updated_utc = $now WHERE id = $id";
 				interrupted++;
 			}

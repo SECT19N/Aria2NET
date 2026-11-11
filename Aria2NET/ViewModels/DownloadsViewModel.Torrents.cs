@@ -95,8 +95,7 @@ public sealed partial class DownloadsViewModel {
 			}
 			await _torrents.StartAsync(resolved.Gid, new TorrentAddRequest(folder, choice.Files, files.Count, choice.Seeding, choice.Allocation, extra));
 			await ForgetAsync(metadataGid);
-		}
-		catch (Exception ex) when (ex is not OperationCanceledException) {
+		} catch (Exception ex) when (ex is not OperationCanceledException) {
 			// Typically the engine stopped while we waited; the paused follower (if any) stays in aria2's session.
 			_logger.LogWarning(ex, "Finishing magnet {Gid} failed (follower {Follower})", metadataGid, followerGid);
 			_notices.Post(new Notice(Loc.S("Torrent_MagnetFailed", "Could not finish adding a magnet link"), ex.Message, InfoBarSeverity.Warning));

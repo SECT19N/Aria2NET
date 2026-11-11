@@ -31,8 +31,8 @@ public sealed record TaskbarProgress(TaskbarProgressState State, ulong Completed
 				default:
 					continue;
 			}
-			total += (ulong)Math.Max(0, item.TotalBytes);
-			completed += (ulong)Math.Max(0, Math.Min(item.CompletedBytes, item.TotalBytes));
+			total += (ulong) Math.Max(0, item.TotalBytes);
+			completed += (ulong) Math.Max(0, Math.Min(item.CompletedBytes, item.TotalBytes));
 		}
 		if (running + paused == 0) {
 			return None;

@@ -68,9 +68,8 @@ public sealed partial class TorrentFilesDialog : ContentDialog {
 		if (free is { } f) {
 			var fits = bytes <= f;
 			SpaceText.Text = fits ? Loc.F("Files_Free", "{0} free in this folder.", ByteFormat.Size(f)) : Loc.F("Files_NoSpace", "Not enough space: this needs {0} but only {1} is free.", ByteFormat.Size(bytes), ByteFormat.Size(f));
-			SpaceText.Foreground = fits ? (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"] : (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"];
-		}
-		else {
+			SpaceText.Foreground = fits ? (Brush) Application.Current.Resources["TextFillColorSecondaryBrush"] : (Brush) Application.Current.Resources["SystemFillColorCriticalBrush"];
+		} else {
 			SpaceText.Text = "";
 		}
 		IsPrimaryButtonEnabled = count > 0 && folderOk;
@@ -88,8 +87,7 @@ public sealed partial class TorrentFilesDialog : ContentDialog {
 			// One file: no folders to open and nothing to pick, so drop the tree chrome.
 			Toolbar.Visibility = ColumnHeader.Visibility = Visibility.Collapsed;
 			FileList.Height = 48;
-		}
-		else {
+		} else {
 			// Use the room the window has instead of a fixed small list.
 			var window = (App.Window.Content as FrameworkElement)?.XamlRoot?.Size.Height ?? 800;
 			FileList.Height = Math.Clamp(window - 520, 220, 520);
@@ -118,8 +116,7 @@ public sealed partial class TorrentFilesDialog : ContentDialog {
 			foreach (var below in item.VisibleDescendants()) {
 				Rows.Insert(insertAt++, below);
 			}
-		}
-		else {
+		} else {
 			while (at + 1 < Rows.Count && Rows[at + 1].Depth > item.Depth) {
 				Rows.RemoveAt(at + 1);
 			}

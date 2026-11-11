@@ -52,8 +52,7 @@ public sealed partial class ShellViewModel : ObservableObject {
 	private async Task RestartEngineAsync() {
 		try {
 			await _engine.RestartAsync();
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			_logger.LogError(ex, "Engine restart threw");
 		}
 	}

@@ -28,7 +28,7 @@ public static class TimeFormat {
 		if (eta is not { } t || t < TimeSpan.Zero) {
 			return "--";
 		}
-		var seconds = (long)Math.Ceiling(t.TotalSeconds);
+		var seconds = (long) Math.Ceiling(t.TotalSeconds);
 		if (seconds < 60) {
 			return $"{seconds}s";
 		}
