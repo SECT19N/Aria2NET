@@ -23,7 +23,7 @@ public sealed partial class ShellViewModel : ObservableObject {
 	private readonly DispatcherQueue _dispatcher = DispatcherQueue.GetForCurrentThread();
 
 	[ObservableProperty]
-	public partial string StatusText { get; private set; } = "Engine: starting…";
+	public partial string StatusText { get; private set; } = Loc.S("Shell_Starting", "Engine: starting…");
 
 	[ObservableProperty]
 	public partial Brush StatusBrush { get; private set; } = Busy;
@@ -61,13 +61,13 @@ public sealed partial class ShellViewModel : ObservableObject {
 	private void Refresh() {
 		var recovering = _engine.State == EngineState.Crashed && _supervisor.IsRecovering;
 		(StatusText, StatusBrush) = _engine.State switch {
-			EngineState.Running => ($"aria2 {_engine.Version?.Version} · Running", Good),
-			EngineState.Starting => ("Engine: starting…", Busy),
-			EngineState.Restarting => ("Engine: restarting…", Busy),
-			EngineState.Stopping => ("Engine: stopping…", Busy),
-			EngineState.Stopped => ("Engine: stopped", Idle),
-			EngineState.Crashed => recovering ? ("Engine: restarting after a crash…", Busy) : ("Engine: crashed", Bad),
-			_ => ("Engine: failed to start", Bad),
+			EngineState.Running => (Loc.F("Shell_Running", "aria2 {0} · Running", _engine.Version?.Version), Good),
+			EngineState.Starting => (Loc.S("Shell_Starting", "Engine: starting…"), Busy),
+			EngineState.Restarting => (Loc.S("Shell_Restarting", "Engine: restarting…"), Busy),
+			EngineState.Stopping => (Loc.S("Shell_Stopping", "Engine: stopping…"), Busy),
+			EngineState.Stopped => (Loc.S("Shell_Stopped", "Engine: stopped"), Idle),
+			EngineState.Crashed => recovering ? (Loc.S("Shell_CrashRestarting", "Engine: restarting after a crash…"), Busy) : (Loc.S("Shell_Crashed", "Engine: crashed"), Bad),
+			_ => (Loc.S("Shell_Failed", "Engine: failed to start"), Bad),
 		};
 		// A crash the supervisor is already dealing with is not worth an error banner; if it gives up, the banner appears.
 		ShowError = _engine.State == EngineState.Failed || (_engine.State == EngineState.Crashed && !recovering);

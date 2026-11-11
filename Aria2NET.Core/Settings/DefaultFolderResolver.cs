@@ -7,7 +7,9 @@ public static class DefaultFolderResolver {
 
 	/// <summary>The engine's own <c>dir</c>: the default folder setting, else the user's Downloads folder.</summary>
 	public static string ForEngine(AppSettings s) =>
-		string.IsNullOrWhiteSpace(s.DefaultDownloadFolder) ? UserDownloads() : s.DefaultDownloadFolder;
+		string.IsNullOrWhiteSpace(s.DefaultDownloadFolder) || s.DefaultDownloadFolder.Any(char.IsControl) // the folder goes into aria2's config file
+			? UserDownloads()
+			: s.DefaultDownloadFolder;
 
 	/// <summary>The folder the Add dialog starts in: last used, then the default, then Downloads.</summary>
 	public static string ForAddDialog(AppSettings s) {

@@ -32,6 +32,7 @@ public sealed partial class DownloadsPage : Page {
 		DownloadList.SelectedItems.Clear();
 		ViewModel.SelectionRestoreNeeded += OnSelectionRestoreNeeded;
 		ViewModel.PromptTorrent = PromptTorrentAsync;
+		ViewModel.PromptConflict = PromptConflictAsync;
 		ViewModel.ExternalAddRequested += OnExternalAddRequested;
 		_ = HandleStartupAsync();
 		ViewModel.SetSelection([]);
@@ -86,10 +87,10 @@ public sealed partial class DownloadsPage : Page {
 		}
 		association.MarkOffered();
 		var dialog = new ContentDialog {
-			Title = "Open torrents with Aria2NET?",
-			Content = "Aria2NET can open .torrent files and magnet links when you click them. Windows will ask you to confirm Aria2NET as the default app. You can change this later in Settings.",
-			PrimaryButtonText = "Set up",
-			CloseButtonText = "Not now",
+			Title = Loc.S("Downloads_AssocTitle", "Open torrents with Aria2NET?"),
+			Content = Loc.S("Downloads_AssocBody", "Aria2NET can open .torrent files and magnet links when you click them. Windows will ask you to confirm Aria2NET as the default app. You can change this later in Settings."),
+			PrimaryButtonText = Loc.S("Downloads_AssocSetUp", "Set up"),
+			CloseButtonText = Loc.S("Downloads_AssocNotNow", "Not now"),
 			DefaultButton = ContentDialogButton.Primary,
 		};
 		if (await ShowDialogAsync(dialog) == ContentDialogResult.Primary) {
@@ -125,7 +126,7 @@ public sealed partial class DownloadsPage : Page {
 		var view = e.DataView;
 		if (ViewModel.IsEngineUp && (view.Contains(StandardDataFormats.StorageItems) || view.Contains(StandardDataFormats.Text))) {
 			e.AcceptedOperation = DataPackageOperation.Copy;
-			e.DragUIOverride.Caption = "Add to Aria2NET";
+			e.DragUIOverride.Caption = Loc.S("Downloads_DragCaption", "Add to Aria2NET");
 		}
 	}
 
@@ -188,10 +189,30 @@ public sealed partial class DownloadsPage : Page {
 		if (await ShowDialogAsync(dialog) != ContentDialogResult.Primary) {
 			return;
 		}
-		var error = await ViewModel.AddAsync(dialog.Urls, dialog.Folder, dialog.FileName);
+		var extra = dialog.Extra;
+		var error = await ViewModel.AddAsync(dialog.Urls, dialog.Folder, dialog.FileName, extra.ToOptions().Count == 0 ? null : extra);
 		if (error is not null) {
-			await ShowDialogAsync(new ContentDialog { Title = "Some downloads could not be added", Content = error, CloseButtonText = "OK" });
+			await ShowDialogAsync(new ContentDialog { Title = Loc.S("Downloads_AddFailedTitle", "Some downloads could not be added"), Content = error, CloseButtonText = Loc.S("Common_OK", "OK") });
 		}
+	}
+
+	/// <summary>"A file with this name already exists": keep both, replace it, or skip this download.</summary>
+	private async Task<ConflictChoice> PromptConflictAsync(string existingPath) {
+		var dialog = new ContentDialog {
+			Title = Loc.S("Downloads_ConflictTitle", "File already exists"),
+			Content = Loc.F("Downloads_ConflictBody", "{0}\n\nKeep both files (the new one gets a number), or replace the existing file?", existingPath),
+			PrimaryButtonText = Loc.S("Downloads_KeepBoth", "Keep both"),
+			SecondaryButtonText = Loc.S("Downloads_Replace", "Replace"),
+			CloseButtonText = Loc.S("Downloads_Skip", "Skip"),
+			DefaultButton = ContentDialogButton.Primary,
+		};
+		// Closing with Esc counts as Skip, so nothing is overwritten by accident.
+		var result = await ShowDialogAsync(dialog);
+		return result switch {
+			ContentDialogResult.Primary => ConflictChoice.Rename,
+			ContentDialogResult.Secondary => ConflictChoice.Overwrite,
+			_ => ConflictChoice.Skip,
+		};
 	}
 
 	/// <summary>Only one dialog can be open at a time in WinUI.</summary>
@@ -325,19 +346,19 @@ public sealed partial class DownloadsPage : Page {
 		}
 		if (deleteFiles && ViewModel.ConfirmDeleteFiles) {
 			var count = ViewModel.SelectedCount;
-			var again = new CheckBox { Content = "Don't ask me again" };
+			var again = new CheckBox { Content = Loc.S("Downloads_DontAsk", "Don't ask me again") };
 			var body = new StackPanel { Spacing = 12 };
 			body.Children.Add(new TextBlock {
-				Text = (count == 1 ? "Remove this download and delete its file?" : $"Remove these {count} downloads and delete their files?")
+				Text = (count == 1 ? Loc.S("Downloads_DeleteOne", "Remove this download and delete its file?") : Loc.F("Downloads_DeleteMany", "Remove these {0} downloads and delete their files?", count))
 					+ "\nFinished files go to the Recycle Bin. Partly downloaded files are deleted permanently.",
 				TextWrapping = TextWrapping.Wrap,
 			});
 			body.Children.Add(again);
 			var dialog = new ContentDialog {
-				Title = "Delete files?",
+				Title = Loc.S("Downloads_DeleteTitle", "Delete files?"),
 				Content = body,
-				PrimaryButtonText = "Delete",
-				CloseButtonText = "Cancel",
+				PrimaryButtonText = Loc.S("Common_Delete", "Delete"),
+				CloseButtonText = Loc.S("Common_Cancel", "Cancel"),
 				DefaultButton = ContentDialogButton.Close,
 			};
 			if (await ShowDialogAsync(dialog) != ContentDialogResult.Primary) {

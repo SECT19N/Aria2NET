@@ -60,7 +60,11 @@ public sealed record Aria2Config(int Port, string Secret, int ParentPid, string 
 		sb.AppendLine("file-allocation=none");
 		// The user's settings come last, so they win over the defaults above (aria2 uses the last occurrence).
 		foreach (var (key, value) in Options ?? new Dictionary<string, string>()) {
-			sb.AppendLine($"{key}={value}");
+			// An empty value means "not set", which is what leaving the line out does. A control character (a line break in a hand-edited
+			// settings file, say) could start another option such as rpc-secret, so such a line is never written.
+			if (value.Length > 0 && !key.Any(char.IsControl) && !value.Any(char.IsControl)) {
+				sb.AppendLine($"{key}={value}");
+			}
 		}
 		if (Trackers is { Count: > 0 }) {
 			sb.AppendLine($"bt-tracker={TrackerOptionValue(Trackers)}");

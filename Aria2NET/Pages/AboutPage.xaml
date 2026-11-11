@@ -4,13 +4,28 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <StackPanel Padding="24" Spacing="8">
-        <TextBlock Text="About" Style="{StaticResource TitleTextBlockStyle}" />
-        <TextBlock Text="Aria2NET" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,8,0,0" />
-        <TextBlock Text="{x:Bind ViewModel.AppVersionText}" />
-        <TextBlock Text="{x:Bind ViewModel.Aria2VersionText}" />
-        <TextBlock Text="{x:Bind ViewModel.License}" TextWrapping="Wrap" MaxWidth="560" Opacity="0.8" Margin="0,12,0,0" />
-        <TextBlock TextWrapping="Wrap" MaxWidth="560" Opacity="0.8" Margin="0,8,0,0"
-                   Text="Peer country codes in the torrent details use the IP to Country Lite database by DB-IP.com (CC BY 4.0), looked up on this computer only." />
-    </StackPanel>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Padding="24" Spacing="8">
+            <TextBlock x:Uid="AboutPage_TextBlock1" Text="About" Style="{StaticResource TitleTextBlockStyle}"/>
+            <TextBlock x:Uid="AboutPage_TextBlock2" Text="Aria2NET" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,8,0,0"/>
+            <TextBlock Text="{x:Bind ViewModel.AppVersionText}" IsTextSelectionEnabled="True" />
+            <TextBlock Text="{x:Bind ViewModel.Aria2VersionText}" IsTextSelectionEnabled="True" />
+            <TextBlock x:Uid="AboutPage_TextBlock3" Text="A Windows front end for aria2: downloads, torrents, magnets and metalinks." TextWrapping="Wrap" MaxWidth="560" Opacity="0.8"/>
+
+            <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,8,0,0">
+                <HyperlinkButton x:Uid="AboutPage_HyperlinkButton1" Content="Project page" NavigateUri="https://github.com/SECT19N/Aria2NET" Padding="4,2"/>
+                <HyperlinkButton x:Uid="AboutPage_HyperlinkButton2" Content="Report a problem" NavigateUri="https://github.com/SECT19N/Aria2NET/issues" Padding="4,2"/>
+                <HyperlinkButton x:Uid="AboutPage_HyperlinkButton3" Content="Releases" NavigateUri="https://github.com/SECT19N/Aria2NET/releases" Padding="4,2"/>
+                <HyperlinkButton x:Uid="AboutPage_HyperlinkButton4" Content="aria2" NavigateUri="https://aria2.github.io/" Padding="4,2"/>
+            </StackPanel>
+
+            <TextBlock Text="{x:Bind ViewModel.License}" TextWrapping="Wrap" MaxWidth="560" Opacity="0.8" Margin="0,12,0,0" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button x:Uid="AboutPage_Button1" Content="View license" Click="License_Click"/>
+                <Button x:Uid="AboutPage_Button2" Content="Third-party notices" Click="Notices_Click"/>
+            </StackPanel>
+            <TextBlock x:Uid="AboutPage_TextBlock4" Text="Peer country codes in the torrent details use the IP to Country Lite database by DB-IP.com (CC BY 4.0), looked up on this computer only."
+                       TextWrapping="Wrap" MaxWidth="560" Opacity="0.8" Margin="0,8,0,0"/>
+        </StackPanel>
+    </ScrollViewer>
 </Page>

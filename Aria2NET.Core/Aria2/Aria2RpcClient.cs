@@ -292,7 +292,17 @@ public sealed class Aria2RpcClient(HttpClient http, Uri endpoint, string secret)
 			case IReadOnlyDictionary<string, string> map:
 				w.WriteStartObject();
 				foreach (var (k, v) in map) {
-					w.WriteString(k, v);
+					if (k == "header") {
+						// aria2 takes repeatable options as an array; one header per line in the value.
+						w.WriteStartArray(k);
+						foreach (var line in v.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)) {
+							w.WriteStringValue(line);
+						}
+						w.WriteEndArray();
+					}
+					else {
+						w.WriteString(k, v);
+					}
 				}
 				w.WriteEndObject();
 				break;

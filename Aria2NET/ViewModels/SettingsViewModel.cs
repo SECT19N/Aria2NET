@@ -7,14 +7,14 @@ using Microsoft.Extensions.Logging;
 
 namespace Aria2NET.ViewModels;
 
-public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings> settings, HistoryService history, StartupRegistration startup, SettingsApplier applier, IAria2Engine engine, ILogger<SettingsViewModel> logger) {
+public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings> settings, HistoryService history, StartupRegistration startup, SettingsApplier applier, IAria2Engine engine, Aria2NET.Core.Logging.FileLoggerProvider fileLog, ILogger<SettingsViewModel> logger) {
 	/// <summary>User-agent presets shown in Settings; the first entry means aria2's own agent and the last is free text.</summary>
 	public static IReadOnlyList<(string Label, string? Value)> UserAgentChoices { get; } = [
-		("aria2 default", null),
+		(Loc.S("Settings_UaDefault", "aria2 default"), null),
 		("Chrome", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"),
 		("Firefox", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:132.0) Gecko/20100101 Firefox/132.0"),
 		("Edge", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0"),
-		("Custom", "")];
+		(Loc.S("Settings_UaCustom", "Custom"), "")];
 
 	/// <summary>A fresh read of the settings file; the Settings page fills its controls from this.</summary>
 	public AppSettings Current => settings.Load();
@@ -22,7 +22,51 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 	/// <summary>Saves a change and pushes it to the running engine right away.</summary>
 	public void Update(Action<AppSettings> apply) {
 		Change(apply);
-		_ = applier.ApplyAsync(settings.Load());
+		var saved = settings.Load();
+		fileLog.MinLevel = EngineOptions.AppLogLevelFor(saved.LogLevel);
+		_ = applier.ApplyAsync(saved);
+	}
+
+	/// <summary>The settings as JSON for export (machine-specific values left out).</summary>
+	public string ExportJson() => SettingsTransfer.Export(settings.Load());
+
+	/// <summary>Replaces the settings with an exported file's. Returns an error text, or null when imported and applied.</summary>
+	public string? ImportJson(string json) {
+		var (imported, error) = SettingsTransfer.Import(json, settings.Load());
+		if (imported is null) {
+			return error;
+		}
+		return Replace(imported);
+	}
+
+	/// <summary>Resets every preference to its default (the window position, last folder and similar machine state stay).</summary>
+	public string? ResetAll() => Replace(SettingsTransfer.ResetAll(settings.Load()));
+
+	private string? Replace(AppSettings next) {
+		try {
+			settings.Save(next);
+		}
+		catch (IOException ex) {
+			logger.LogWarning(ex, "Could not save settings");
+			return Loc.F("Settings_SaveFailed", "Could not save the settings: {0}", ex.Message);
+		}
+		fileLog.MinLevel = EngineOptions.AppLogLevelFor(next.LogLevel);
+		App.ApplyTheme(next.Theme);
+		_ = applier.ApplyAsync(next);
+		return null;
+	}
+
+	/// <summary>The hand-typed options as text, one name=value per line.</summary>
+	public string RawOptionsText => RawOptionRules.ToText(settings.Load().RawOptions);
+
+	/// <summary>Saves hand-typed options. Returns the problem (nothing is saved) or null.</summary>
+	public string? SetRawOptions(string text) {
+		var (options, error) = RawOptionRules.Parse(text);
+		if (error is not null) {
+			return error;
+		}
+		Update(s => s.RawOptions = options);
+		return null;
 	}
 
 	public void ResetDownloads() {
@@ -39,6 +83,7 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 			s.TimeoutSeconds = d.TimeoutSeconds;
 			s.UserAgent = d.UserAgent;
 			s.FileAllocation = d.FileAllocation;
+			s.Conflict = d.Conflict;
 		});
 	}
 
@@ -48,6 +93,38 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 			s.AltSpeedActive = false;
 		});
 	}
+
+	public void ResetTorrents() {
+		var d = new AppSettings();
+		Update(s => {
+			s.ListenPortStart = d.ListenPortStart;
+			s.ListenPortEnd = d.ListenPortEnd;
+			s.DhtPort = d.DhtPort;
+			s.EnableDht = d.EnableDht;
+			s.EnablePex = d.EnablePex;
+			s.EnableLpd = d.EnableLpd;
+			s.Encryption = d.Encryption;
+			s.SeedRatio = d.SeedRatio;
+			s.SeedTimeMinutes = d.SeedTimeMinutes;
+			s.Trackers = d.Trackers;
+			s.TrackerUrl = d.TrackerUrl;
+		});
+	}
+
+	public void ResetNetwork() {
+		var d = new AppSettings();
+		Update(s => {
+			s.Proxy = d.Proxy;
+			s.ProxyAddress = d.ProxyAddress;
+			s.ProxyUser = d.ProxyUser;
+			s.ProxyPasswordProtected = d.ProxyPasswordProtected;
+			s.CheckCertificates = d.CheckCertificates;
+			s.UseIPv6 = d.UseIPv6;
+		});
+	}
+
+	/// <summary>Saves the proxy password protected; an empty password clears it.</summary>
+	public void SetProxyPassword(string password) => Update(s => s.ProxyPasswordProtected = SecretProtector.Protect(password));
 
 	/// <summary>The default folder differs from the folder the engine runs in, so a restart is needed.</summary>
 	public bool RestartRequired => applier.RestartRequired(settings.Load());
@@ -66,7 +143,7 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 			return null;
 		}
 		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) {
-			return $"Cannot write to this folder: {ex.Message}";
+			return Loc.F("Settings_FolderNotWritable", "Cannot write to this folder: {0}", ex.Message);
 		}
 	}
 
@@ -74,7 +151,7 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 	public static string FreeSpaceText(string path) {
 		try {
 			var root = Path.GetPathRoot(Path.GetFullPath(path));
-			return root is null ? "" : $"{FormatBytes(new DriveInfo(root).AvailableFreeSpace)} free";
+			return root is null ? "" : Loc.F("Settings_FreeSpace", "{0} free", FormatBytes(new DriveInfo(root).AvailableFreeSpace));
 		}
 		catch (Exception ex) when (ex is IOException or ArgumentException or UnauthorizedAccessException or NotSupportedException) {
 			return "";
@@ -93,7 +170,7 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 	}
 
 	/// <summary>Days finished downloads stay in History, in the order shown by the Settings combo box (0 = forever).</summary>
-	public static IReadOnlyList<(string Label, int Days)> RetentionChoices { get; } = [("Keep forever", 0), ("30 days", 30), ("90 days", 90), ("1 year", 365)];
+	public static IReadOnlyList<(string Label, int Days)> RetentionChoices { get; } = [(Loc.S("Settings_KeepForever", "Keep forever"), 0), (Loc.S("Settings_Days30", "30 days"), 30), (Loc.S("Settings_Days90", "90 days"), 90), (Loc.S("Settings_Year1", "1 year"), 365)];
 
 	public string DataFolder { get; } = paths.DataRoot;
 	public string LogsFolder { get; } = paths.LogsDir;

@@ -95,7 +95,7 @@ internal sealed class ToastService(
 		else if (toast.Kind == NotificationKind.Failed) {
 			builder.AddArgument("action", "show");
 			if (DownloadCapabilities.CanRetry(item)) {
-				builder.AddButton(new AppNotificationButton("Retry").AddArgument("action", "retry").AddArgument("gid", item.Gid));
+				builder.AddButton(new AppNotificationButton(Loc.S("Toast_Retry", "Retry")).AddArgument("action", "retry").AddArgument("gid", item.Gid));
 			}
 		}
 		else {
@@ -103,9 +103,9 @@ internal sealed class ToastService(
 			var dir = item.Dir ?? "";
 			builder.AddArgument("action", "folder").AddArgument("path", path).AddArgument("dir", dir);
 			if (path.Length > 0) {
-				builder.AddButton(new AppNotificationButton("Open").AddArgument("action", "open").AddArgument("path", path));
+				builder.AddButton(new AppNotificationButton(Loc.S("Toast_Open", "Open")).AddArgument("action", "open").AddArgument("path", path));
 			}
-			builder.AddButton(new AppNotificationButton("Show in folder").AddArgument("action", "folder").AddArgument("path", path).AddArgument("dir", dir));
+			builder.AddButton(new AppNotificationButton(Loc.S("Toast_ShowInFolder", "Show in folder")).AddArgument("action", "folder").AddArgument("path", path).AddArgument("dir", dir));
 		}
 		return builder.BuildNotification();
 	}

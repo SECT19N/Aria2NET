@@ -93,3 +93,103 @@ public class SettingsApplierIntegrationTests {
 		Assert.Equal(400 * 1024, long.Parse(global["max-overall-download-limit"]));
 	}
 }
+
+public class NetworkOptionsTests {
+	[Fact]
+	public void Defaults_mean_no_proxy_certificates_checked_and_ipv6_on() {
+		var o = EngineOptions.NetworkOptions(new AppSettings());
+		Assert.Equal("", o["all-proxy"]);
+		Assert.Equal("true", o["check-certificate"]);
+		Assert.Equal("false", o["disable-ipv6"]);
+	}
+
+	[Fact]
+	public void Manual_proxy_sends_address_and_decrypted_credentials() {
+		var s = new AppSettings { Proxy = ProxyMode.Manual, ProxyAddress = " proxy.local:8080 ", ProxyUser = "bob", ProxyPasswordProtected = SecretProtector.Protect("p@ss") };
+		var o = EngineOptions.NetworkOptions(s);
+		Assert.Equal("proxy.local:8080", o["all-proxy"]);
+		Assert.Equal("bob", o["all-proxy-user"]);
+		Assert.Equal("p@ss", o["all-proxy-passwd"]);
+		Assert.DoesNotContain("p@ss", s.ProxyPasswordProtected);
+	}
+
+	[Fact]
+	public void Invalid_manual_address_is_not_sent_and_is_reported() {
+		var s = new AppSettings { Proxy = ProxyMode.Manual, ProxyAddress = "not a host:99999" };
+		Assert.NotNull(EngineOptions.ValidateProxy(s));
+		Assert.Equal("", EngineOptions.NetworkOptions(s)["all-proxy"]);
+		Assert.NotNull(EngineOptions.ValidateProxy(new AppSettings { Proxy = ProxyMode.Manual }));
+		Assert.Null(EngineOptions.ValidateProxy(new AppSettings { Proxy = ProxyMode.Manual, ProxyAddress = "http://proxy.local:3128" }));
+	}
+
+	[Fact]
+	public void System_proxy_uses_what_windows_reports_and_none_means_direct() {
+		var s = new AppSettings { Proxy = ProxyMode.System };
+		Assert.Equal("http://corp:8080", EngineOptions.NetworkOptions(s, () => new Uri("http://corp:8080/"))["all-proxy"]);
+		Assert.Equal("", EngineOptions.NetworkOptions(s, () => null)["all-proxy"]);
+	}
+
+	[Fact]
+	public void Turned_off_toggles_map_to_aria2_values() {
+		var o = EngineOptions.NetworkOptions(new AppSettings { CheckCertificates = false, UseIPv6 = false });
+		Assert.Equal("false", o["check-certificate"]);
+		Assert.Equal("true", o["disable-ipv6"]);
+	}
+
+	[Fact]
+	public void Secret_round_trips_and_garbage_reads_as_empty() {
+		Assert.Equal("", SecretProtector.Protect(""));
+		Assert.Equal("héllo wörld", SecretProtector.Unprotect(SecretProtector.Protect("héllo wörld")));
+		Assert.Equal("", SecretProtector.Unprotect("!!not base64!!"));
+		Assert.Equal("", SecretProtector.Unprotect(null));
+	}
+}
+
+[Collection(RealAria2Collection.Name)]
+public class NetworkApplyIntegrationTests {
+	[RequiresAria2Fact]
+	public async Task Aria2_accepts_the_network_options_on_a_running_engine() {
+		var (engine, temp) = await DownloadIntegrationTests.StartEngineAsync();
+		using var _ = temp;
+		await using var __ = engine;
+		var store = new SettingsStore<AppSettings>(Path.Combine(temp.Path, "settings.json"), AppSettingsJsonContext.Default.AppSettings);
+		var applier = new SettingsApplier(engine, store, new DownloadOperations(engine, NullLogger<DownloadOperations>.Instance), NullLogger<SettingsApplier>.Instance);
+
+		var s = new AppSettings { Proxy = ProxyMode.Manual, ProxyAddress = "127.0.0.1:3128", ProxyUser = "u", CheckCertificates = false, UseIPv6 = false };
+		Assert.True(await applier.ApplyAsync(s));
+		var global = await engine.Rpc!.GetGlobalOptionAsync();
+		Assert.Contains("127.0.0.1:3128", global["all-proxy"]); // aria2 normalizes it to http://127.0.0.1:3128/
+		// aria2 ignores these two on a running engine, so they are not sent live and need a restart.
+		Assert.Equal("true", global["check-certificate"]);
+		Assert.Equal("false", global["disable-ipv6"]);
+
+		Assert.True(await applier.ApplyAsync(new AppSettings()));
+		global = await engine.Rpc.GetGlobalOptionAsync();
+		Assert.Equal("", global.GetValueOrDefault("all-proxy", ""));
+	}
+
+	[RequiresAria2Fact]
+	public async Task Launch_only_options_take_effect_when_the_engine_starts() {
+		using var temp = new TempDir();
+		var paths = new AppPaths(Path.Combine(temp.Path, "data"), RequiresAria2Fact.FindAria2Dir()!);
+		var settings = new AppSettings { CheckCertificates = false, UseIPv6 = false };
+		await using var engine = new Aria2Engine(paths, Path.Combine(temp.Path, "dl"), NullLogger<Aria2Engine>.Instance, () => settings);
+		await engine.StartAsync();
+
+		var global = await engine.Rpc!.GetGlobalOptionAsync();
+		Assert.Equal("false", global["check-certificate"]);
+		Assert.Equal("true", global["disable-ipv6"]);
+	}
+
+	[Fact]
+	public void Live_options_leave_out_the_launch_only_ones_but_the_conf_keeps_them() {
+		var s = new AppSettings { CheckCertificates = false, UseIPv6 = false };
+		var live = EngineOptions.LiveOptions(s);
+		Assert.DoesNotContain("check-certificate", live.Keys);
+		Assert.DoesNotContain("disable-ipv6", live.Keys);
+		Assert.Contains("all-proxy", live.Keys);
+		var all = EngineOptions.ToGlobalOptions(s);
+		Assert.Equal("false", all["check-certificate"]);
+		Assert.Equal("true", all["disable-ipv6"]);
+	}
+}

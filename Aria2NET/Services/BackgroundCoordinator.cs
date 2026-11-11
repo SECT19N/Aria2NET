@@ -36,8 +36,8 @@ internal sealed class BackgroundCoordinator(
 		try {
 			_tray = new TrayIcon(WindowNative.GetWindowHandle(window), Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico"), _logger);
 			_tray.OpenRequested += window.BringToFront;
-			_tray.PauseAllRequested += () => _ = RunAsync(operations.PauseAllAsync, "Pause all");
-			_tray.ResumeAllRequested += () => _ = RunAsync(operations.ResumeAllAsync, "Resume all");
+			_tray.PauseAllRequested += () => _ = RunAsync(operations.PauseAllAsync, Loc.S("Tray_PauseAll", "Pause all"));
+			_tray.ResumeAllRequested += () => _ = RunAsync(operations.ResumeAllAsync, Loc.S("Tray_ResumeAll", "Resume all"));
 			_tray.OpenFolderRequested += OpenDownloadFolder;
 			_tray.ExitRequested += () => window.RequestExit();
 			_tray.CurrentFinishAction = () => whenFinished.Action;

@@ -67,28 +67,28 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 	public partial bool SortDescending { get; private set; }
 
 	[ObservableProperty]
-	public partial string AllLabel { get; private set; } = "All";
+	public partial string AllLabel { get; private set; } = Loc.S("Downloads_FilterAll", "All");
 
 	[ObservableProperty]
-	public partial string DownloadingLabel { get; private set; } = "Downloading";
+	public partial string DownloadingLabel { get; private set; } = Loc.S("Status_Downloading", "Downloading");
 
 	[ObservableProperty]
-	public partial string WaitingLabel { get; private set; } = "Waiting";
+	public partial string WaitingLabel { get; private set; } = Loc.S("Downloads_FilterWaiting", "Waiting");
 
 	[ObservableProperty]
-	public partial string PausedLabel { get; private set; } = "Paused";
+	public partial string PausedLabel { get; private set; } = Loc.S("Status_Paused", "Paused");
 
 	[ObservableProperty]
-	public partial string CompletedLabel { get; private set; } = "Completed";
+	public partial string CompletedLabel { get; private set; } = Loc.S("Status_Completed", "Completed");
 
 	[ObservableProperty]
-	public partial string FailedLabel { get; private set; } = "Failed";
+	public partial string FailedLabel { get; private set; } = Loc.S("Status_Failed", "Failed");
 
 	[ObservableProperty]
-	public partial string SeedingLabel { get; private set; } = "Seeding";
+	public partial string SeedingLabel { get; private set; } = Loc.S("Status_Seeding", "Seeding");
 
 	[ObservableProperty]
-	public partial string TorrentsLabel { get; private set; } = "Torrents";
+	public partial string TorrentsLabel { get; private set; } = Loc.S("Downloads_FilterTorrents", "Torrents");
 
 	[ObservableProperty]
 	public partial bool CanRecheck { get; private set; }
@@ -100,22 +100,22 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 	public partial bool CanShowTorrentDetails { get; private set; }
 
 	[ObservableProperty]
-	public partial string NameHeader { get; private set; } = "Name";
+	public partial string NameHeader { get; private set; } = Loc.S("Downloads_ColName", "Name");
 
 	[ObservableProperty]
-	public partial string SizeHeader { get; private set; } = "Size";
+	public partial string SizeHeader { get; private set; } = Loc.S("Downloads_ColSize", "Size");
 
 	[ObservableProperty]
-	public partial string ProgressHeader { get; private set; } = "Progress";
+	public partial string ProgressHeader { get; private set; } = Loc.S("Downloads_ColProgress", "Progress");
 
 	[ObservableProperty]
-	public partial string SpeedHeader { get; private set; } = "Speed";
+	public partial string SpeedHeader { get; private set; } = Loc.S("Downloads_ColSpeed", "Speed");
 
 	[ObservableProperty]
-	public partial string EtaHeader { get; private set; } = "ETA";
+	public partial string EtaHeader { get; private set; } = Loc.S("Downloads_ColEta", "ETA");
 
 	[ObservableProperty]
-	public partial string StatusHeader { get; private set; } = "Status";
+	public partial string StatusHeader { get; private set; } = Loc.S("Downloads_ColStatus", "Status");
 
 	// ---- What the current selection allows ----
 	[ObservableProperty]
@@ -230,19 +230,25 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		var s = _settings.Load();
 		AltSpeedActive = s.AltSpeedActive;
 		var (down, up) = (s.AltDownloadLimitKiBps, s.AltUploadLimitKiBps);
-		static string Limit(int kib) => kib <= 0 ? "unlimited" : $"{kib} KiB/s";
+		static string Limit(int kib) => kib <= 0 ? Loc.S("Downloads_Unlimited", "unlimited") : $"{kib} KiB/s";
 		AltSpeedTip = AltSpeedActive
-			? "Alternative speeds are on. Click to go back to the normal limits."
-			: $"Switch to alternative speeds (download {Limit(down)}, upload {Limit(up)}). Set them in Settings.";
+			? Loc.S("Downloads_AltSpeedOn", "Alternative speeds are on. Click to go back to the normal limits.")
+			: Loc.F("Downloads_AltSpeedTip", "Switch to alternative speeds (download {0}, upload {1}). Set them in Settings.", Limit(down), Limit(up));
 	}
 
 	public Task SetAltSpeedAsync(bool active) => _applier.SetAltSpeedAsync(active);
 
+	/// <summary>Set by the page: asks what to do about a file that already exists (the "Ask" name-clash setting). Without it, both files are kept.</summary>
+	public Func<string, Task<ConflictChoice>>? PromptConflict { get; set; }
+
 	/// <summary>Adds each link or file as its own download. Returns an error message, or null when everything was accepted.</summary>
-	public async Task<string?> AddAsync(IReadOnlyList<string> urls, string folder, string? fileName) {
+	public async Task<string?> AddAsync(IReadOnlyList<string> urls, string folder, string? fileName, AddOptions? extra = null) {
 		var rpc = _engine.Rpc;
 		if (rpc is null) {
-			return "The download engine is not running.";
+			return Loc.S("Downloads_EngineNotRunning", "The download engine is not running.");
+		}
+		if (extra?.Validate() is { } invalid) {
+			return invalid;
 		}
 
 		var failures = new List<string>();
@@ -251,24 +257,36 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 			try {
 				switch (UrlParser.Classify(url)) {
 					case LinkKind.TorrentFile:
-						if (await AddTorrentFileAsync(url, folder)) {
+						if (await AddTorrentFileAsync(url, folder, extra)) {
 							accepted++;
 						}
 						continue;
 					case LinkKind.MetalinkFile:
-						await AddMetalinkFileAsync(url, folder);
+						await AddMetalinkFileAsync(url, folder, extra);
 						accepted++;
 						continue;
 					case LinkKind.Magnet:
-						if (await AddMagnetAsync(url, folder)) {
+						if (await AddMagnetAsync(url, folder, extra)) {
 							accepted++;
 						}
 						continue;
 				}
 
-				var options = new Dictionary<string, string> { ["dir"] = folder };
+				var options = (extra ?? AddOptions.None).ToOptions().ToDictionary(p => p.Key, p => p.Value);
+				options["dir"] = folder;
 				if (urls.Count == 1 && !string.IsNullOrWhiteSpace(fileName)) {
 					options["out"] = fileName.Trim();
+				}
+				if (FileConflicts.FindExisting(folder, url, urls.Count == 1 ? fileName : null) is { } existing) {
+					var policy = _settings.Load().Conflict;
+					var choice = FileConflicts.FromPolicy(policy)
+						?? (PromptConflict is { } ask ? await ask(existing) : ConflictChoice.Rename);
+					if (choice == ConflictChoice.Skip) {
+						continue;
+					}
+					foreach (var (k, v) in FileConflicts.OptionsFor(choice)) {
+						options[k] = v;
+					}
 				}
 				var gid = await rpc.AddUriAsync([url], options);
 				_added[gid] = DateTimeOffset.Now;
@@ -447,7 +465,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 	private void ReportOpen(bool opened, string target, string error) {
 		if (!opened) {
 			_logger.LogWarning("Could not open {Target}: {Error}", target, error);
-			ShowMessage($"Could not open it: {error}");
+			ShowMessage(Loc.F("Downloads_OpenFailed", "Could not open it: {0}", error));
 		}
 	}
 
@@ -474,7 +492,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		foreach (var item in items) {
 			_hidden.Add(item.Gid);
 		}
-		UndoText = items.Count == 1 ? $"Removed “{items[0].Name}”" : $"Removed {items.Count} downloads";
+		UndoText = items.Count == 1 ? Loc.F("Downloads_RemovedOne", "Removed “{0}”", items[0].Name) : Loc.F("Downloads_RemovedMany", "Removed {0} downloads", items.Count);
 		IsUndoVisible = true;
 		Rebuild();
 		_undoTimer.Stop();
@@ -508,7 +526,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 			foreach (var item in pending) {
 				_hidden.Remove(item.Gid);
 			}
-			ShowMessage($"Could not remove: {ex.Message}");
+			ShowMessage(Loc.F("Downloads_RemoveFailed", "Could not remove: {0}", ex.Message));
 			Rebuild();
 		}
 	}
@@ -549,12 +567,12 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 
 	private void RefreshHeaders() {
 		string H(string text, SortColumn column) => SortColumn == column ? $"{text} {(SortDescending ? "▼" : "▲")}" : text;
-		NameHeader = H("Name", SortColumn.Name);
-		SizeHeader = H("Size", SortColumn.Size);
-		ProgressHeader = H("Progress", SortColumn.Progress);
-		SpeedHeader = H("Speed", SortColumn.Speed);
-		EtaHeader = H("ETA", SortColumn.Eta);
-		StatusHeader = H("Status", SortColumn.Status);
+		NameHeader = H(Loc.S("Downloads_ColName", "Name"), SortColumn.Name);
+		SizeHeader = H(Loc.S("Downloads_ColSize", "Size"), SortColumn.Size);
+		ProgressHeader = H(Loc.S("Downloads_ColProgress", "Progress"), SortColumn.Progress);
+		SpeedHeader = H(Loc.S("Downloads_ColSpeed", "Speed"), SortColumn.Speed);
+		EtaHeader = H(Loc.S("Downloads_ColEta", "ETA"), SortColumn.Eta);
+		StatusHeader = H(Loc.S("Downloads_ColStatus", "Status"), SortColumn.Status);
 	}
 
 	// ---------------------------------------------------------------- snapshots
@@ -586,7 +604,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		CheckDiskSpace(_items);
 
 		var stats = snapshot.Stats;
-		StatsText = $"↓ {ByteFormat.Speed(stats.DownloadSpeed)}  ·  {stats.NumActive} active  ·  {stats.NumWaiting} waiting";
+		StatsText = Loc.F("Downloads_Stats", "↓ {0}  ·  {1} active  ·  {2} waiting", ByteFormat.Speed(stats.DownloadSpeed), stats.NumActive, stats.NumWaiting);
 		Rebuild();
 		_ = RestoreForcedLimitAsync(snapshot);
 	}
@@ -651,14 +669,14 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 
 		IsEmpty = visible.Count == 0;
 		IsFilteredEmpty = visible.Count > 0 && desired.Count == 0;
-		AllLabel = Label("All", StatusFilter.All, visible);
-		DownloadingLabel = Label("Downloading", StatusFilter.Downloading, visible);
-		WaitingLabel = Label("Waiting", StatusFilter.Waiting, visible);
-		PausedLabel = Label("Paused", StatusFilter.Paused, visible);
-		CompletedLabel = Label("Completed", StatusFilter.Completed, visible);
-		FailedLabel = Label("Failed", StatusFilter.Failed, visible);
-		SeedingLabel = Label("Seeding", StatusFilter.Seeding, visible);
-		TorrentsLabel = Label("Torrents", StatusFilter.Torrents, visible);
+		AllLabel = Label(Loc.S("Downloads_FilterAll", "All"), StatusFilter.All, visible);
+		DownloadingLabel = Label(Loc.S("Status_Downloading", "Downloading"), StatusFilter.Downloading, visible);
+		WaitingLabel = Label(Loc.S("Downloads_FilterWaiting", "Waiting"), StatusFilter.Waiting, visible);
+		PausedLabel = Label(Loc.S("Status_Paused", "Paused"), StatusFilter.Paused, visible);
+		CompletedLabel = Label(Loc.S("Status_Completed", "Completed"), StatusFilter.Completed, visible);
+		FailedLabel = Label(Loc.S("Status_Failed", "Failed"), StatusFilter.Failed, visible);
+		SeedingLabel = Label(Loc.S("Status_Seeding", "Seeding"), StatusFilter.Seeding, visible);
+		TorrentsLabel = Label(Loc.S("Downloads_FilterTorrents", "Torrents"), StatusFilter.Torrents, visible);
 		RefreshCapabilities();
 	}
 
@@ -702,7 +720,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		// TaskCanceledException is the 5 s RPC timeout: aria2 does not answer while it zero-fills a big file.
 		catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException or InvalidOperationException or ArgumentException or TaskCanceledException) {
 			_logger.LogWarning(ex, "Download action failed");
-			ShowMessage(ex is TaskCanceledException ? "aria2 is busy preparing files and did not answer in time. Try again in a moment." : ex.Message);
+			ShowMessage(ex is TaskCanceledException ? Loc.S("Downloads_Busy", "aria2 is busy preparing files and did not answer in time. Try again in a moment.") : ex.Message);
 		}
 	}
 

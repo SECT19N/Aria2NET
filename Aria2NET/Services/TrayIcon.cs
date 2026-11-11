@@ -129,20 +129,20 @@ internal sealed class TrayIcon : IDisposable {
 	private void ShowMenu() {
 		var menu = CreatePopupMenu();
 		try {
-			AppendMenu(menu, 0, MenuOpen, "Open Aria2NET");
+			AppendMenu(menu, 0, MenuOpen, Loc.S("Tray_Open", "Open Aria2NET"));
 			AppendMenu(menu, 0x800 /* MF_SEPARATOR */, 0, null);
-			AppendMenu(menu, 0, MenuPauseAll, "Pause all");
-			AppendMenu(menu, 0, MenuResumeAll, "Resume all");
-			AppendMenu(menu, 0, MenuOpenFolder, "Open download folder");
+			AppendMenu(menu, 0, MenuPauseAll, Loc.S("Tray_PauseAll", "Pause all"));
+			AppendMenu(menu, 0, MenuResumeAll, Loc.S("Tray_ResumeAll", "Resume all"));
+			AppendMenu(menu, 0, MenuOpenFolder, Loc.S("Tray_OpenFolder", "Open download folder"));
 			AppendMenu(menu, 0x800, 0, null);
 			var finish = CreatePopupMenu(); // destroyed together with its parent
 			var current = CurrentFinishAction?.Invoke() ?? FinishAction.None;
 			foreach (var action in Enum.GetValues<FinishAction>()) {
 				AppendMenu(finish, action == current ? 0x8u /* MF_CHECKED */ : 0u, (nuint)(MenuFinishBase + (int)action), WhenFinishedMachine.Label(action));
 			}
-			AppendMenu(menu, 0x10 /* MF_POPUP */, (nuint)finish, "When downloads finish");
+			AppendMenu(menu, 0x10 /* MF_POPUP */, (nuint)finish, Loc.S("Tray_WhenFinished", "When downloads finish"));
 			AppendMenu(menu, 0x800, 0, null);
-			AppendMenu(menu, 0, MenuExit, "Exit");
+			AppendMenu(menu, 0, MenuExit, Loc.S("Tray_Exit", "Exit"));
 			SetMenuDefaultItem(menu, MenuOpen, 0);
 
 			GetCursorPos(out var point);

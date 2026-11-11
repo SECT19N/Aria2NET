@@ -63,20 +63,20 @@ internal sealed class WhenFinishedService(DownloadMonitor monitor, ILoggerFactor
 	private static async Task<bool> CountdownAsync(MainWindow window, FinishAction action) {
 		window.BringToFront();
 		var verb = action switch {
-			FinishAction.Sleep => "go to sleep",
-			FinishAction.Hibernate => "hibernate",
-			_ => "shut down",
+			FinishAction.Sleep => Loc.S("Finish_VerbSleep", "go to sleep"),
+			FinishAction.Hibernate => Loc.S("Finish_VerbHibernate", "hibernate"),
+			_ => Loc.S("Finish_VerbShutDown", "shut down"),
 		};
 		var remaining = CountdownSeconds;
 		var text = new TextBlock { TextWrapping = TextWrapping.Wrap };
-		void Refresh() => text.Text = $"All downloads are finished. The computer will {verb} in {remaining} seconds.";
+		void Refresh() => text.Text = Loc.F("Finish_Countdown", "All downloads are finished. The computer will {0} in {1} seconds.", verb, remaining);
 		Refresh();
 
 		var dialog = new ContentDialog {
-			Title = "Downloads finished",
+			Title = Loc.S("Finish_Title", "Downloads finished"),
 			Content = text,
-			PrimaryButtonText = $"{WhenFinishedMachine.Label(action)} now",
-			CloseButtonText = "Cancel",
+			PrimaryButtonText = Loc.F("Finish_Now", "{0} now", WhenFinishedMachine.Label(action)),
+			CloseButtonText = Loc.S("Common_Cancel", "Cancel"),
 			DefaultButton = ContentDialogButton.Close,
 			XamlRoot = window.Content.XamlRoot,
 		};

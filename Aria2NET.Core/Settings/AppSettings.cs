@@ -68,6 +68,95 @@ public sealed class AppSettings {
 	public int AltUploadLimitKiBps { get; set; }
 	/// <summary>The alternative limits are in force instead of the normal ones.</summary>
 	public bool AltSpeedActive { get; set; }
+
+	// Network.
+	public ProxyMode Proxy { get; set; } = ProxyMode.None;
+	/// <summary>Manual proxy as <c>host:port</c> or a full URL such as <c>http://host:8080</c>.</summary>
+	public string? ProxyAddress { get; set; }
+	public string? ProxyUser { get; set; }
+	/// <summary>The proxy password, protected with <see cref="SecretProtector"/>. Never plain text.</summary>
+	public string? ProxyPasswordProtected { get; set; }
+	/// <summary>Verify HTTPS server certificates. Turning this off makes downloads open to tampering.</summary>
+	public bool CheckCertificates { get; set; } = true;
+	/// <summary>Use IPv6 as well as IPv4. Off helps on networks where IPv6 is broken.</summary>
+	public bool UseIPv6 { get; set; } = true;
+
+	// Torrents. Seeding and peer options apply to torrents added afterwards; ports and DHT need an engine restart.
+	/// <summary>First and last port tried for incoming BitTorrent connections.</summary>
+	public int ListenPortStart { get; set; } = 6881;
+	public int ListenPortEnd { get; set; } = 6999;
+	/// <summary>UDP port of the DHT.</summary>
+	public int DhtPort { get; set; } = 6881;
+	public bool EnableDht { get; set; } = true;
+	/// <summary>Peer exchange: peers tell each other about more peers.</summary>
+	public bool EnablePex { get; set; } = true;
+	/// <summary>Local peer discovery on the LAN.</summary>
+	public bool EnableLpd { get; set; } = true;
+	public TorrentEncryption Encryption { get; set; } = TorrentEncryption.Allow;
+	/// <summary>Stop seeding at this upload/download ratio; 0 means no ratio limit.</summary>
+	public double SeedRatio { get; set; } = 1.0;
+	/// <summary>Stop seeding after this many minutes; 0 means no time limit.</summary>
+	public int SeedTimeMinutes { get; set; }
+	public TrackerSource Trackers { get; set; } = TrackerSource.Default;
+	/// <summary>Address of the tracker list when <see cref="Trackers"/> is <see cref="TrackerSource.Custom"/>; https only.</summary>
+	public string? TrackerUrl { get; set; }
+
+	// General.
+	public AppTheme Theme { get; set; } = AppTheme.System;
+	/// <summary>What to do when a download would overwrite a file that is already there.</summary>
+	public ConflictPolicy Conflict { get; set; } = ConflictPolicy.AutoRename;
+
+	// Advanced.
+	public AppLogLevel LogLevel { get; set; } = AppLogLevel.Information;
+	/// <summary>aria2 options typed in by hand (<see cref="RawOptionRules"/>). They are applied last, so they override the settings above.</summary>
+	public Dictionary<string, string> RawOptions { get; set; } = [];
+}
+
+/// <summary>How much the app log and aria2's log record.</summary>
+public enum AppLogLevel {
+	Warning,
+	Information,
+	/// <summary>Everything, including aria2's debug output. Large; for finding a problem.</summary>
+	Debug,
+}
+
+public enum AppTheme {
+	System,
+	Light,
+	Dark,
+}
+
+/// <summary>What happens when the file a download would create already exists.</summary>
+public enum ConflictPolicy {
+	/// <summary>Keep both: the new file gets a number (name.1.ext).</summary>
+	AutoRename,
+	Overwrite,
+	/// <summary>Ask each time.</summary>
+	Ask,
+}
+
+public enum TorrentEncryption {
+	/// <summary>Encrypted or plain connections, whichever the peer offers.</summary>
+	Allow,
+	/// <summary>Ask for encryption first, fall back to plain.</summary>
+	Prefer,
+	/// <summary>Only encrypted connections; fewer peers.</summary>
+	Require,
+}
+
+public enum TrackerSource {
+	/// <summary>The built-in public tracker list.</summary>
+	Default,
+	Custom,
+	/// <summary>No extra trackers: only the ones in each torrent.</summary>
+	Off,
+}
+
+public enum ProxyMode {
+	None,
+	/// <summary>The Windows proxy setting, read when the options are applied.</summary>
+	System,
+	Manual,
 }
 
 /// <summary>aria2's <c>file-allocation</c> values.</summary>

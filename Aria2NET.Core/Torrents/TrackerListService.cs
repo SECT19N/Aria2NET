@@ -17,6 +17,13 @@ public sealed class TrackerListService(HttpClient http, AppPaths paths, ILogger<
 	private static readonly TimeSpan MaxAge = TimeSpan.FromDays(7);
 	private static readonly string[] Schemes = ["http", "https", "udp"];
 
+	/// <summary>The address to fetch the list from for these settings, or null when extra trackers are switched off (or the custom address is unusable).</summary>
+	public static string? SourceUrl(Settings.AppSettings s) => s.Trackers switch {
+		Settings.TrackerSource.Off => null,
+		Settings.TrackerSource.Custom => Settings.EngineOptions.ValidateTorrent(s) is null ? s.TrackerUrl!.Trim() : null,
+		_ => DefaultUrl,
+	};
+
 	/// <summary>Keeps tracker addresses only. The result is written into aria2's config file, so a line with a comma, space or newline could smuggle in another option and is rejected.</summary>
 	public static IReadOnlyList<string> Parse(string? text) {
 		var result = new List<string>();

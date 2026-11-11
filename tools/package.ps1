@@ -36,7 +36,7 @@ dotnet publish (Join-Path $root 'Aria2NET\Aria2NET.csproj') -c Release -r $Rid "
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed ($LASTEXITCODE)" }
 
 # The app cannot start without these, so fail the build instead of shipping a broken zip.
-foreach ($required in 'Aria2NET.exe', 'Aria2NET.pri', 'MainWindow.xbf', 'tools\aria2\aria2c.exe', 'Assets\AppIcon.ico') {
+foreach ($required in 'Aria2NET.exe', 'Aria2NET.pri', 'MainWindow.xbf', 'tools\aria2\aria2c.exe', 'Assets\AppIcon.ico', 'LICENSE.txt', 'THIRD-PARTY-NOTICES.md') {
     if (-not (Test-Path (Join-Path $stage $required))) { throw "Published output is missing $required" }
 }
 

@@ -14,10 +14,10 @@ namespace Aria2NET.ViewModels;
 
 /// <summary>The History page: everything downloaded so far, searchable and filterable. Must be created on the UI thread.</summary>
 public sealed partial class HistoryViewModel : ObservableObject {
-	private static readonly string[] StatusNames = ["All statuses", "Completed", "Failed", "Removed", "Interrupted", "In progress"];
-	private static readonly string[] SortNames = ["Date added", "Date finished", "Name", "Size", "Status"];
-	private const string AllSites = "All sites";
-	private const string AllTypes = "All types";
+	private static readonly string[] StatusNames = [Loc.S("History_AllStatuses", "All statuses"), Loc.S("Status_Completed", "Completed"), Loc.S("Status_Failed", "Failed"), Loc.S("Status_Removed", "Removed"), Loc.S("Status_Interrupted", "Interrupted"), Loc.S("History_InProgress", "In progress")];
+	private static readonly string[] SortNames = [Loc.S("History_SortAdded", "Date added"), Loc.S("History_SortFinished", "Date finished"), Loc.S("Downloads_ColName", "Name"), Loc.S("Downloads_ColSize", "Size"), Loc.S("Downloads_ColStatus", "Status")];
+	private static readonly string AllSites = Loc.S("History_AllSites", "All sites");
+	private static readonly string AllTypes = Loc.S("History_AllTypes", "All types");
 
 	private readonly HistoryService _history;
 	private readonly DownloadOperations _operations;
@@ -70,7 +70,7 @@ public sealed partial class HistoryViewModel : ObservableObject {
 	[NotifyPropertyChangedFor(nameof(DirectionText))]
 	public partial bool Descending { get; set; } = true;
 
-	public string DirectionText => Descending ? "Descending" : "Ascending";
+	public string DirectionText => Descending ? Loc.S("History_Descending", "Descending") : Loc.S("History_Ascending", "Ascending");
 
 	[ObservableProperty]
 	public partial DateTimeOffset? FromDate { get; set; }
@@ -200,14 +200,14 @@ public sealed partial class HistoryViewModel : ObservableObject {
 			HasRows = Rows.Count > 0;
 			OnPropertyChanged(nameof(IsFilteredEmpty));
 			OnPropertyChanged(nameof(IsHistoryEmpty));
-			CountText = entries.Count == total ? $"{total} {(total == 1 ? "download" : "downloads")}" : $"{entries.Count} of {total} downloads";
+			CountText = entries.Count == total ? (total == 1 ? Loc.S("History_CountOne", "1 download") : Loc.F("History_CountMany", "{0} downloads", total)) : Loc.F("History_CountOf", "{0} of {1} downloads", entries.Count, total);
 			_selection = [];
 			RefreshCapabilities();
 			_ = MarkMissingFilesAsync(Rows.ToList(), version);
 		}
 		catch (Exception ex) {
 			_logger.LogError(ex, "Loading history failed");
-			ShowMessage("History could not be read. Details are in the log file.");
+			ShowMessage(Loc.S("History_ReadFailed", "History could not be read. Details are in the log file."));
 		}
 	}
 
@@ -303,7 +303,7 @@ public sealed partial class HistoryViewModel : ObservableObject {
 		}
 		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
 			_logger.LogWarning(ex, "Export failed");
-			ShowMessage($"Could not write the file: {ex.Message}");
+			ShowMessage(Loc.F("History_WriteFailed", "Could not write the file: {0}", ex.Message));
 		}
 	}
 
@@ -333,7 +333,7 @@ public sealed partial class HistoryViewModel : ObservableObject {
 	private void ReportOpen(bool opened, string target, string error) {
 		if (!opened) {
 			_logger.LogWarning("Could not open {Target}: {Error}", target, error);
-			ShowMessage($"Could not open it: {error}");
+			ShowMessage(Loc.F("Downloads_OpenFailed", "Could not open it: {0}", error));
 		}
 	}
 

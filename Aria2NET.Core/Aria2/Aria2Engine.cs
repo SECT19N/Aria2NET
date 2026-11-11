@@ -106,7 +106,8 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 
 		for (var attempt = 1; attempt <= MaxStartAttempts; attempt++) {
 			ct.ThrowIfCancellationRequested();
-			var config = Aria2Config.CreateRandom(_downloadDir, Environment.ProcessId, TrackerListService.ReadCache(_paths),
+			var config = Aria2Config.CreateRandom(_downloadDir, Environment.ProcessId,
+				userSettings?.Trackers == TrackerSource.Off ? null : TrackerListService.ReadCache(_paths),
 				userSettings is null ? null : EngineOptions.ToGlobalOptions(userSettings));
 			File.WriteAllText(_paths.Aria2ConfFile, config.Render(_paths));
 

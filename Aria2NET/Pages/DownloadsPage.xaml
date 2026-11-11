@@ -31,51 +31,51 @@
         </Grid.RowDefinitions>
 
         <CommandBar Grid.Row="0" DefaultLabelPosition="Right" HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
-            <AppBarButton x:Name="AddButton" Label="Add URL" Click="Add_Click" IsEnabled="{x:Bind ViewModel.IsEngineUp, Mode=OneWay}"
+            <AppBarButton x:Uid="DownloadsPage_AddButton" x:Name="AddButton" Label="Add URL" Click="Add_Click" IsEnabled="{x:Bind ViewModel.IsEngineUp, Mode=OneWay}"
                           ToolTipService.ToolTip="Add downloads (Ctrl+V pastes links)">
                 <AppBarButton.Icon><FontIcon Glyph="&#xE710;" /></AppBarButton.Icon>
             </AppBarButton>
             <AppBarSeparator />
-            <AppBarButton Label="Pause" Click="Pause_Click" IsEnabled="{x:Bind ViewModel.CanPause, Mode=OneWay}"
+            <AppBarButton x:Uid="DownloadsPage_AppBarButton1" Label="Pause" Click="Pause_Click" IsEnabled="{x:Bind ViewModel.CanPause, Mode=OneWay}"
                           ToolTipService.ToolTip="Pause the selected downloads (Space)">
                 <AppBarButton.Icon><FontIcon Glyph="&#xE769;" /></AppBarButton.Icon>
             </AppBarButton>
-            <AppBarButton Label="Resume" Click="Resume_Click" IsEnabled="{x:Bind ViewModel.CanResume, Mode=OneWay}"
+            <AppBarButton x:Uid="DownloadsPage_AppBarButton2" Label="Resume" Click="Resume_Click" IsEnabled="{x:Bind ViewModel.CanResume, Mode=OneWay}"
                           ToolTipService.ToolTip="Resume the selected downloads (Space)">
                 <AppBarButton.Icon><FontIcon Glyph="&#xE768;" /></AppBarButton.Icon>
             </AppBarButton>
-            <AppBarButton Label="Retry" Click="Retry_Click" IsEnabled="{x:Bind ViewModel.CanRetry, Mode=OneWay}"
+            <AppBarButton x:Uid="DownloadsPage_AppBarButton3" Label="Retry" Click="Retry_Click" IsEnabled="{x:Bind ViewModel.CanRetry, Mode=OneWay}"
                           ToolTipService.ToolTip="Start failed downloads again">
                 <AppBarButton.Icon><FontIcon Glyph="&#xE72C;" /></AppBarButton.Icon>
             </AppBarButton>
-            <AppBarButton Label="Remove" IsEnabled="{x:Bind ViewModel.CanRemove, Mode=OneWay}" ToolTipService.ToolTip="Remove the selected downloads (Del)">
+            <AppBarButton x:Uid="DownloadsPage_AppBarButton4" Label="Remove" IsEnabled="{x:Bind ViewModel.CanRemove, Mode=OneWay}" ToolTipService.ToolTip="Remove the selected downloads (Del)">
                 <AppBarButton.Icon><FontIcon Glyph="&#xE74D;" /></AppBarButton.Icon>
                 <AppBarButton.Flyout>
                     <MenuFlyout>
-                        <MenuFlyoutItem Text="Remove from list" Click="Remove_Click" KeyboardAcceleratorTextOverride="Del" />
-                        <MenuFlyoutItem Text="Remove and delete file" Click="RemoveDelete_Click" KeyboardAcceleratorTextOverride="Shift+Del" />
+                        <MenuFlyoutItem x:Uid="DownloadsPage_MenuFlyoutItem1" Text="Remove from list" Click="Remove_Click" KeyboardAcceleratorTextOverride="Del"/>
+                        <MenuFlyoutItem x:Uid="DownloadsPage_MenuFlyoutItem2" Text="Remove and delete file" Click="RemoveDelete_Click" KeyboardAcceleratorTextOverride="Shift+Del"/>
                     </MenuFlyout>
                 </AppBarButton.Flyout>
             </AppBarButton>
             <AppBarSeparator />
-            <AppBarButton Label="Open folder" Click="OpenFolder_Click" IsEnabled="{x:Bind ViewModel.CanOpenFolder, Mode=OneWay}"
+            <AppBarButton x:Uid="DownloadsPage_AppBarButton5" Label="Open folder" Click="OpenFolder_Click" IsEnabled="{x:Bind ViewModel.CanOpenFolder, Mode=OneWay}"
                           ToolTipService.ToolTip="Show the file in its folder">
                 <AppBarButton.Icon><FontIcon Glyph="&#xE838;" /></AppBarButton.Icon>
             </AppBarButton>
 
             <AppBarSeparator />
-            <AppBarToggleButton x:Name="AltSpeedButton" Label="Alt speed" Click="AltSpeed_Click"
+            <AppBarToggleButton x:Uid="DownloadsPage_AltSpeedButton" x:Name="AltSpeedButton" Label="Alt speed" Click="AltSpeed_Click"
                                 IsChecked="{x:Bind ViewModel.AltSpeedActive, Mode=OneWay}"
                                 ToolTipService.ToolTip="{x:Bind ViewModel.AltSpeedTip, Mode=OneWay}">
                 <AppBarToggleButton.Icon><FontIcon Glyph="&#xEC4A;" /></AppBarToggleButton.Icon>
             </AppBarToggleButton>
 
             <CommandBar.SecondaryCommands>
-                <AppBarButton Label="Pause all" Click="PauseAll_Click" IsEnabled="{x:Bind ViewModel.CanPauseAll, Mode=OneWay}" />
-                <AppBarButton Label="Resume all" Click="ResumeAll_Click" IsEnabled="{x:Bind ViewModel.CanResumeAll, Mode=OneWay}" />
+                <AppBarButton x:Uid="DownloadsPage_AppBarButton6" Label="Pause all" Click="PauseAll_Click" IsEnabled="{x:Bind ViewModel.CanPauseAll, Mode=OneWay}"/>
+                <AppBarButton x:Uid="DownloadsPage_AppBarButton7" Label="Resume all" Click="ResumeAll_Click" IsEnabled="{x:Bind ViewModel.CanResumeAll, Mode=OneWay}"/>
                 <AppBarSeparator />
-                <AppBarButton Label="Clear completed" Click="ClearCompleted_Click" IsEnabled="{x:Bind ViewModel.CanClearCompleted, Mode=OneWay}" />
-                <AppBarButton Label="Clear failed" Click="ClearFailed_Click" IsEnabled="{x:Bind ViewModel.CanClearFailed, Mode=OneWay}" />
+                <AppBarButton x:Uid="DownloadsPage_AppBarButton8" Label="Clear completed" Click="ClearCompleted_Click" IsEnabled="{x:Bind ViewModel.CanClearCompleted, Mode=OneWay}"/>
+                <AppBarButton x:Uid="DownloadsPage_AppBarButton9" Label="Clear failed" Click="ClearFailed_Click" IsEnabled="{x:Bind ViewModel.CanClearFailed, Mode=OneWay}"/>
             </CommandBar.SecondaryCommands>
         </CommandBar>
 
@@ -97,12 +97,12 @@
             <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.StatsText, Mode=OneWay}" VerticalAlignment="Center" Opacity="0.8" />
         </Grid>
 
-        <InfoBar Grid.Row="2" IsOpen="{x:Bind ViewModel.IsEngineDown, Mode=OneWay}" IsClosable="False" Severity="Warning"
+        <InfoBar x:Uid="DownloadsPage_InfoBar1" Grid.Row="2" IsOpen="{x:Bind ViewModel.IsEngineDown, Mode=OneWay}" IsClosable="False" Severity="Warning"
                  Title="Download engine is not running"
-                 Message="Adding downloads is disabled until aria2 is running. Use the status bar message or Restart engine." />
+                 Message="Adding downloads is disabled until aria2 is running. Use the status bar message or Restart engine."/>
 
-        <InfoBar Grid.Row="3" IsOpen="{x:Bind ViewModel.HasActionMessage, Mode=OneWay}" Severity="Error" Title="That did not work"
-                 Message="{x:Bind ViewModel.ActionMessage, Mode=OneWay}" CloseButtonClick="ActionMessage_Closed" />
+        <InfoBar x:Uid="DownloadsPage_InfoBar2" Grid.Row="3" IsOpen="{x:Bind ViewModel.HasActionMessage, Mode=OneWay}" Severity="Error" Title="That did not work"
+                 Message="{x:Bind ViewModel.ActionMessage, Mode=OneWay}" CloseButtonClick="ActionMessage_Closed"/>
 
         <Grid Grid.Row="4">
             <Grid.RowDefinitions>
@@ -133,49 +133,49 @@
                       DoubleTapped="List_DoubleTapped">
                 <FlyoutBase.AttachedFlyout>
                     <MenuFlyout x:Name="RowMenu">
-                        <MenuFlyoutItem Text="Pause" Click="Pause_Click" IsEnabled="{x:Bind ViewModel.CanPause, Mode=OneWay}" KeyboardAcceleratorTextOverride="Space">
+                        <MenuFlyoutItem x:Uid="DownloadsPage_MenuFlyoutItem3" Text="Pause" Click="Pause_Click" IsEnabled="{x:Bind ViewModel.CanPause, Mode=OneWay}" KeyboardAcceleratorTextOverride="Space">
                             <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE769;" /></MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
-                        <MenuFlyoutItem Text="Resume" Click="Resume_Click" IsEnabled="{x:Bind ViewModel.CanResume, Mode=OneWay}" KeyboardAcceleratorTextOverride="Space">
+                        <MenuFlyoutItem x:Uid="DownloadsPage_MenuFlyoutItem4" Text="Resume" Click="Resume_Click" IsEnabled="{x:Bind ViewModel.CanResume, Mode=OneWay}" KeyboardAcceleratorTextOverride="Space">
                             <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE768;" /></MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
-                        <MenuFlyoutItem Text="Retry" Click="Retry_Click" IsEnabled="{x:Bind ViewModel.CanRetry, Mode=OneWay}">
+                        <MenuFlyoutItem x:Uid="DownloadsPage_MenuFlyoutItem5" Text="Retry" Click="Retry_Click" IsEnabled="{x:Bind ViewModel.CanRetry, Mode=OneWay}">
                             <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE72C;" /></MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
                         <MenuFlyoutSeparator />
-                        <MenuFlyoutItem Text="Open file" Click="OpenFile_Click" IsEnabled="{x:Bind ViewModel.CanOpenFile, Mode=OneWay}" KeyboardAcceleratorTextOverride="Enter">
+                        <MenuFlyoutItem x:Uid="DownloadsPage_MenuFlyoutItem6" Text="Open file" Click="OpenFile_Click" IsEnabled="{x:Bind ViewModel.CanOpenFile, Mode=OneWay}" KeyboardAcceleratorTextOverride="Enter">
                             <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8E5;" /></MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
-                        <MenuFlyoutItem Text="Open folder" Click="OpenFolder_Click" IsEnabled="{x:Bind ViewModel.CanOpenFolder, Mode=OneWay}">
+                        <MenuFlyoutItem x:Uid="DownloadsPage_MenuFlyoutItem7" Text="Open folder" Click="OpenFolder_Click" IsEnabled="{x:Bind ViewModel.CanOpenFolder, Mode=OneWay}">
                             <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE838;" /></MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
-                        <MenuFlyoutItem Text="Copy URL" Click="CopyUrl_Click" IsEnabled="{x:Bind ViewModel.CanCopyUrl, Mode=OneWay}">
+                        <MenuFlyoutItem x:Uid="DownloadsPage_MenuFlyoutItem8" Text="Copy URL" Click="CopyUrl_Click" IsEnabled="{x:Bind ViewModel.CanCopyUrl, Mode=OneWay}">
                             <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
                         <MenuFlyoutSeparator />
-                        <MenuFlyoutItem Text="Speed limit…" Click="SpeedLimit_Click" IsEnabled="{x:Bind ViewModel.CanSetSpeedLimit, Mode=OneWay}" />
-                        <MenuFlyoutItem Text="Rename…" Click="Rename_Click" IsEnabled="{x:Bind ViewModel.CanRename, Mode=OneWay}" />
-                        <MenuFlyoutItem Text="Change folder…" Click="ChangeFolder_Click" IsEnabled="{x:Bind ViewModel.CanChangeFolder, Mode=OneWay}" />
+                        <MenuFlyoutItem x:Uid="DownloadsPage_MenuFlyoutItem9" Text="Speed limit…" Click="SpeedLimit_Click" IsEnabled="{x:Bind ViewModel.CanSetSpeedLimit, Mode=OneWay}"/>
+                        <MenuFlyoutItem x:Uid="DownloadsPage_MenuFlyoutItem10" Text="Rename…" Click="Rename_Click" IsEnabled="{x:Bind ViewModel.CanRename, Mode=OneWay}"/>
+                        <MenuFlyoutItem x:Uid="DownloadsPage_MenuFlyoutItem11" Text="Change folder…" Click="ChangeFolder_Click" IsEnabled="{x:Bind ViewModel.CanChangeFolder, Mode=OneWay}"/>
                         <MenuFlyoutSeparator />
-                        <MenuFlyoutItem Text="Torrent details…" Click="TorrentDetails_Click" IsEnabled="{x:Bind ViewModel.CanShowTorrentDetails, Mode=OneWay}" />
-                        <MenuFlyoutItem Text="Check files again" Click="Recheck_Click" IsEnabled="{x:Bind ViewModel.CanRecheck, Mode=OneWay}" ToolTipService.ToolTip="Verify the files against the torrent and download whatever is damaged or missing" />
-                        <MenuFlyoutItem Text="Seeding…" Click="Seeding_Click" IsEnabled="{x:Bind ViewModel.CanChangeSeeding, Mode=OneWay}" />
+                        <MenuFlyoutItem x:Uid="DownloadsPage_MenuFlyoutItem12" Text="Torrent details…" Click="TorrentDetails_Click" IsEnabled="{x:Bind ViewModel.CanShowTorrentDetails, Mode=OneWay}"/>
+                        <MenuFlyoutItem x:Uid="DownloadsPage_MenuFlyoutItem13" Text="Check files again" Click="Recheck_Click" IsEnabled="{x:Bind ViewModel.CanRecheck, Mode=OneWay}" ToolTipService.ToolTip="Verify the files against the torrent and download whatever is damaged or missing"/>
+                        <MenuFlyoutItem x:Uid="DownloadsPage_MenuFlyoutItem14" Text="Seeding…" Click="Seeding_Click" IsEnabled="{x:Bind ViewModel.CanChangeSeeding, Mode=OneWay}"/>
                         <MenuFlyoutSeparator />
-                        <MenuFlyoutSubItem Text="Queue">
-                            <MenuFlyoutItem Text="Start now" Click="ForceStart_Click" IsEnabled="{x:Bind ViewModel.CanForceStart, Mode=OneWay}" />
+                        <MenuFlyoutSubItem x:Uid="DownloadsPage_MenuFlyoutSubItem1" Text="Queue">
+                            <MenuFlyoutItem x:Uid="DownloadsPage_MenuFlyoutItem15" Text="Start now" Click="ForceStart_Click" IsEnabled="{x:Bind ViewModel.CanForceStart, Mode=OneWay}"/>
                             <MenuFlyoutSeparator />
-                            <MenuFlyoutItem Text="Move to top" Click="MoveTop_Click" IsEnabled="{x:Bind ViewModel.CanMove, Mode=OneWay}" />
-                            <MenuFlyoutItem Text="Move up" Click="MoveUp_Click" IsEnabled="{x:Bind ViewModel.CanMove, Mode=OneWay}" />
-                            <MenuFlyoutItem Text="Move down" Click="MoveDown_Click" IsEnabled="{x:Bind ViewModel.CanMove, Mode=OneWay}" />
-                            <MenuFlyoutItem Text="Move to bottom" Click="MoveBottom_Click" IsEnabled="{x:Bind ViewModel.CanMove, Mode=OneWay}" />
+                            <MenuFlyoutItem x:Uid="DownloadsPage_MenuFlyoutItem16" Text="Move to top" Click="MoveTop_Click" IsEnabled="{x:Bind ViewModel.CanMove, Mode=OneWay}"/>
+                            <MenuFlyoutItem x:Uid="DownloadsPage_MenuFlyoutItem17" Text="Move up" Click="MoveUp_Click" IsEnabled="{x:Bind ViewModel.CanMove, Mode=OneWay}"/>
+                            <MenuFlyoutItem x:Uid="DownloadsPage_MenuFlyoutItem18" Text="Move down" Click="MoveDown_Click" IsEnabled="{x:Bind ViewModel.CanMove, Mode=OneWay}"/>
+                            <MenuFlyoutItem x:Uid="DownloadsPage_MenuFlyoutItem19" Text="Move to bottom" Click="MoveBottom_Click" IsEnabled="{x:Bind ViewModel.CanMove, Mode=OneWay}"/>
                         </MenuFlyoutSubItem>
                         <MenuFlyoutSeparator />
-                        <MenuFlyoutItem Text="Remove from list" Click="Remove_Click" IsEnabled="{x:Bind ViewModel.CanRemove, Mode=OneWay}" KeyboardAcceleratorTextOverride="Del">
+                        <MenuFlyoutItem x:Uid="DownloadsPage_MenuFlyoutItem20" Text="Remove from list" Click="Remove_Click" IsEnabled="{x:Bind ViewModel.CanRemove, Mode=OneWay}" KeyboardAcceleratorTextOverride="Del">
                             <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE74D;" /></MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
-                        <MenuFlyoutItem Text="Remove and delete file" Click="RemoveDelete_Click" IsEnabled="{x:Bind ViewModel.CanRemove, Mode=OneWay}" KeyboardAcceleratorTextOverride="Shift+Del" />
+                        <MenuFlyoutItem x:Uid="DownloadsPage_MenuFlyoutItem21" Text="Remove and delete file" Click="RemoveDelete_Click" IsEnabled="{x:Bind ViewModel.CanRemove, Mode=OneWay}" KeyboardAcceleratorTextOverride="Shift+Del"/>
                         <MenuFlyoutSeparator />
-                        <MenuFlyoutItem Text="Properties" Click="Properties_Click" IsEnabled="{x:Bind ViewModel.CanShowProperties, Mode=OneWay}">
+                        <MenuFlyoutItem x:Uid="DownloadsPage_MenuFlyoutItem22" Text="Properties" Click="Properties_Click" IsEnabled="{x:Bind ViewModel.CanShowProperties, Mode=OneWay}">
                             <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE946;" /></MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
                     </MenuFlyout>
@@ -212,23 +212,23 @@
                 </ListView.ItemTemplate>
             </ListView>
 
-            <TextBlock Grid.RowSpan="2" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.7"
-                       Text="No downloads match this filter." Visibility="{x:Bind ViewModel.IsFilteredEmpty, Mode=OneWay}" />
+            <TextBlock x:Uid="DownloadsPage_TextBlock1" Grid.RowSpan="2" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.7"
+                       Text="No downloads match this filter." Visibility="{x:Bind ViewModel.IsFilteredEmpty, Mode=OneWay}"/>
 
             <StackPanel Grid.RowSpan="2" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10"
                         Visibility="{x:Bind ViewModel.IsEmpty, Mode=OneWay}">
                 <FontIcon Glyph="&#xE896;" FontSize="48" Opacity="0.6" />
-                <TextBlock Text="Paste a link to start" Style="{StaticResource SubtitleTextBlockStyle}" HorizontalAlignment="Center" />
-                <TextBlock Text="Press Ctrl+V anywhere on this page, or use the button." Opacity="0.7" HorizontalAlignment="Center" />
-                <Button Click="Add_Click" HorizontalAlignment="Center" Padding="24,10" Style="{StaticResource AccentButtonStyle}"
-                        IsEnabled="{x:Bind ViewModel.IsEngineUp, Mode=OneWay}" Content="Add URL" />
+                <TextBlock x:Uid="DownloadsPage_TextBlock2" Text="Paste a link to start" Style="{StaticResource SubtitleTextBlockStyle}" HorizontalAlignment="Center"/>
+                <TextBlock x:Uid="DownloadsPage_TextBlock3" Text="Press Ctrl+V anywhere on this page, or use the button." Opacity="0.7" HorizontalAlignment="Center"/>
+                <Button x:Uid="DownloadsPage_Button1" Click="Add_Click" HorizontalAlignment="Center" Padding="24,10" Style="{StaticResource AccentButtonStyle}"
+                        IsEnabled="{x:Bind ViewModel.IsEngineUp, Mode=OneWay}" Content="Add URL"/>
             </StackPanel>
         </Grid>
 
         <InfoBar Grid.Row="5" IsOpen="{x:Bind ViewModel.IsUndoVisible, Mode=OneWay}" IsClosable="False" Severity="Informational"
                  Title="{x:Bind ViewModel.UndoText, Mode=OneWay}">
             <InfoBar.ActionButton>
-                <Button Content="Undo" Click="Undo_Click" />
+                <Button x:Uid="DownloadsPage_Button2" Content="Undo" Click="Undo_Click"/>
             </InfoBar.ActionButton>
         </InfoBar>
     </Grid>

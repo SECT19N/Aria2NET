@@ -24,7 +24,8 @@ public sealed class AppPaths(string dataRoot, string toolsDir) {
 	public string Aria2ConfFile => Path.Combine(EngineDir, "aria2.conf");
 	public string Aria2SessionFile => Path.Combine(EngineDir, "aria2.session");
 	public string Aria2LogFile => Path.Combine(LogsDir, "aria2.log");
-	public string TrackerListFile => Path.Combine(DataRoot, "trackers.txt");
+	public string PresetsFile => Path.Combine(DataRoot, "presets.json");
+	public string TrackerListFile =>Path.Combine(DataRoot, "trackers.txt");
 	/// <summary>Optional offline country database next to the aria2 folder (tools\geoip), fetched by tools/get-geoip.ps1.</summary>
 	public string GeoIpFile => Path.Combine(Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(ToolsDir)) ?? ToolsDir, "geoip", "dbip-country-lite.csv.gz");
 

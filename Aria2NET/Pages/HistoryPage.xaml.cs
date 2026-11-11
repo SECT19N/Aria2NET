@@ -103,8 +103,8 @@ public sealed partial class HistoryPage : Page {
 		var started = await ViewModel.RedownloadAsync(folder);
 		if (started > 0) {
 			App.Services.GetRequiredService<NoticeCenter>().Post(new Notice(
-				started == 1 ? "Download started" : $"{started} downloads started",
-				"You can follow it on the Downloads page.", InfoBarSeverity.Success));
+				started == 1 ? Loc.S("History_StartedOne", "Download started") : Loc.F("History_StartedMany", "{0} downloads started", started),
+				Loc.S("History_FollowOnDownloads", "You can follow it on the Downloads page."), InfoBarSeverity.Success));
 		}
 	}
 
@@ -121,15 +121,15 @@ public sealed partial class HistoryPage : Page {
 		if (count == 0) {
 			return;
 		}
-		if (await App.Window.ConfirmAsync("Remove from history?",
-				$"{count} {(count == 1 ? "entry" : "entries")} will be forgotten. Downloaded files are not deleted.", "Remove")) {
+		if (await App.Window.ConfirmAsync(Loc.S("History_RemoveTitle", "Remove from history?"),
+				(count == 1 ? Loc.S("History_RemoveOne", "1 entry will be forgotten. Downloaded files are not deleted.") : Loc.F("History_RemoveMany", "{0} entries will be forgotten. Downloaded files are not deleted.", count)), Loc.S("Common_Remove", "Remove"))) {
 			await ViewModel.DeleteSelectedAsync();
 		}
 	}
 
 	private async void ClearHistory_Click(object sender, RoutedEventArgs e) {
-		if (await App.Window.ConfirmAsync("Clear all history?",
-				"Every finished, failed and removed entry is forgotten. Downloads still in progress stay. Downloaded files are not deleted.", "Clear history")) {
+		if (await App.Window.ConfirmAsync(Loc.S("History_ClearTitle", "Clear all history?"),
+				Loc.S("History_ClearBody", "Every finished, failed and removed entry is forgotten. Downloads still in progress stay. Downloaded files are not deleted."), Loc.S("History_ClearConfirm", "Clear history"))) {
 			await ViewModel.ClearAllAsync();
 		}
 	}

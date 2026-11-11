@@ -82,8 +82,8 @@ public sealed partial class MainWindow : Window {
 		BringToFrontIfHidden(); // a dialog on a hidden window would wait there unseen
 		var dialog = new ContentDialog {
 			Title = title,
-			Content = message + "\n\nDetails were written to the log file.",
-			CloseButtonText = "OK",
+			Content = message + Loc.S("Main_ErrorDetails", "\n\nDetails were written to the log file."),
+			CloseButtonText = Loc.S("Common_OK", "OK"),
 			XamlRoot = Content.XamlRoot,
 		};
 		await dialog.ShowAsync();
@@ -96,7 +96,7 @@ public sealed partial class MainWindow : Window {
 			Title = title,
 			Content = message,
 			PrimaryButtonText = confirmText,
-			CloseButtonText = "Cancel",
+			CloseButtonText = Loc.S("Common_Cancel", "Cancel"),
 			DefaultButton = ContentDialogButton.Close,
 			XamlRoot = Content.XamlRoot,
 		};
@@ -268,9 +268,9 @@ public sealed partial class MainWindow : Window {
 		if (settings.ConfirmExitWithActive && !_skipExitConfirm && _background.ActiveDownloads is > 0 and var running) {
 			BringToFront();
 			var message = running == 1
-				? "A download is still running. Exiting stops it; it continues the next time you open Aria2NET."
-				: $"{running} downloads are still running. Exiting stops them; they continue the next time you open Aria2NET.";
-			if (!await ConfirmAsync("Exit Aria2NET?", message, "Exit")) {
+				? Loc.S("Main_ExitOne", "A download is still running. Exiting stops it; it continues the next time you open Aria2NET.")
+				: Loc.F("Main_ExitMany", "{0} downloads are still running. Exiting stops them; they continue the next time you open Aria2NET.", running);
+			if (!await ConfirmAsync(Loc.S("Main_ExitTitle", "Exit Aria2NET?"), message, Loc.S("Main_ExitConfirm", "Exit"))) {
 				_exitRequested = false;
 				return;
 			}
