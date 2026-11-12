@@ -19,7 +19,16 @@ public sealed partial class HistoryPage : Page {
 		InitializeComponent();
 	}
 
-	private async void Page_Loaded(object sender, RoutedEventArgs e) => await ViewModel.ReloadAsync();
+	private async void Page_Loaded(object sender, RoutedEventArgs e) {
+		ViewModel.Rows.CollectionChanged += Rows_Changed;
+		await ViewModel.ReloadAsync();
+	}
+
+	private void Page_Unloaded(object sender, RoutedEventArgs e) => ViewModel.Rows.CollectionChanged -= Rows_Changed;
+
+	private void Rows_Changed(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) => RowStripes.RefreshLater(HistoryList);
+
+	private void List_ContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args) => RowStripes.Apply(args);
 
 	private void Find_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args) {
 		args.Handled = true;

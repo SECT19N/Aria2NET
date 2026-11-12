@@ -33,6 +33,7 @@ public sealed partial class DownloadsPage : Page {
 		ViewModel.PromptTorrent = PromptTorrentAsync;
 		ViewModel.PromptConflict = PromptConflictAsync;
 		ViewModel.ExternalAddRequested += OnExternalAddRequested;
+		ViewModel.Rows.CollectionChanged += Rows_Changed;
 		_ = HandleStartupAsync();
 		ViewModel.SetSelection([]);
 	}
@@ -40,8 +41,13 @@ public sealed partial class DownloadsPage : Page {
 	private void Page_Unloaded(object sender, RoutedEventArgs e) {
 		ViewModel.SelectionRestoreNeeded -= OnSelectionRestoreNeeded;
 		ViewModel.ExternalAddRequested -= OnExternalAddRequested;
+		ViewModel.Rows.CollectionChanged -= Rows_Changed;
 		ViewModel.FinishRestore([]);
 	}
+
+	private void Rows_Changed(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) => RowStripes.RefreshLater(DownloadList);
+
+	private void List_ContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args) => RowStripes.Apply(args);
 
 	// Moving a row (e.g. a paused download dropping below the active ones) makes ListView forget its selection; put it back.
 	private void OnSelectionRestoreNeeded(object? sender, IReadOnlyList<DownloadRowViewModel> rows) =>

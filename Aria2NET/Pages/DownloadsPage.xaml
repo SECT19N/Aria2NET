@@ -130,7 +130,7 @@
             <ListView x:Name="DownloadList" Grid.Row="1" ItemsSource="{x:Bind ViewModel.Rows}" SelectionMode="Extended"
                       Visibility="{x:Bind ViewModel.HasRows, Mode=OneWay}"
                       SelectionChanged="List_SelectionChanged" PreviewKeyDown="List_KeyDown" ContextRequested="List_ContextRequested"
-                      DoubleTapped="List_DoubleTapped">
+                      DoubleTapped="List_DoubleTapped" ContainerContentChanging="List_ContainerContentChanging">
                 <FlyoutBase.AttachedFlyout>
                     <MenuFlyout x:Name="RowMenu">
                         <MenuFlyoutItem x:Uid="DownloadsPage_MenuFlyoutItem3" Text="Pause" Click="Pause_Click" IsEnabled="{x:Bind ViewModel.CanPause, Mode=OneWay}" KeyboardAcceleratorTextOverride="Space">
