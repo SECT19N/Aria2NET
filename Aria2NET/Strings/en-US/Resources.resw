@@ -1622,4 +1622,58 @@ Keep both files (the new one gets a number), or replace the existing file?</valu
   <data name="History_AllTypes" xml:space="preserve">
     <value>All types</value>
   </data>
+  <data name="SettingsPage_UpdatesHeader.Text" xml:space="preserve">
+    <value>Updates</value>
+  </data>
+  <data name="SettingsPage_AutoUpdateBox.Content" xml:space="preserve">
+    <value>Check for updates automatically and download them in the background</value>
+  </data>
+  <data name="SettingsPage_PreReleaseBox.Content" xml:space="preserve">
+    <value>Include pre-releases (every version before 1.0 is one)</value>
+  </data>
+  <data name="SettingsPage_CheckUpdatesButton.Content" xml:space="preserve">
+    <value>Check for updates now</value>
+  </data>
+  <data name="SettingsPage_RestartUpdateButton.Content" xml:space="preserve">
+    <value>Restart to update</value>
+  </data>
+  <data name="Update_ReadyTitle" xml:space="preserve">
+    <value>Update ready</value>
+  </data>
+  <data name="Update_ReadyMessage" xml:space="preserve">
+    <value>Aria2NET {0} is downloaded. Restart to install it; your downloads continue afterwards.</value>
+  </data>
+  <data name="Update_Restart" xml:space="preserve">
+    <value>Restart to update</value>
+  </data>
+  <data name="Update_Later" xml:space="preserve">
+    <value>Later</value>
+  </data>
+  <data name="Update_FailedTitle" xml:space="preserve">
+    <value>Could not check for updates</value>
+  </data>
+  <data name="Update_ConfirmTitle" xml:space="preserve">
+    <value>Restart to update?</value>
+  </data>
+  <data name="Update_ConfirmMessage" xml:space="preserve">
+    <value>Downloads that are running stop now and continue after the update.</value>
+  </data>
+  <data name="Update_NotInstalled" xml:space="preserve">
+    <value>This copy was not installed with Setup.exe (portable copy or a build from source), so it cannot update itself. Download a newer version from the Releases page.</value>
+  </data>
+  <data name="Update_Checking" xml:space="preserve">
+    <value>Checking for updates…</value>
+  </data>
+  <data name="Update_UpToDate" xml:space="preserve">
+    <value>Aria2NET {0} is up to date.</value>
+  </data>
+  <data name="Update_Downloading" xml:space="preserve">
+    <value>Downloading version {0}…</value>
+  </data>
+  <data name="Update_Ready" xml:space="preserve">
+    <value>Version {0} is ready. Restart to install it.</value>
+  </data>
+  <data name="Update_Failed" xml:space="preserve">
+    <value>Could not check for updates: {0}</value>
+  </data>
 </root>

@@ -10,7 +10,7 @@ on:
         required: true
         type: string
       dry_run:
-        description: 'Build and package only (zips are attached to this run); no commit, tag or release'
+        description: 'Build and package only (installer, portable zip and update packages are attached to this run); no commit, tag or release'
         required: false
         default: false
         type: boolean
@@ -73,16 +73,18 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      # Velopack builds delta packages against the previous release, so that one is downloaded first (missing on the first release: fine).
       - name: Package ${{ matrix.rid }}
         shell: pwsh
         env:
           VERSION: ${{ needs.verify.outputs.version }}
-        run: ./tools/package.ps1 -Rid ${{ matrix.rid }} -Version $env:VERSION
+          VPK_TOKEN: ${{ github.token }}
+        run: ./tools/package.ps1 -Rid ${{ matrix.rid }} -Version $env:VERSION -DownloadPrevious
 
       - uses: actions/upload-artifact@v7
         with:
           name: package-${{ matrix.rid }}
-          path: artifacts/*.zip*
+          path: artifacts/${{ matrix.rid }}/*
           if-no-files-found: error
 
   release:
@@ -96,11 +98,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      # One folder per processor: artifacts/package-win-x64 and artifacts/package-win-arm64.
       - uses: actions/download-artifact@v8
         with:
           path: artifacts
           pattern: package-*
-          merge-multiple: true
 
       - name: Commit the version bump and tag it
         shell: pwsh
@@ -121,13 +127,33 @@ jobs:
           git push --atomic origin HEAD:refs/heads/master "refs/tags/$env:TAG"
           if ($LASTEXITCODE -ne 0) { throw "Push failed. If master moved on, run the release again." }
 
-      - name: Create GitHub Release
+      # vpk creates the release (published, pre-release when asked) and uploads the packages and the update feed of each processor.
+      # --merge lets the second upload join the release the first one created.
+      - name: Create GitHub Release and upload the packages
+        shell: pwsh
         env:
-          GH_TOKEN: ${{ github.token }}
+          VPK_TOKEN: ${{ github.token }}
           TAG: ${{ needs.verify.outputs.tag }}
           VERSION: ${{ needs.verify.outputs.version }}
           PRERELEASE: ${{ needs.verify.outputs.prerelease }}
         run: |
-          flags=(--verify-tag --generate-notes --title "Aria2NET $VERSION")
-          if [ "$PRERELEASE" = "true" ]; then flags+=(--prerelease); fi
-          gh release create "$TAG" artifacts/* --repo "${{ github.repository }}" "${flags[@]}"
+          dotnet tool restore
+          foreach ($rid in 'win-x64', 'win-arm64') {
+              $vpkArgs = @('upload', 'github', '--repoUrl', "https://github.com/${{ github.repository }}", '--outputDir', "artifacts/package-$rid",
+                        '--channel', $rid, '--tag', $env:TAG, '--releaseName', "Aria2NET $env:VERSION", '--publish', '--merge')
+              if ($env:PRERELEASE -eq 'true') { $vpkArgs += '--pre' }
+              dotnet vpk @vpkArgs
+              if ($LASTEXITCODE -ne 0) { throw "vpk upload failed for $rid ($LASTEXITCODE)" }
+          }
+
+      # vpk writes no release notes of its own; use the ones GitHub generates from the commits and pull requests since the previous tag.
+      - name: Add generated release notes
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.verify.outputs.tag }}
+        run: |
+          $notes = gh api "repos/${{ github.repository }}/releases/generate-notes" -f tag_name=$env:TAG --jq .body
+          if ($LASTEXITCODE -ne 0) { throw "Could not generate release notes" }
+          Set-Content -Path release-notes.md -Value $notes -Encoding utf8
+          gh release edit $env:TAG --repo "${{ github.repository }}" --notes-file release-notes.md

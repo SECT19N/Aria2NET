@@ -66,6 +66,23 @@ public sealed partial class MainWindow : Window {
 		Close();
 	}
 
+	/// <summary>
+	/// Installs the downloaded update: asks first when downloads are running, hands the update to Velopack's updater and exits through the
+	/// normal shutdown, which stops aria2 and waits for it. The updater then swaps the files and starts the new version.
+	/// </summary>
+	public async Task RestartToUpdateAsync() {
+		if (_background.ActiveDownloads > 0) {
+			BringToFront();
+			if (!await ConfirmAsync(Loc.S("Update_ConfirmTitle", "Restart to update?"),
+				Loc.S("Update_ConfirmMessage", "Downloads that are running stop now and continue after the update."), Loc.S("Update_Restart", "Restart to update"))) {
+				return;
+			}
+		}
+		if (App.Services.GetRequiredService<UpdateService>().ApplyOnExit()) {
+			RequestExit(confirm: false);
+		}
+	}
+
 	/// <summary>Shows the window again if it was hidden to the tray or minimized, and brings it forward.</summary>
 	public void BringToFront() {
 		if (!AppWindow.IsVisible) {
