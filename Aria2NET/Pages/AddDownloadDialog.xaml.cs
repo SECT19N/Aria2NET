@@ -15,6 +15,7 @@ public sealed partial class AddDownloadDialog : ContentDialog {
 
 	private readonly HeaderPresets _presets = App.Services.GetRequiredService<HeaderPresets>();
 	private bool _loading;
+	private bool _ready;
 
 	/// <summary>The "More options" values. Empty fields are left out.</summary>
 	public AddOptions Extra {
@@ -45,6 +46,7 @@ public sealed partial class AddDownloadDialog : ContentDialog {
 		FolderBox.Text = initialFolder;
 		UrlsBox.Text = prefilledText ?? "";
 		ReloadPresets(null);
+		_ready = true;
 		Validate();
 	}
 
@@ -113,6 +115,10 @@ public sealed partial class AddDownloadDialog : ContentDialog {
 	private void FolderBox_TextChanged(object sender, TextChangedEventArgs e) => Validate();
 
 	private void Validate() {
+		// Change events (e.g. the NumberBox Value="0" defaults) fire during InitializeComponent, before every named control exists.
+		if (!_ready) {
+			return;
+		}
 		_parsed = UrlParser.Parse(UrlsBox.Text);
 		var valid = _parsed.Valid.Count;
 		var invalid = _parsed.Invalid.Count;
