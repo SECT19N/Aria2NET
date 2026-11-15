@@ -37,7 +37,7 @@ public sealed partial class AddDownloadDialog : ContentDialog {
 	private static string? NullIfBlank(string text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
 
 	private static List<string> Lines(string text) =>
-		text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+		[.. text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
 
 	private static int Limit(NumberBox box) => double.IsNaN(box.Value) ? 0 : (int) Math.Max(0, Math.Round(box.Value));
 

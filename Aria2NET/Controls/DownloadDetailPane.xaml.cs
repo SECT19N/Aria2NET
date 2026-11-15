@@ -36,15 +36,11 @@ public sealed partial class DownloadDetailPane : UserControl {
 			Detail.PropertyChanged -= OnDetailChanged;
 			Detail.Files.CollectionChanged -= OnFilesChanged;
 		}
-		if (Row is not null) {
-			Row.PropertyChanged -= OnRowChanged;
-		}
+		Row?.PropertyChanged -= OnRowChanged;
 		Row = row;
 		Detail = detail;
 		Bindings.Update();
-		if (row is not null) {
-			row.PropertyChanged += OnRowChanged;
-		}
+		row?.PropertyChanged += OnRowChanged;
 		if (detail is not null) {
 			detail.PropertyChanged += OnDetailChanged;
 			detail.Files.CollectionChanged += OnFilesChanged;
