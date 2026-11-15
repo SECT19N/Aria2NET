@@ -12,16 +12,16 @@ public static class TrayBadge {
 
 	/// <summary>Paints an opaque dot with a white rim into the bottom-right corner of a <paramref name="size"/> x <paramref name="size"/> BGRA image.</summary>
 	public static void Paint(byte[] bgra, int size, (byte R, byte G, byte B) color) {
-		var radius = Math.Max(3.0, size * 0.25);
-		var centre = size - radius - 1.5;
-		for (var y = 0; y < size; y++) {
-			for (var x = 0; x < size; x++) {
-				var distance = Math.Sqrt((x + 0.5 - centre) * (x + 0.5 - centre) + (y + 0.5 - centre) * (y + 0.5 - centre));
+		double radius = Math.Max(3.0, size * 0.25);
+		double centre = size - radius - 1.5;
+		for (int y = 0; y < size; y++) {
+			for (int x = 0; x < size; x++) {
+				double distance = Math.Sqrt((x + 0.5 - centre) * (x + 0.5 - centre) + (y + 0.5 - centre) * (y + 0.5 - centre));
 				if (distance > radius + 1) {
 					continue;
 				}
-				var i = (y * size + x) * 4;
-				var (r, g, b) = distance <= radius ? color : ((byte) 255, (byte) 255, (byte) 255);
+				int i = (y * size + x) * 4;
+				(byte r, byte g, byte b) = distance <= radius ? color : ((byte) 255, (byte) 255, (byte) 255);
 				bgra[i] = b;
 				bgra[i + 1] = g;
 				bgra[i + 2] = r;

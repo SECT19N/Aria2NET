@@ -21,7 +21,7 @@ public class TorrentModelTests {
 
 	[Fact]
 	public void Active_with_seeder_true_is_Seeding_and_carries_torrent_fields() {
-		var item = Parse(SeedingStatus);
+		DownloadItem item = Parse(SeedingStatus);
 
 		Assert.Equal(DownloadStatus.Seeding, item.Status);
 		Assert.True(item.IsTorrent);
@@ -40,7 +40,7 @@ public class TorrentModelTests {
 
 	[Fact]
 	public void Download_without_the_seeder_flag_stays_Active() {
-		var item = Parse("""{"gid":"d","status":"active","seeder":"false","infoHash":"abc","bittorrent":{"info":{"name":"x"}},"files":[]}""");
+		DownloadItem item = Parse("""{"gid":"d","status":"active","seeder":"false","infoHash":"abc","bittorrent":{"info":{"name":"x"}},"files":[]}""");
 
 		Assert.Equal(DownloadStatus.Active, item.Status);
 		Assert.True(item.IsTorrent);
@@ -48,7 +48,7 @@ public class TorrentModelTests {
 
 	[Fact]
 	public void Plain_http_download_is_not_a_torrent() {
-		var item = Parse("""{"gid":"h","status":"active","files":[{"path":"C:/dl/a.zip","uris":[{"uri":"https://x/a.zip"}]}]}""");
+		DownloadItem item = Parse("""{"gid":"h","status":"active","files":[{"path":"C:/dl/a.zip","uris":[{"uri":"https://x/a.zip"}]}]}""");
 
 		Assert.False(item.IsTorrent);
 		Assert.Null(item.InfoHash);
@@ -57,7 +57,7 @@ public class TorrentModelTests {
 
 	[Fact]
 	public void Magnet_placeholder_is_recognised_as_fetching_metadata_and_has_no_openable_path() {
-		var item = Parse("""
+		DownloadItem item = Parse("""
 			{"gid":"m","status":"active","infoHash":"4CDD3A2EECBFD4A4C3CF40E93963A2F6957E1B7D","bittorrent":{"announceList":[["http://t/announce"]]},
 			 "totalLength":"0","completedLength":"0","files":[{"index":"1","path":"[METADATA]lonely","length":"0","uris":[]}],"followedBy":["f1"]}
 			""");
@@ -71,7 +71,7 @@ public class TorrentModelTests {
 
 	[Fact]
 	public void Finished_metadata_placeholder_is_no_longer_fetching() {
-		var item = Parse("""{"gid":"m","status":"complete","infoHash":"abc","bittorrent":{},"files":[{"path":"[METADATA]x"}]}""");
+		DownloadItem item = Parse("""{"gid":"m","status":"complete","infoHash":"abc","bittorrent":{},"files":[{"path":"[METADATA]x"}]}""");
 
 		Assert.False(item.IsFetchingMetadata);
 		Assert.True(item.IsMetadata);
@@ -79,14 +79,14 @@ public class TorrentModelTests {
 
 	[Fact]
 	public void Metadata_placeholder_without_a_name_falls_back_to_the_info_hash() {
-		var item = Parse("""{"gid":"m","status":"active","infoHash":"abcdef","bittorrent":{},"files":[{"path":"[METADATA]"}]}""");
+		DownloadItem item = Parse("""{"gid":"m","status":"active","infoHash":"abcdef","bittorrent":{},"files":[{"path":"[METADATA]"}]}""");
 
 		Assert.Equal("abcdef", item.Name);
 	}
 
 	[Fact]
 	public void Global_stats_read_the_upload_speed() {
-		var stats = GlobalStats.FromJson(Json("""{"downloadSpeed":"10","uploadSpeed":"20","numActive":"1","numWaiting":"2","numStopped":"3"}"""));
+		GlobalStats stats = GlobalStats.FromJson(Json("""{"downloadSpeed":"10","uploadSpeed":"20","numActive":"1","numWaiting":"2","numStopped":"3"}"""));
 
 		Assert.Equal(20, stats.UploadSpeed);
 		Assert.Equal(10, stats.DownloadSpeed);
@@ -94,7 +94,7 @@ public class TorrentModelTests {
 
 	[Fact]
 	public void Seeding_counts_as_live_and_can_be_paused_and_limited() {
-		var seeding = Parse(SeedingStatus);
+		DownloadItem seeding = Parse(SeedingStatus);
 
 		Assert.True(DownloadCapabilities.IsLive(seeding));
 		Assert.True(DownloadCapabilities.CanPause(seeding));
@@ -105,8 +105,8 @@ public class TorrentModelTests {
 
 	[Fact]
 	public void Filters_put_seeding_torrents_under_Seeding_and_Torrents_but_not_Downloading() {
-		var seeding = Parse(SeedingStatus);
-		var http = Parse("""{"gid":"h","status":"active","files":[{"path":"C:/dl/a.zip"}]}""");
+		DownloadItem seeding = Parse(SeedingStatus);
+		DownloadItem http = Parse("""{"gid":"h","status":"active","files":[{"path":"C:/dl/a.zip"}]}""");
 
 		Assert.True(DownloadView.Matches(StatusFilter.Seeding, seeding));
 		Assert.True(DownloadView.Matches(StatusFilter.Torrents, seeding));
@@ -118,10 +118,10 @@ public class TorrentModelTests {
 
 	[Fact]
 	public void Recheck_and_seeding_rules_apply_to_live_torrents_only() {
-		var seeding = Parse(SeedingStatus);
-		var http = Parse("""{"gid":"h","status":"active","files":[{"path":"C:/dl/a.zip"}]}""");
-		var placeholder = Parse("""{"gid":"m","status":"active","infoHash":"abc","bittorrent":{},"files":[{"path":"[METADATA]x"}]}""");
-		var finished = Parse("""{"gid":"c","status":"complete","infoHash":"abc","bittorrent":{"info":{"name":"x"}},"files":[{"path":"C:/dl/x"}]}""");
+		DownloadItem seeding = Parse(SeedingStatus);
+		DownloadItem http = Parse("""{"gid":"h","status":"active","files":[{"path":"C:/dl/a.zip"}]}""");
+		DownloadItem placeholder = Parse("""{"gid":"m","status":"active","infoHash":"abc","bittorrent":{},"files":[{"path":"[METADATA]x"}]}""");
+		DownloadItem finished = Parse("""{"gid":"c","status":"complete","infoHash":"abc","bittorrent":{"info":{"name":"x"}},"files":[{"path":"C:/dl/x"}]}""");
 
 		Assert.True(DownloadCapabilities.CanRecheck(seeding));
 		Assert.True(DownloadCapabilities.CanChangeSeeding(seeding));
@@ -132,11 +132,11 @@ public class TorrentModelTests {
 
 	[Fact]
 	public void A_multi_file_torrent_has_no_single_file_to_open_but_a_single_file_one_does() {
-		using var temp = new TempDir();
-		var file = Path.Combine(temp.Path, "one.iso").Replace('\\', '/');
+		using TempDir temp = new TempDir();
+		string file = Path.Combine(temp.Path, "one.iso").Replace('\\', '/');
 		File.WriteAllText(file, "x");
-		var multi = Parse(SeedingStatus.Replace("C:/dl/My Album/01.mp3", file));
-		var single = Parse("{\"gid\":\"s\",\"status\":\"complete\",\"infoHash\":\"abc\",\"bittorrent\":{\"info\":{\"name\":\"one.iso\"}},\"files\":[{\"path\":\"" + file + "\"}]}");
+		DownloadItem multi = Parse(SeedingStatus.Replace("C:/dl/My Album/01.mp3", file));
+		DownloadItem single = Parse("{\"gid\":\"s\",\"status\":\"complete\",\"infoHash\":\"abc\",\"bittorrent\":{\"info\":{\"name\":\"one.iso\"}},\"files\":[{\"path\":\"" + file + "\"}]}");
 
 		Assert.Equal(2, multi.FileCount);
 		Assert.False(DownloadCapabilities.CanOpenFile(multi));
@@ -155,14 +155,14 @@ public class TorrentRpcTests {
 
 	[Fact]
 	public async Task AddTorrent_sends_base64_webseeds_and_options_and_returns_the_gid() {
-		var handler = new FakeHandler((_, _) => Json("\"gid1\""));
+		FakeHandler handler = new FakeHandler((_, _) => Json("\"gid1\""));
 		byte[] torrent = [1, 2, 3, 250];
 
-		var gid = await Client(handler).AddTorrentAsync(torrent, new Dictionary<string, string> { ["pause"] = "true" }, ["http://seed/x"]);
+		string gid = await Client(handler).AddTorrentAsync(torrent, new Dictionary<string, string> { ["pause"] = "true" }, ["http://seed/x"]);
 
 		Assert.Equal("gid1", gid);
-		var sent = Sent(handler);
-		var p = sent.GetProperty("params");
+		JsonElement sent = Sent(handler);
+		JsonElement p = sent.GetProperty("params");
 		Assert.Equal("aria2.addTorrent", sent.GetProperty("method").GetString());
 		Assert.Equal("token:s3cret", p[0].GetString());
 		Assert.Equal(Convert.ToBase64String(torrent), p[1].GetString());
@@ -172,11 +172,11 @@ public class TorrentRpcTests {
 
 	[Fact]
 	public async Task AddTorrent_without_options_still_sends_an_empty_uri_list_and_options_object() {
-		var handler = new FakeHandler((_, _) => Json("\"g\""));
+		FakeHandler handler = new FakeHandler((_, _) => Json("\"g\""));
 
 		await Client(handler).AddTorrentAsync([1]);
 
-		var p = Sent(handler).GetProperty("params");
+		JsonElement p = Sent(handler).GetProperty("params");
 		Assert.Equal(JsonValueKind.Array, p[2].ValueKind);
 		Assert.Equal(0, p[2].GetArrayLength());
 		Assert.Equal(JsonValueKind.Object, p[3].ValueKind);
@@ -184,13 +184,13 @@ public class TorrentRpcTests {
 
 	[Fact]
 	public async Task AddMetalink_returns_every_gid() {
-		var handler = new FakeHandler((_, _) => Json("[\"a\",\"b\"]"));
+		FakeHandler handler = new FakeHandler((_, _) => Json("[\"a\",\"b\"]"));
 
-		var gids = await Client(handler).AddMetalinkAsync([9, 9], new Dictionary<string, string> { ["dir"] = "C:\\dl" });
+		IReadOnlyList<string> gids = await Client(handler).AddMetalinkAsync([9, 9], new Dictionary<string, string> { ["dir"] = "C:\\dl" });
 
 		Assert.Equal(["a", "b"], gids);
-		var sent = Sent(handler);
-		var p = sent.GetProperty("params");
+		JsonElement sent = Sent(handler);
+		JsonElement p = sent.GetProperty("params");
 		Assert.Equal("aria2.addMetalink", sent.GetProperty("method").GetString());
 		Assert.Equal(Convert.ToBase64String([9, 9]), p[1].GetString());
 		Assert.Equal("C:\\dl", p[2].GetProperty("dir").GetString());
@@ -198,9 +198,9 @@ public class TorrentRpcTests {
 
 	[Fact]
 	public async Task GetFiles_parses_index_selection_and_progress() {
-		var handler = new FakeHandler((_, _) => Json("""[{"index":"1","path":"a/b.bin","length":"100","completedLength":"40","selected":"true"},{"index":"2","path":"c.bin","length":"5","completedLength":"0","selected":"false"}]"""));
+		FakeHandler handler = new FakeHandler((_, _) => Json("""[{"index":"1","path":"a/b.bin","length":"100","completedLength":"40","selected":"true"},{"index":"2","path":"c.bin","length":"5","completedLength":"0","selected":"false"}]"""));
 
-		var files = await Client(handler).GetFilesAsync("g");
+		IReadOnlyList<DownloadFile> files = await Client(handler).GetFilesAsync("g");
 
 		Assert.Equal(new DownloadFile(1, "a/b.bin", 100, 40, true), files[0]);
 		Assert.False(files[1].Selected);
@@ -209,9 +209,9 @@ public class TorrentRpcTests {
 
 	[Fact]
 	public async Task GetPeers_parses_and_decodes_the_peer_id() {
-		var handler = new FakeHandler((_, _) => Json("""[{"peerId":"-qB4650-%AB%CD","ip":"10.0.0.2","port":"6881","bitfield":"ff","amChoking":"false","peerChoking":"true","downloadSpeed":"7","uploadSpeed":"9","seeder":"true"}]"""));
+		FakeHandler handler = new FakeHandler((_, _) => Json("""[{"peerId":"-qB4650-%AB%CD","ip":"10.0.0.2","port":"6881","bitfield":"ff","amChoking":"false","peerChoking":"true","downloadSpeed":"7","uploadSpeed":"9","seeder":"true"}]"""));
 
-		var peer = Assert.Single(await Client(handler).GetPeersAsync("g"));
+		PeerInfo peer = Assert.Single(await Client(handler).GetPeersAsync("g"));
 
 		Assert.StartsWith("-qB4650-", peer.PeerId);
 		Assert.Equal("10.0.0.2", peer.Ip);
@@ -225,41 +225,52 @@ public class TorrentRpcTests {
 
 	[Fact]
 	public async Task Poll_asks_for_the_torrent_status_keys() {
-		var handler = new FakeHandler((_, _) => Json("""[[[]],[[]],[[]],[{"downloadSpeed":"0","uploadSpeed":"5"}]]"""));
+		FakeHandler handler = new FakeHandler((_, _) => Json("""[[[]],[[]],[[]],[{"downloadSpeed":"0","uploadSpeed":"5"}]]"""));
 
-		var snapshot = await Client(handler).PollAsync();
+		PollSnapshot snapshot = await Client(handler).PollAsync();
 
 		Assert.Equal(5, snapshot.Stats.UploadSpeed);
-		var body = handler.Bodies.Single();
-		foreach (var key in new[] { "infoHash", "seeder", "uploadSpeed", "uploadLength", "numSeeders", "connections", "followedBy", "belongsTo" }) {
+		string body = handler.Bodies.Single();
+		foreach (string? key in new[] { "infoHash", "seeder", "uploadSpeed", "uploadLength", "numSeeders", "connections", "followedBy", "belongsTo" }) {
 			Assert.Contains("\"" + key + "\"", body);
 		}
 	}
 }
 
-public class TorrentSummaryTests {
-	private static DownloadItem T(DownloadStatus status, int connections, bool metadata = false) =>
-		new("g", "n", status, 1, 1, 0, null, null, null, IsTorrent: true, Connections: connections, IsMetadata: metadata);
+public class StatusCountsTests {
+	private static DownloadItem T(DownloadStatus status, int connections, bool metadata = false, bool torrent = true) =>
+		new("g", "n", status, 1, 1, 0, null, null, null, IsTorrent: torrent, Connections: connections, IsMetadata: metadata);
 
 	[Fact]
-	public void Says_nothing_without_running_torrents() {
-		Assert.Equal("", TorrentSummary.Describe(new PollSnapshot([T(DownloadStatus.Paused, 0), T(DownloadStatus.Complete, 0)], GlobalStats.Empty)));
-		Assert.Equal("", TorrentSummary.Describe(new PollSnapshot([], GlobalStats.Empty)));
+	public void Is_all_zero_without_downloads() {
+		Assert.Equal(StatusCounts.Empty, StatusCounts.From(new PollSnapshot([], GlobalStats.Empty)));
 	}
 
 	[Fact]
-	public void Summarises_seeding_upload_speed_and_peers() {
-		var snapshot = new PollSnapshot([T(DownloadStatus.Seeding, 4), T(DownloadStatus.Active, 7), T(DownloadStatus.Seeding, 1, metadata: true)], new GlobalStats(0, 2, 0, 0, 2048));
+	public void Counts_each_state_and_takes_the_speeds_from_aria2() {
+		PollSnapshot snapshot = new PollSnapshot([
+			T(DownloadStatus.Active, 7),
+			T(DownloadStatus.Active, 2, torrent: false),
+			T(DownloadStatus.Waiting, 0),
+			T(DownloadStatus.Paused, 0),
+			T(DownloadStatus.Seeding, 4),
+			T(DownloadStatus.Complete, 0),
+			T(DownloadStatus.Complete, 0),
+			T(DownloadStatus.Error, 0),
+			T(DownloadStatus.Removed, 0),
+		], new GlobalStats(4096, 2, 1, 4, 2048));
 
-		Assert.Equal("1 seeding · ↑ 2.00 KiB/s · 11 peers", TorrentSummary.Describe(snapshot));
+		Assert.Equal(new StatusCounts(4096, 2048, Active: 2, Waiting: 1, Paused: 1, Seeding: 1, Completed: 2, Failed: 2, Peers: 11), StatusCounts.From(snapshot));
 	}
 
 	[Fact]
-	public void Leaves_out_the_seeding_part_when_nothing_seeds() {
-		var text = TorrentSummary.Describe(new PollSnapshot([T(DownloadStatus.Active, 3)], GlobalStats.Empty));
+	public void Leaves_out_a_finished_magnet_placeholder_and_the_peers_of_metadata_fetches() {
+		PollSnapshot snapshot = new PollSnapshot([T(DownloadStatus.Complete, 0, metadata: true), T(DownloadStatus.Active, 5, metadata: true), T(DownloadStatus.Paused, 9)], GlobalStats.Empty);
 
-		Assert.StartsWith("↑ ", text);
-		Assert.EndsWith(" · 3 peers", text);
-		Assert.DoesNotContain("seeding", text);
+		StatusCounts counts = StatusCounts.From(snapshot);
+
+		Assert.Equal(0, counts.Completed);
+		Assert.Equal(1, counts.Active);
+		Assert.Equal(0, counts.Peers);
 	}
 }

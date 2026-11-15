@@ -19,10 +19,10 @@ public static class UrlParser {
 
 	/// <summary>Splits pasted text into tokens (whitespace separated), trims, drops duplicates and sorts into valid and invalid.</summary>
 	public static UrlParseResult Parse(string? text) {
-		var valid = new List<string>();
-		var invalid = new List<string>();
-		var seen = new HashSet<string>(StringComparer.Ordinal);
-		foreach (var token in Tokens(text)) {
+		List<string> valid = [];
+		List<string> invalid = [];
+		HashSet<string> seen = [with(StringComparer.Ordinal)];
+		foreach (string token in Tokens(text)) {
 			if (!seen.Add(token)) {
 				continue;
 			}
@@ -37,7 +37,7 @@ public static class UrlParser {
 		if (token.StartsWith("magnet:?", StringComparison.OrdinalIgnoreCase)) {
 			return token.Contains("xt=", StringComparison.OrdinalIgnoreCase) ? LinkKind.Magnet : LinkKind.Unsupported;
 		}
-		if (Uri.TryCreate(token, UriKind.Absolute, out var uri) && Schemes.Contains(uri.Scheme, StringComparer.OrdinalIgnoreCase)) {
+		if (Uri.TryCreate(token, UriKind.Absolute, out Uri? uri) && Schemes.Contains(uri.Scheme, StringComparer.OrdinalIgnoreCase)) {
 			return string.IsNullOrEmpty(uri.Host) ? LinkKind.Unsupported : LinkKind.Uri;
 		}
 		if (Path.IsPathFullyQualified(token) && token.IndexOfAny(Path.GetInvalidPathChars()) < 0) {
@@ -52,13 +52,13 @@ public static class UrlParser {
 
 	// A path with spaces can be pasted in quotes: "C:\My Files\a.torrent".
 	private static IEnumerable<string> Tokens(string? text) {
-		foreach (var line in (text ?? "").Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)) {
-			var trimmed = line.Trim();
+		foreach (string line in (text ?? "").Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)) {
+			string trimmed = line.Trim();
 			if (trimmed.Length >= 2 && trimmed[0] == '"' && trimmed[^1] == '"') {
 				yield return trimmed[1..^1];
 				continue;
 			}
-			foreach (var token in trimmed.Split((char[]?) null, StringSplitOptions.RemoveEmptyEntries)) {
+			foreach (string token in trimmed.Split((char[]?) null, StringSplitOptions.RemoveEmptyEntries)) {
 				yield return token;
 			}
 		}

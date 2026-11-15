@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Windows.Foundation;
 using Windows.Storage.Pickers;
 using Windows.System;
 using WinRT.Interop;
@@ -19,7 +20,38 @@ public sealed partial class HistoryPage : Page {
 		InitializeComponent();
 	}
 
-	private async void Page_Loaded(object sender, RoutedEventArgs e) => await ViewModel.ReloadAsync();
+	private async void Page_Loaded(object sender, RoutedEventArgs e) {
+		ViewModel.Rows.CollectionChanged += Rows_Changed;
+		if (_reveal is { } target) {
+			_reveal = null;
+			await RevealEntryAsync(target);
+		} else {
+			await ViewModel.ReloadAsync();
+		}
+	}
+
+	private HistoryTarget? _reveal;
+
+	protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e) {
+		base.OnNavigatedTo(e);
+		_reveal = e.Parameter as HistoryTarget;
+	}
+
+	/// <summary>Lists the entry found by the title-bar search (by searching for its name), then selects it.</summary>
+	public async Task RevealEntryAsync(HistoryTarget target) {
+		await ViewModel.ShowOnlyAsync(target.Name);
+		if (ViewModel.Rows.FirstOrDefault(r => r.Entry.Id == target.Id) is { } row) {
+			HistoryList.SelectedItem = row;
+			HistoryList.ScrollIntoView(row);
+			HistoryList.Focus(FocusState.Programmatic);
+		}
+	}
+
+	private void Page_Unloaded(object sender, RoutedEventArgs e) => ViewModel.Rows.CollectionChanged -= Rows_Changed;
+
+	private void Rows_Changed(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) => RowStripes.RefreshLater(HistoryList);
+
+	private void List_ContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args) => RowStripes.Apply(args);
 
 	private void Find_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args) {
 		args.Handled = true;
@@ -47,11 +79,11 @@ public sealed partial class HistoryPage : Page {
 
 	private void List_ContextRequested(UIElement sender, ContextRequestedEventArgs args) {
 		args.Handled = true;
-		var menu = FlyoutBase.GetAttachedFlyout(HistoryList);
-		if (args.TryGetPosition(HistoryList, out var point)) {
+		FlyoutBase menu = FlyoutBase.GetAttachedFlyout(HistoryList);
+		if (args.TryGetPosition(HistoryList, out Point point)) {
 			// Right-clicking a row outside the selection selects just that row first.
-			var host = HistoryList.TransformToVisual(null).TransformPoint(point);
-			var hit = VisualTreeHelper.FindElementsInHostCoordinates(host, HistoryList)
+			Windows.Foundation.Point host = HistoryList.TransformToVisual(null).TransformPoint(point);
+			HistoryRowViewModel? hit = VisualTreeHelper.FindElementsInHostCoordinates(host, HistoryList)
 				.OfType<FrameworkElement>()
 				.Select(el => el.DataContext)
 				.OfType<HistoryRowViewModel>()
@@ -90,7 +122,7 @@ public sealed partial class HistoryPage : Page {
 	private async void Redownload_Click(object sender, RoutedEventArgs e) => await StartAgainAsync(null);
 
 	private async void DownloadTo_Click(object sender, RoutedEventArgs e) {
-		var picker = new FolderPicker();
+		FolderPicker picker = new();
 		picker.FileTypeFilter.Add("*");
 		InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(App.Window));
 		if (await picker.PickSingleFolderAsync() is { } folder) {
@@ -99,7 +131,7 @@ public sealed partial class HistoryPage : Page {
 	}
 
 	private async Task StartAgainAsync(string? folder) {
-		var started = await ViewModel.RedownloadAsync(folder);
+		int started = await ViewModel.RedownloadAsync(folder);
 		if (started > 0) {
 			App.Services.GetRequiredService<NoticeCenter>().Post(new Notice(
 				started == 1 ? Loc.S("History_StartedOne", "Download started") : Loc.F("History_StartedMany", "{0} downloads started", started),
@@ -116,7 +148,7 @@ public sealed partial class HistoryPage : Page {
 	private async void Delete_Click(object sender, RoutedEventArgs e) => await ConfirmAndDeleteAsync();
 
 	private async Task ConfirmAndDeleteAsync() {
-		var count = ViewModel.SelectedCount;
+		int count = ViewModel.SelectedCount;
 		if (count == 0) {
 			return;
 		}
@@ -138,7 +170,7 @@ public sealed partial class HistoryPage : Page {
 	private async void ExportJson_Click(object sender, RoutedEventArgs e) => await ExportAsync(json: true);
 
 	private async Task ExportAsync(bool json) {
-		var picker = new FileSavePicker { SuggestedFileName = "aria2net-history", SuggestedStartLocation = PickerLocationId.DocumentsLibrary };
+		FileSavePicker picker = new() { SuggestedFileName = "aria2net-history", SuggestedStartLocation = PickerLocationId.DocumentsLibrary };
 		picker.FileTypeChoices.Add(json ? "JSON" : "CSV (opens in Excel)", [json ? ".json" : ".csv"]);
 		InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(App.Window));
 		if (await picker.PickSaveFileAsync() is { } file) {

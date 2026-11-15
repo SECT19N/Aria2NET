@@ -15,7 +15,7 @@ public sealed partial class RenameDialog : ContentDialog {
 	private void NameBox_TextChanged(object sender, TextChangedEventArgs e) => Validate();
 
 	private void Validate() {
-		var name = NewName;
+		string name = NewName;
 		if (name.Length == 0) {
 			ErrorText.Text = Loc.S("Rename_Empty", "Enter a file name.");
 		} else if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) {

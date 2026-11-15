@@ -17,7 +17,7 @@ public static class ShellLauncher {
 	/// aria2 joins paths with a forward slash (<c>C:\Downloads/a.zip</c>) and Explorer ignores such a path, showing a generic window, so they are normalised first.
 	/// </summary>
 	public static string FolderArguments(string dir, string? file) {
-		var folder = Normalize(dir) ?? dir;
+		string folder = Normalize(dir) ?? dir;
 		if (file is not null && Normalize(file) is { } full && Highlight(folder, full) is { } target) {
 			return $"/select,\"{target}\"";
 		}
@@ -32,11 +32,11 @@ public static class ShellLauncher {
 	/// that top-level folder, which is what the download is. Null when nothing is there yet.
 	/// </summary>
 	private static string? Highlight(string dir, string file) {
-		var relative = Path.GetRelativePath(dir, file);
+		string relative = Path.GetRelativePath(dir, file);
 		if (!relative.StartsWith("..", StringComparison.Ordinal) && !Path.IsPathRooted(relative)) {
-			var separator = relative.IndexOf(Path.DirectorySeparatorChar);
+			int separator = relative.IndexOf(Path.DirectorySeparatorChar);
 			if (separator > 0) {
-				var top = Path.Combine(dir, relative[..separator]);
+				string top = Path.Combine(dir, relative[..separator]);
 				if (Directory.Exists(top)) {
 					return top;
 				}

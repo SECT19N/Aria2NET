@@ -1,6 +1,7 @@
 using Aria2NET.Core.Downloads;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml.Controls;
+using Windows.Storage;
 using Windows.Storage.Pickers;
 using WinRT.Interop;
 
@@ -15,12 +16,13 @@ public sealed partial class AddDownloadDialog : ContentDialog {
 
 	private readonly HeaderPresets _presets = App.Services.GetRequiredService<HeaderPresets>();
 	private bool _loading;
+	private bool _ready;
 
 	/// <summary>The "More options" values. Empty fields are left out.</summary>
 	public AddOptions Extra {
 		get {
-			var user = UserBox.Text.Trim();
-			var password = PasswordBox.Password;
+			string user = UserBox.Text.Trim();
+			string password = PasswordBox.Password;
 			return new AddOptions(
 				Lines(HeadersBox.Text),
 				NullIfBlank(RefererBox.Text),
@@ -36,7 +38,7 @@ public sealed partial class AddDownloadDialog : ContentDialog {
 	private static string? NullIfBlank(string text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
 
 	private static List<string> Lines(string text) =>
-		text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+		[.. text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
 
 	private static int Limit(NumberBox box) => double.IsNaN(box.Value) ? 0 : (int) Math.Max(0, Math.Round(box.Value));
 
@@ -45,6 +47,7 @@ public sealed partial class AddDownloadDialog : ContentDialog {
 		FolderBox.Text = initialFolder;
 		UrlsBox.Text = prefilledText ?? "";
 		ReloadPresets(null);
+		_ready = true;
 		Validate();
 	}
 
@@ -52,7 +55,7 @@ public sealed partial class AddDownloadDialog : ContentDialog {
 		_loading = true;
 		try {
 			PresetBox.Items.Clear();
-			foreach (var preset in _presets.List()) {
+			foreach (HeaderPreset preset in _presets.List()) {
 				PresetBox.Items.Add(preset.Name);
 			}
 			PresetBox.SelectedItem = select;
@@ -87,8 +90,8 @@ public sealed partial class AddDownloadDialog : ContentDialog {
 			e.Handled = true;
 		} else if (e.Key == Windows.System.VirtualKey.Enter) {
 			e.Handled = true; // keep Enter from pressing the dialog's Download button
-			var name = PresetNameBox.Text.Trim();
-			var error = _presets.Save(name, Lines(HeadersBox.Text), NullIfBlank(RefererBox.Text), NullIfBlank(CookieBox.Text));
+			string name = PresetNameBox.Text.Trim();
+			string? error = _presets.Save(name, Lines(HeadersBox.Text), NullIfBlank(RefererBox.Text), NullIfBlank(CookieBox.Text));
 			OptionsError.Text = error ?? "";
 			if (error is null) {
 				PresetNameBox.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
@@ -113,9 +116,13 @@ public sealed partial class AddDownloadDialog : ContentDialog {
 	private void FolderBox_TextChanged(object sender, TextChangedEventArgs e) => Validate();
 
 	private void Validate() {
+		// Change events (e.g. the NumberBox Value="0" defaults) fire during InitializeComponent, before every named control exists.
+		if (!_ready) {
+			return;
+		}
 		_parsed = UrlParser.Parse(UrlsBox.Text);
-		var valid = _parsed.Valid.Count;
-		var invalid = _parsed.Invalid.Count;
+		int valid = _parsed.Valid.Count;
+		int invalid = _parsed.Invalid.Count;
 		ValidationText.Text = (valid, invalid) switch {
 			(0, 0) => "",
 			(0, _) => Loc.F("Add_NothingUsable", "Nothing usable. Use http, https, ftp, sftp, a magnet link or a .torrent/.metalink file. Not recognized: {0}", invalid),
@@ -126,7 +133,7 @@ public sealed partial class AddDownloadDialog : ContentDialog {
 		if (!FileNameBox.IsEnabled) {
 			FileNameBox.Text = "";
 		}
-		var problem = Extra.Validate();
+		string? problem = Extra.Validate();
 		if (!_loading && PresetNameBox.Visibility != Microsoft.UI.Xaml.Visibility.Visible) {
 			OptionsError.Text = problem ?? "";
 		}
@@ -137,26 +144,26 @@ public sealed partial class AddDownloadDialog : ContentDialog {
 	}
 
 	private async void Browse_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e) {
-		var picker = new FolderPicker();
+		FolderPicker picker = new FolderPicker();
 		picker.FileTypeFilter.Add("*");
 		InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(App.Window));
-		var folder = await picker.PickSingleFolderAsync();
+		StorageFolder folder = await picker.PickSingleFolderAsync();
 		if (folder is not null) {
 			FolderBox.Text = folder.Path;
 		}
 	}
 
 	private async void BrowseFiles_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e) {
-		var picker = new FileOpenPicker();
-		foreach (var extension in new[] { ".torrent", ".metalink", ".meta4" }) {
+		FileOpenPicker picker = new FileOpenPicker();
+		foreach (string extension in new[] { ".torrent", ".metalink", ".meta4" }) {
 			picker.FileTypeFilter.Add(extension);
 		}
 		InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(App.Window));
-		var files = await picker.PickMultipleFilesAsync();
+		IReadOnlyList<StorageFile> files = await picker.PickMultipleFilesAsync();
 		if (files is null || files.Count == 0) {
 			return;
 		}
-		var lines = files.Select(f => "\"" + f.Path + "\"");
+		IEnumerable<string> lines = files.Select(f => "\"" + f.Path + "\"");
 		UrlsBox.Text = string.Join("\r\n", UrlsBox.Text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Concat(lines));
 	}
 }

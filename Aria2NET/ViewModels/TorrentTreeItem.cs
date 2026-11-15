@@ -23,7 +23,7 @@ public sealed partial class TorrentTreeItem : ObservableObject {
 		_changed = changed;
 		_expandedChanged = expandedChanged;
 		Depth = depth;
-		Children = node.Children.Select(c => new TorrentTreeItem(c, depth + 1, changed, expandedChanged)).ToList();
+		Children = [.. node.Children.Select(c => new TorrentTreeItem(c, depth + 1, changed, expandedChanged))];
 		node.PropertyChanged += (_, _) => OnPropertyChanged(nameof(IsChecked));
 	}
 
@@ -70,7 +70,7 @@ public sealed partial class TorrentTreeItem : ObservableObject {
 		if (Children.Count > 0) {
 			SetExpanded(value);
 		}
-		foreach (var child in Children) {
+		foreach (TorrentTreeItem child in Children) {
 			child.SetExpandedAll(value);
 		}
 	}
@@ -80,9 +80,9 @@ public sealed partial class TorrentTreeItem : ObservableObject {
 		if (!_isExpanded) {
 			yield break;
 		}
-		foreach (var child in Children) {
+		foreach (TorrentTreeItem child in Children) {
 			yield return child;
-			foreach (var below in child.VisibleDescendants()) {
+			foreach (TorrentTreeItem below in child.VisibleDescendants()) {
 				yield return below;
 			}
 		}

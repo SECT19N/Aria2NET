@@ -16,11 +16,11 @@ public sealed record TaskbarProgress(TaskbarProgressState State, ulong Completed
 	public static TaskbarProgress None { get; } = new(TaskbarProgressState.None, 0, 0);
 
 	public static TaskbarProgress From(PollSnapshot snapshot) {
-		var running = 0;
-		var paused = 0;
+		int running = 0;
+		int paused = 0;
 		ulong total = 0;
 		ulong completed = 0;
-		foreach (var item in snapshot.Items) {
+		foreach (DownloadItem item in snapshot.Items) {
 			switch (item.Status) {
 				case DownloadStatus.Active or DownloadStatus.Waiting:
 					running++;

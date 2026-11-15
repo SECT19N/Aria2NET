@@ -9,25 +9,25 @@ public class BencodeTests {
 
 	[Fact]
 	public void Decodes_integers_strings_lists_and_dictionaries() {
-		var value = (Dictionary<string, object>) Bencode.Decode(Bytes("d3:bari-42e3:fool1:a2:bcee"));
+		Dictionary<string, object> value = (Dictionary<string, object>) Bencode.Decode(Bytes("d3:bari-42e3:fool1:a2:bcee"));
 
 		Assert.Equal(-42L, value["bar"]);
-		var list = (List<object>) value["foo"];
+		List<object> list = (List<object>) value["foo"];
 		Assert.Equal(Bytes("a"), (byte[]) list[0]);
 		Assert.Equal(Bytes("bc"), (byte[]) list[1]);
 	}
 
 	[Fact]
 	public void Round_trips_a_nested_value_with_sorted_keys() {
-		var dict = new Dictionary<string, object> {
+		Dictionary<string, object> dict = new Dictionary<string, object> {
 			["z"] = 1L,
 			["a"] = new List<object> { "x", 2L },
 		};
 
-		var encoded = Bencode.Encode(dict);
+		byte[] encoded = Bencode.Encode(dict);
 
 		Assert.Equal("d1:al1:xi2ee1:zi1ee", Encoding.ASCII.GetString(encoded));
-		var back = (Dictionary<string, object>) Bencode.Decode(encoded);
+		Dictionary<string, object> back = (Dictionary<string, object>) Bencode.Decode(encoded);
 		Assert.Equal(1L, back["z"]);
 	}
 
@@ -52,11 +52,11 @@ public class BencodeTests {
 	[Fact]
 	public void Finds_the_raw_info_bytes_so_the_hash_does_not_depend_on_re_encoding() {
 		// Keys deliberately out of order inside info: re-encoding would change the bytes and the hash.
-		var info = "d6:lengthi3e4:name1:ae";
-		var info2 = "d4:name1:a6:lengthi3ee";
-		var file = Bytes("d8:announce4:http4:info" + info2 + "e");
+		string info = "d6:lengthi3e4:name1:ae";
+		string info2 = "d4:name1:a6:lengthi3ee";
+		byte[] file = Bytes("d8:announce4:http4:info" + info2 + "e");
 
-		var raw = Bencode.FindRawTopLevelValue(file, "info");
+		byte[]? raw = Bencode.FindRawTopLevelValue(file, "info");
 
 		Assert.NotNull(raw);
 		Assert.Equal(Bytes(info2), raw);

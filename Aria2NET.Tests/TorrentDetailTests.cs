@@ -1,4 +1,7 @@
+using System.Diagnostics;
+using System.IO.Compression;
 using System.Text.Json;
+using Aria2NET.Core.Aria2;
 using Aria2NET.Core.Torrents;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -48,7 +51,7 @@ public class BitfieldTests {
 
 	[Fact]
 	public void Downsample_can_stretch_a_few_pieces_over_many_buckets() {
-		var bar = Bitfield.Downsample([1, 0], 4);
+		double[] bar = Bitfield.Downsample([1, 0], 4);
 
 		Assert.Equal([1.0, 1.0, 0.0, 0.0], bar);
 		Assert.Empty(Bitfield.Downsample([1], 0));
@@ -68,7 +71,7 @@ public class GeoIpResolverTests {
 
 	[Fact]
 	public void Finds_the_country_of_an_address() {
-		var geo = GeoIpResolver.FromCsv(new StringReader(Csv));
+		GeoIpResolver geo = GeoIpResolver.FromCsv(new StringReader(Csv));
 
 		Assert.Equal("US", geo.Lookup("8.8.8.8"));
 		Assert.Equal("AU", geo.Lookup("1.0.0.0"));
@@ -98,14 +101,14 @@ public class GeoIpResolverTests {
 
 	[Fact]
 	public void Reads_gzip_and_survives_a_missing_or_broken_file() {
-		using var temp = new TempDir();
-		var gz = Path.Combine(temp.Path, "db.csv.gz");
-		using (var file = File.Create(gz))
-		using (var zip = new System.IO.Compression.GZipStream(file, System.IO.Compression.CompressionMode.Compress))
-		using (var writer = new StreamWriter(zip)) {
+		using TempDir temp = new TempDir();
+		string gz = Path.Combine(temp.Path, "db.csv.gz");
+		using (FileStream file = File.Create(gz))
+		using (GZipStream zip = new System.IO.Compression.GZipStream(file, System.IO.Compression.CompressionMode.Compress))
+		using (StreamWriter writer = new StreamWriter(zip)) {
 			writer.Write(Csv);
 		}
-		var broken = Path.Combine(temp.Path, "broken.csv.gz");
+		string broken = Path.Combine(temp.Path, "broken.csv.gz");
 		File.WriteAllText(broken, "this is not gzip");
 
 		Assert.Equal("US", GeoIpResolver.Load(gz).Lookup("8.8.8.8"));
@@ -123,19 +126,19 @@ public class GeoIpResolverTests {
 public class TorrentDetailBuildTests {
 	[Fact]
 	public void Builds_overview_trackers_peers_and_bars_from_aria2_output() {
-		using var doc = JsonDocument.Parse("""
+		using JsonDocument doc = JsonDocument.Parse("""
 			{"gid":"g","status":"active","seeder":"false","infoHash":"ABCDEF","dir":"C:\\dl","totalLength":"1000","completedLength":"500",
 			 "uploadLength":"250","downloadSpeed":"100","uploadSpeed":"50","numSeeders":"3","connections":"2","numPieces":"8","pieceLength":"125",
 			 "bitfield":"f0",
 			 "bittorrent":{"comment":"hello","creationDate":"1700000000","announceList":[["http://a/announce","udp://b:1/x"],["http://c/z"]],"info":{"name":"Album"}}}
 			""");
-		var peers = new List<PeerInfo> {
+		List<PeerInfo> peers = new List<PeerInfo> {
 			new("-qB4650-xxxxxxxxxxxx", "8.8.8.8", 6881, "ff", false, false, 10, 20, true),
 			new("-TR3000-xxxxxxxxxxxx", "10.0.0.2", 51413, "0f", false, true, 0, 0, false),
 		};
-		var geo = GeoIpResolver.FromCsv(new StringReader("\"8.8.8.0\",\"8.8.8.255\",\"US\""));
+		GeoIpResolver geo = GeoIpResolver.FromCsv(new StringReader("\"8.8.8.0\",\"8.8.8.255\",\"US\""));
 
-		var snapshot = TorrentDetailLoader.Build(doc.RootElement, [new DownloadFile(1, "a", 1000, 500, true)], peers, geo);
+		TorrentDetailSnapshot snapshot = TorrentDetailLoader.Build(doc.RootElement, [new DownloadFile(1, "a", 1000, 500, true)], peers, geo);
 
 		Assert.Equal("Album", snapshot.Name);
 		Assert.Equal("abcdef", snapshot.InfoHash);
@@ -163,9 +166,9 @@ public class TorrentDetailBuildTests {
 
 	[Fact]
 	public void A_torrent_without_peers_or_pieces_yields_empty_bars_not_errors() {
-		using var doc = JsonDocument.Parse("""{"gid":"g","status":"waiting"}""");
+		using JsonDocument doc = JsonDocument.Parse("""{"gid":"g","status":"waiting"}""");
 
-		var snapshot = TorrentDetailLoader.Build(doc.RootElement, [], [], GeoIpResolver.Empty);
+		TorrentDetailSnapshot snapshot = TorrentDetailLoader.Build(doc.RootElement, [], [], GeoIpResolver.Empty);
 
 		Assert.Empty(snapshot.Peers);
 		Assert.Empty(snapshot.Trackers);
@@ -176,7 +179,7 @@ public class TorrentDetailBuildTests {
 
 	[Fact]
 	public void A_seeder_flag_turns_the_status_into_seeding() {
-		using var doc = JsonDocument.Parse("""{"gid":"g","status":"active","seeder":"true"}""");
+		using JsonDocument doc = JsonDocument.Parse("""{"gid":"g","status":"active","seeder":"true"}""");
 
 		Assert.Equal("seeding", TorrentDetailLoader.Build(doc.RootElement, [], [], GeoIpResolver.Empty).Status);
 	}
@@ -187,15 +190,15 @@ public class TorrentDetailIntegrationTests {
 	[RequiresAria2Fact]
 	public async Task Detail_of_a_downloading_torrent_shows_the_seeder_and_a_partly_filled_piece_bar() {
 		// The seeder is throttled so the download is still running while we look at it.
-		using var swarm = new Swarm([("big.bin", 800_000)], seederUploadLimit: "40K");
-		var (engine, temp) = await DownloadIntegrationTests.StartEngineAsync();
-		using var _ = temp;
-		await using var __ = engine;
-		var ops = new TorrentOperations(engine, NullLogger<TorrentOperations>.Instance);
-		var gid = await ops.AddTorrentAsync(swarm.Torrent.TorrentFile, new TorrentAddRequest(swarm.LeechDir));
+		using Swarm swarm = new Swarm([("big.bin", 800_000)], seederUploadLimit: "40K");
+		(Aria2Engine? engine, TempDir? temp) = await DownloadIntegrationTests.StartEngineAsync();
+		using TempDir _ = temp;
+		await using Aria2Engine __ = engine;
+		TorrentOperations ops = new TorrentOperations(engine, NullLogger<TorrentOperations>.Instance);
+		string gid = await ops.AddTorrentAsync(swarm.Torrent.TorrentFile, new TorrentAddRequest(swarm.LeechDir));
 
 		TorrentDetailSnapshot? snapshot = null;
-		var deadline = DateTime.UtcNow.AddSeconds(25);
+		DateTime deadline = DateTime.UtcNow.AddSeconds(25);
 		while (DateTime.UtcNow < deadline) {
 			snapshot = await TorrentDetailLoader.LoadAsync(engine.Rpc!, gid, GeoIpResolver.Empty);
 			if (snapshot.Peers.Count > 0 && snapshot.CompletedBytes > 0) {
@@ -221,17 +224,17 @@ public class TorrentDetailIntegrationTests {
 
 	[RequiresAria2Fact]
 	public async Task A_tracker_cannot_be_added_to_a_torrent_that_already_exists() {
-		using var swarm = new Swarm([("big.bin", 800_000)], seederUploadLimit: "40K");
-		var (engine, temp) = await DownloadIntegrationTests.StartEngineAsync();
-		using var _ = temp;
-		await using var __ = engine;
-		var ops = new TorrentOperations(engine, NullLogger<TorrentOperations>.Instance);
-		var gid = await ops.AddTorrentAsync(swarm.Torrent.TorrentFile, new TorrentAddRequest(swarm.LeechDir), paused: true);
+		using Swarm swarm = new Swarm([("big.bin", 800_000)], seederUploadLimit: "40K");
+		(Aria2Engine? engine, TempDir? temp) = await DownloadIntegrationTests.StartEngineAsync();
+		using TempDir _ = temp;
+		await using Aria2Engine __ = engine;
+		TorrentOperations ops = new TorrentOperations(engine, NullLogger<TorrentOperations>.Instance);
+		string gid = await ops.AddTorrentAsync(swarm.Torrent.TorrentFile, new TorrentAddRequest(swarm.LeechDir), paused: true);
 		await engine.Rpc!.ChangeOptionAsync(gid, new Dictionary<string, string> { ["bt-tracker"] = "udp://extra.example:1/announce" });
 		await engine.Rpc.UnpauseAsync([gid]);
 		await Task.Delay(1500);
 
-		var snapshot = await TorrentDetailLoader.LoadAsync(engine.Rpc, gid, GeoIpResolver.Empty);
+		TorrentDetailSnapshot snapshot = await TorrentDetailLoader.LoadAsync(engine.Rpc, gid, GeoIpResolver.Empty);
 
 		// aria2 applies bt-tracker when the torrent is added; changing it afterwards does not touch the tracker list (checked against 1.37.0).
 		Assert.DoesNotContain(snapshot.Trackers, t => t.Url == "udp://extra.example:1/announce");
@@ -240,18 +243,18 @@ public class TorrentDetailIntegrationTests {
 
 	[Fact]
 	public void The_real_database_resolves_well_known_addresses_when_it_has_been_fetched() {
-		var dir = new DirectoryInfo(AppContext.BaseDirectory);
+		DirectoryInfo? dir = new DirectoryInfo(AppContext.BaseDirectory);
 		string? file = null;
 		for (; dir is not null && file is null; dir = dir.Parent) {
-			var candidate = Path.Combine(dir.FullName, "tools", "geoip", "dbip-country-lite.csv.gz");
+			string candidate = Path.Combine(dir.FullName, "tools", "geoip", "dbip-country-lite.csv.gz");
 			file = File.Exists(candidate) ? candidate : null;
 		}
 		if (file is null) {
 			return; // optional download (tools/get-geoip.ps1); nothing to check
 		}
 
-		var watch = System.Diagnostics.Stopwatch.StartNew();
-		var geo = GeoIpResolver.Load(file);
+		Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
+		GeoIpResolver geo = GeoIpResolver.Load(file);
 		watch.Stop();
 
 		Assert.True(geo.RangeCount > 100_000);

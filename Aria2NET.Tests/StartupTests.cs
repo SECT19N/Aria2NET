@@ -24,7 +24,7 @@ public sealed class StartupRegistrationTests : IDisposable {
 	private StartupRegistration Create(string exe = Exe) => new(exe, _software);
 
 	private string? Stored() {
-		using var key = _software.OpenSubKey(RunKey);
+		using RegistryKey? key = _software.OpenSubKey(RunKey);
 		return key?.GetValue("Aria2NET") as string;
 	}
 
@@ -35,7 +35,7 @@ public sealed class StartupRegistrationTests : IDisposable {
 
 	[Fact]
 	public void Enable_writes_the_quoted_path_with_the_autostart_flag() {
-		var startup = Create();
+		StartupRegistration startup = Create();
 
 		startup.Enable();
 
@@ -45,7 +45,7 @@ public sealed class StartupRegistrationTests : IDisposable {
 
 	[Fact]
 	public void Disable_removes_the_entry_and_is_safe_when_there_is_none() {
-		var startup = Create();
+		StartupRegistration startup = Create();
 		startup.Disable();
 
 		startup.Enable();
@@ -57,15 +57,15 @@ public sealed class StartupRegistrationTests : IDisposable {
 
 	[Fact]
 	public void Disable_leaves_other_programs_run_entries_alone() {
-		using (var run = _software.CreateSubKey(RunKey, writable: true)) {
+		using (RegistryKey run = _software.CreateSubKey(RunKey, writable: true)) {
 			run.SetValue("Other", "other.exe");
 		}
-		var startup = Create();
+		StartupRegistration startup = Create();
 		startup.Enable();
 
 		startup.Disable();
 
-		using var after = _software.OpenSubKey(RunKey)!;
+		using RegistryKey after = _software.OpenSubKey(RunKey)!;
 		Assert.Equal("other.exe", after.GetValue("Other"));
 	}
 
@@ -73,7 +73,7 @@ public sealed class StartupRegistrationTests : IDisposable {
 	public void Refresh_repairs_an_entry_that_points_at_the_old_location() {
 		Create(@"C:\Old\Aria2NET.exe").Enable();
 
-		var changed = Create().Refresh();
+		bool changed = Create().Refresh();
 
 		Assert.True(changed);
 		Assert.Equal($"\"{Exe}\" --autostart", Stored());
@@ -81,7 +81,7 @@ public sealed class StartupRegistrationTests : IDisposable {
 
 	[Fact]
 	public void Refresh_does_nothing_when_the_entry_is_current_or_absent() {
-		var startup = Create();
+		StartupRegistration startup = Create();
 		Assert.False(startup.Refresh());
 		Assert.False(startup.IsEnabled); // never creates an entry the user did not ask for
 
@@ -106,7 +106,7 @@ public class AutostartArgumentTests {
 
 	[Fact]
 	public void Starting_with_the_tray_only_is_the_default_and_pausing_at_start_is_not() {
-		var settings = new AppSettings();
+		AppSettings settings = new AppSettings();
 
 		Assert.True(settings.StartMinimized);
 		Assert.False(settings.StartPaused);

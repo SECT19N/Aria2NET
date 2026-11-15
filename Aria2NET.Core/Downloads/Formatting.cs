@@ -10,12 +10,12 @@ public static class ByteFormat {
 			return "—";
 		}
 		double value = bytes;
-		var unit = 0;
+		int unit = 0;
 		while (value >= 1024 && unit < Units.Length - 1) {
 			value /= 1024;
 			unit++;
 		}
-		var format = unit == 0 ? "0" : value >= 100 ? "0" : value >= 10 ? "0.0" : "0.00";
+		string format = unit == 0 ? "0" : value >= 100 ? "0" : value >= 10 ? "0.0" : "0.00";
 		return value.ToString(format, CultureInfo.InvariantCulture) + " " + Units[unit];
 	}
 
@@ -28,7 +28,7 @@ public static class TimeFormat {
 		if (eta is not { } t || t < TimeSpan.Zero) {
 			return "--";
 		}
-		var seconds = (long) Math.Ceiling(t.TotalSeconds);
+		long seconds = (long) Math.Ceiling(t.TotalSeconds);
 		if (seconds < 60) {
 			return $"{seconds}s";
 		}

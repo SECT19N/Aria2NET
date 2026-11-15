@@ -14,6 +14,7 @@ internal sealed class ToastService(
 	IAria2Engine engine,
 	DownloadMonitor monitor,
 	DownloadOperations operations,
+	DiskRetryService diskRetry,
 	SettingsStore<AppSettings> settings,
 	ILoggerFactory loggerFactory) : IDisposable {
 
@@ -50,7 +51,7 @@ internal sealed class ToastService(
 		_latest = snapshot;
 		IReadOnlyList<ToastContent> due;
 		lock (_gate) {
-			var found = _detector.Observe(snapshot);
+			IReadOnlyList<DownloadNotification> found = _detector.Observe(snapshot);
 			if (found.Count > 0) {
 				_batcher.Add(Allowed(found), DateTimeOffset.UtcNow);
 			}
@@ -59,8 +60,8 @@ internal sealed class ToastService(
 		if (due.Count == 0) {
 			return;
 		}
-		var sound = settings.Load().NotifySound;
-		foreach (var toast in due) {
+		bool sound = settings.Load().NotifySound;
+		foreach (ToastContent toast in due) {
 			try {
 				AppNotificationManager.Default.Show(Build(toast, sound));
 			} catch (Exception ex) {
@@ -71,19 +72,21 @@ internal sealed class ToastService(
 
 	/// <summary>Applies the per-event switches and the "only when the window is not in front" filter.</summary>
 	private List<DownloadNotification> Allowed(IReadOnlyList<DownloadNotification> found) {
-		var s = settings.Load();
+		AppSettings s = settings.Load();
 		if (s.NotifyOnlyWhenUnfocused && _window?.IsForeground == true) {
 			return [];
 		}
-		return found.Where(n => n.Kind switch {
+		// A download that failed on a sleeping disk is started again by itself; only the last failure is worth a toast.
+		found = [.. found.Where(n => !(n.Kind == NotificationKind.Failed && diskRetry.WillRetry(n.Item)))];
+		return [.. found.Where(n => n.Kind switch {
 			NotificationKind.Completed => s.NotifyOnComplete,
 			NotificationKind.Failed => s.NotifyOnFailed,
 			_ => s.NotifyOnTorrentFinished,
-		}).ToList();
+		})];
 	}
 
 	private static AppNotification Build(ToastContent toast, bool sound) {
-		var builder = new AppNotificationBuilder().AddText(toast.Title).AddText(toast.Body);
+		AppNotificationBuilder builder = new AppNotificationBuilder().AddText(toast.Title).AddText(toast.Body);
 		if (!sound) {
 			builder.MuteAudio();
 		}
@@ -95,8 +98,8 @@ internal sealed class ToastService(
 				builder.AddButton(new AppNotificationButton(Loc.S("Toast_Retry", "Retry")).AddArgument("action", "retry").AddArgument("gid", item.Gid));
 			}
 		} else {
-			var path = item.Path ?? "";
-			var dir = item.Dir ?? "";
+			string path = item.Path ?? "";
+			string dir = item.Dir ?? "";
 			builder.AddArgument("action", "folder").AddArgument("path", path).AddArgument("dir", dir);
 			if (path.Length > 0) {
 				builder.AddButton(new AppNotificationButton(Loc.S("Toast_Open", "Open")).AddArgument("action", "open").AddArgument("path", path));
@@ -109,23 +112,23 @@ internal sealed class ToastService(
 	// Runs on a background thread when the user clicks a toast or one of its buttons.
 	private void OnInvoked(AppNotificationManager sender, AppNotificationActivatedEventArgs args) {
 		try {
-			var values = args.Arguments;
-			values.TryGetValue("action", out var action);
-			values.TryGetValue("path", out var path);
-			values.TryGetValue("dir", out var dir);
+			IDictionary<string, string> values = args.Arguments;
+			values.TryGetValue("action", out string? action);
+			values.TryGetValue("path", out string? path);
+			values.TryGetValue("dir", out string? dir);
 			switch (action) {
 				case "open" when !string.IsNullOrEmpty(path):
-					if (!ShellLauncher.TryOpenFile(path, out var openError)) {
+					if (!ShellLauncher.TryOpenFile(path, out string openError)) {
 						_logger.LogWarning("Could not open {Path}: {Error}", path, openError);
 					}
 					break;
 				case "folder":
-					var folder = !string.IsNullOrEmpty(dir) ? dir : Path.GetDirectoryName(path);
-					if (!string.IsNullOrEmpty(folder) && !ShellLauncher.TryOpenFolder(folder, path, out var folderError)) {
+					string? folder = !string.IsNullOrEmpty(dir) ? dir : Path.GetDirectoryName(path);
+					if (!string.IsNullOrEmpty(folder) && !ShellLauncher.TryOpenFolder(folder, path, out string folderError)) {
 						_logger.LogWarning("Could not open {Folder}: {Error}", folder, folderError);
 					}
 					break;
-				case "retry" when values.TryGetValue("gid", out var gid):
+				case "retry" when values.TryGetValue("gid", out string? gid):
 					_ = RetryAsync(gid);
 					break;
 				default:

@@ -134,6 +134,20 @@ public sealed partial class HistoryViewModel : ObservableObject {
 		_debounce.Start();
 	}
 
+	/// <summary>Drops every filter and searches for <paramref name="name"/>, so an entry found by the title-bar search is certainly listed.</summary>
+	public async Task ShowOnlyAsync(string name) {
+		_loadingFilters = true;
+		SearchText = name;
+		StatusIndex = 0;
+		TypeIndex = 0;
+		SiteIndex = 0;
+		FromDate = null;
+		ToDate = null;
+		_loadingFilters = false;
+		_debounce.Stop();
+		await ReloadAsync();
+	}
+
 	public void ClearFilters() {
 		_loadingFilters = true;
 		SearchText = "";
@@ -147,8 +161,8 @@ public sealed partial class HistoryViewModel : ObservableObject {
 	}
 
 	private HistoryQuery BuildQuery(int limit = 2000) {
-		var from = FromDate is { } f ? f.LocalDateTime.Date.ToUniversalTime() : (DateTime?) null;
-		var to = ToDate is { } t ? t.LocalDateTime.Date.AddDays(1).ToUniversalTime() : (DateTime?) null;
+		DateTime? from = FromDate is { } f ? f.LocalDateTime.Date.ToUniversalTime() : (DateTime?) null;
+		DateTime? to = ToDate is { } t ? t.LocalDateTime.Date.AddDays(1).ToUniversalTime() : (DateTime?) null;
 		return new HistoryQuery(
 			Search: SearchText,
 			Statuses: StatusIndex switch {
@@ -173,27 +187,27 @@ public sealed partial class HistoryViewModel : ObservableObject {
 		if (_history.Store is not { } store) {
 			return;
 		}
-		var version = ++_loadVersion;
-		var query = BuildQuery();
+		int version = ++_loadVersion;
+		HistoryQuery query = BuildQuery();
 		HasFilter = StatusIndex > 0 || TypeIndex > 0 || SiteIndex > 0 || FromDate is not null || ToDate is not null || !string.IsNullOrWhiteSpace(SearchText);
 		try {
-			var (entries, total, hosts) = await Task.Run(() => (store.Query(query), store.Count(), store.Hosts()));
+			(IReadOnlyList<HistoryEntry> entries, int total, IReadOnlyList<string> hosts) = await Task.Run(() => (store.Query(query), store.Count(), store.Hosts()));
 			if (version != _loadVersion) {
 				return;
 			}
 
-			var chosen = SiteIndex > 0 && SiteIndex < Sites.Count ? Sites[SiteIndex] : null;
+			string? chosen = SiteIndex > 0 && SiteIndex < Sites.Count ? Sites[SiteIndex] : null;
 			_loadingFilters = true;
 			Sites.Clear();
 			Sites.Add(AllSites);
-			foreach (var host in hosts) {
+			foreach (string host in hosts) {
 				Sites.Add(host);
 			}
 			SiteIndex = chosen is null ? 0 : Math.Max(0, Sites.IndexOf(chosen));
 			_loadingFilters = false;
 
 			Rows.Clear();
-			foreach (var entry in entries) {
+			foreach (HistoryEntry entry in entries) {
 				Rows.Add(new HistoryRowViewModel(entry));
 			}
 			_anyEntries = total > 0;
@@ -203,7 +217,7 @@ public sealed partial class HistoryViewModel : ObservableObject {
 			CountText = entries.Count == total ? (total == 1 ? Loc.S("History_CountOne", "1 download") : Loc.F("History_CountMany", "{0} downloads", total)) : Loc.F("History_CountOf", "{0} of {1} downloads", entries.Count, total);
 			_selection = [];
 			RefreshCapabilities();
-			_ = MarkMissingFilesAsync(Rows.ToList(), version);
+			_ = MarkMissingFilesAsync([.. Rows], version);
 		} catch (Exception ex) {
 			_logger.LogError(ex, "Loading history failed");
 			ShowMessage(Loc.S("History_ReadFailed", "History could not be read. Details are in the log file."));
@@ -212,14 +226,14 @@ public sealed partial class HistoryViewModel : ObservableObject {
 
 	// Checking thousands of paths is slow on network drives, so the list is shown first and the "File missing" badges follow.
 	private async Task MarkMissingFilesAsync(List<HistoryRowViewModel> rows, int version) {
-		var missing = await Task.Run(() => rows
+		List<HistoryRowViewModel> missing = await Task.Run(() => rows
 			.Where(r => r.Entry.Status == HistoryStatus.Complete && !string.IsNullOrEmpty(r.Entry.Path))
 			.Where(r => !File.Exists(r.Entry.Path))
 			.ToList());
 		if (version != _loadVersion) {
 			return;
 		}
-		foreach (var row in missing) {
+		foreach (HistoryRowViewModel row in missing) {
 			row.FileMissing = true;
 		}
 		RefreshCapabilities();
@@ -228,15 +242,15 @@ public sealed partial class HistoryViewModel : ObservableObject {
 	// ---------------------------------------------------------------- selection
 
 	public void SetSelection(IEnumerable<HistoryRowViewModel> rows) {
-		_selection = rows.ToList();
+		_selection = [.. rows];
 		RefreshCapabilities();
 	}
 
 	private void RefreshCapabilities() {
-		var single = _selection.Count == 1 ? _selection[0] : null;
+		HistoryRowViewModel? single = _selection.Count == 1 ? _selection[0] : null;
 		CanRedownload = _selection.Any(r => !string.IsNullOrEmpty(r.Entry.Uri));
 		CanCopyUrl = CanRedownload;
-		CanOpenFile = single is { Entry: { Status: HistoryStatus.Complete, Path: { Length: > 0 } }, FileMissing: false };
+		CanOpenFile = single is { Entry: { Status: HistoryStatus.Complete, Path.Length: > 0 }, FileMissing: false };
 		CanOpenFolder = single is { Entry.Dir.Length: > 0 };
 		CanDelete = _selection.Count > 0;
 	}
@@ -251,10 +265,10 @@ public sealed partial class HistoryViewModel : ObservableObject {
 	/// </summary>
 	public async Task<int> RedownloadAsync(string? folder) {
 		ClearMessage();
-		var started = 0;
-		var problems = new List<string>();
-		foreach (var row in _selection.Where(r => !string.IsNullOrEmpty(r.Entry.Uri)).ToList()) {
-			var target = folder ?? row.Entry.Dir;
+		int started = 0;
+		List<string> problems = [];
+		foreach (HistoryRowViewModel row in _selection.Where(r => !string.IsNullOrEmpty(r.Entry.Uri)).ToList()) {
+			string? target = folder ?? row.Entry.Dir;
 			if (string.IsNullOrEmpty(target)) {
 				target = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
 			}
@@ -276,7 +290,7 @@ public sealed partial class HistoryViewModel : ObservableObject {
 		if (_history.Store is not { } store || _selection.Count == 0) {
 			return;
 		}
-		var ids = _selection.Select(r => r.Entry.Id).ToList();
+		List<long> ids = [.. _selection.Select(r => r.Entry.Id)];
 		await Task.Run(() => store.Delete(ids));
 		await ReloadAsync();
 	}
@@ -295,7 +309,7 @@ public sealed partial class HistoryViewModel : ObservableObject {
 			return;
 		}
 		try {
-			var entries = await Task.Run(() => store.Query(BuildQuery(limit: 100_000)));
+			IReadOnlyList<HistoryEntry> entries = await Task.Run(() => store.Query(BuildQuery(limit: 100_000)));
 			// Excel only recognises UTF-8 CSV with a byte-order mark.
 			await File.WriteAllTextAsync(path, json ? HistoryExport.ToJson(entries) : HistoryExport.ToCsv(entries), new UTF8Encoding(encoderShouldEmitUTF8Identifier: !json));
 		} catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
@@ -306,7 +320,7 @@ public sealed partial class HistoryViewModel : ObservableObject {
 
 	public void OpenFile() {
 		if (_selection is [{ Entry.Path: { Length: > 0 } path, FileMissing: false }]) {
-			ReportOpen(ShellLauncher.TryOpenFile(path, out var error), path, error);
+			ReportOpen(ShellLauncher.TryOpenFile(path, out string error), path, error);
 		}
 	}
 
@@ -314,15 +328,15 @@ public sealed partial class HistoryViewModel : ObservableObject {
 		if (_selection is not [{ Entry.Dir: { Length: > 0 } dir } row]) {
 			return;
 		}
-		ReportOpen(ShellLauncher.TryOpenFolder(dir, row.Entry.Path, out var error), dir, error);
+		ReportOpen(ShellLauncher.TryOpenFolder(dir, row.Entry.Path, out string error), dir, error);
 	}
 
 	public void CopyUrl() {
-		var urls = _selection.Select(r => r.Entry.Uri).Where(u => !string.IsNullOrEmpty(u)).ToList();
+		List<string?> urls = [.. _selection.Select(r => r.Entry.Uri).Where(u => !string.IsNullOrEmpty(u))];
 		if (urls.Count == 0) {
 			return;
 		}
-		var package = new DataPackage();
+		DataPackage package = new();
 		package.SetText(string.Join(Environment.NewLine, urls));
 		Clipboard.SetContent(package);
 	}

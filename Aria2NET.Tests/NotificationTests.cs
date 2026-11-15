@@ -12,7 +12,7 @@ public class NotificationDetectorTests {
 
 	[Fact]
 	public void The_first_snapshot_only_records_so_old_results_are_not_announced() {
-		var detector = new NotificationDetector();
+		NotificationDetector detector = new NotificationDetector();
 
 		Assert.Empty(detector.Observe(Snap(Item("a", DownloadStatus.Complete), Item("b", DownloadStatus.Error))));
 		Assert.Empty(detector.Observe(Snap(Item("a", DownloadStatus.Complete), Item("b", DownloadStatus.Error))));
@@ -20,11 +20,11 @@ public class NotificationDetectorTests {
 
 	[Fact]
 	public void A_download_that_completes_is_announced_once() {
-		var detector = new NotificationDetector();
+		NotificationDetector detector = new NotificationDetector();
 		detector.Observe(Snap(Item("a", DownloadStatus.Active)));
 
-		var done = detector.Observe(Snap(Item("a", DownloadStatus.Complete)));
-		var again = detector.Observe(Snap(Item("a", DownloadStatus.Complete)));
+		IReadOnlyList<DownloadNotification> done = detector.Observe(Snap(Item("a", DownloadStatus.Complete)));
+		IReadOnlyList<DownloadNotification> again = detector.Observe(Snap(Item("a", DownloadStatus.Complete)));
 
 		Assert.Equal(NotificationKind.Completed, Assert.Single(done).Kind);
 		Assert.Empty(again);
@@ -32,7 +32,7 @@ public class NotificationDetectorTests {
 
 	[Fact]
 	public void A_failure_is_announced_once_and_again_after_a_retry_fails() {
-		var detector = new NotificationDetector();
+		NotificationDetector detector = new NotificationDetector();
 		detector.Observe(Snap(Item("a", DownloadStatus.Active)));
 
 		Assert.Equal(NotificationKind.Failed, Assert.Single(detector.Observe(Snap(Item("a", DownloadStatus.Error)))).Kind);
@@ -43,11 +43,11 @@ public class NotificationDetectorTests {
 
 	[Fact]
 	public void A_torrent_is_finished_when_seeding_starts_and_not_again_when_seeding_ends() {
-		var detector = new NotificationDetector();
+		NotificationDetector detector = new NotificationDetector();
 		detector.Observe(Snap(Item("t", DownloadStatus.Active, torrent: true)));
 
-		var seeding = detector.Observe(Snap(Item("t", DownloadStatus.Seeding, torrent: true)));
-		var ended = detector.Observe(Snap(Item("t", DownloadStatus.Complete, torrent: true)));
+		IReadOnlyList<DownloadNotification> seeding = detector.Observe(Snap(Item("t", DownloadStatus.Seeding, torrent: true)));
+		IReadOnlyList<DownloadNotification> ended = detector.Observe(Snap(Item("t", DownloadStatus.Complete, torrent: true)));
 
 		Assert.Equal(NotificationKind.TorrentFinished, Assert.Single(seeding).Kind);
 		Assert.Empty(ended);
@@ -55,7 +55,7 @@ public class NotificationDetectorTests {
 
 	[Fact]
 	public void A_torrent_that_does_not_seed_is_finished_when_it_completes() {
-		var detector = new NotificationDetector();
+		NotificationDetector detector = new NotificationDetector();
 		detector.Observe(Snap(Item("t", DownloadStatus.Active, torrent: true)));
 
 		Assert.Equal(NotificationKind.TorrentFinished, Assert.Single(detector.Observe(Snap(Item("t", DownloadStatus.Complete, torrent: true)))).Kind);
@@ -63,7 +63,7 @@ public class NotificationDetectorTests {
 
 	[Fact]
 	public void A_magnets_metadata_placeholder_is_never_announced() {
-		var detector = new NotificationDetector();
+		NotificationDetector detector = new NotificationDetector();
 		detector.Observe(Snap(Item("m", DownloadStatus.Active, torrent: true, metadata: true)));
 
 		Assert.Empty(detector.Observe(Snap(Item("m", DownloadStatus.Complete, torrent: true, metadata: true))));
@@ -71,7 +71,7 @@ public class NotificationDetectorTests {
 
 	[Fact]
 	public void A_download_that_appears_already_finished_after_the_baseline_is_announced() {
-		var detector = new NotificationDetector();
+		NotificationDetector detector = new NotificationDetector();
 		detector.Observe(Snap());
 
 		Assert.Equal(NotificationKind.Completed, Assert.Single(detector.Observe(Snap(Item("quick", DownloadStatus.Complete)))).Kind);
@@ -79,7 +79,7 @@ public class NotificationDetectorTests {
 
 	[Fact]
 	public void After_a_reset_the_next_snapshot_is_a_new_baseline() {
-		var detector = new NotificationDetector();
+		NotificationDetector detector = new NotificationDetector();
 		detector.Observe(Snap(Item("a", DownloadStatus.Active)));
 		detector.Reset();
 
@@ -88,7 +88,7 @@ public class NotificationDetectorTests {
 
 	[Fact]
 	public void Pausing_and_removing_make_no_noise() {
-		var detector = new NotificationDetector();
+		NotificationDetector detector = new NotificationDetector();
 		detector.Observe(Snap(Item("a", DownloadStatus.Active)));
 
 		Assert.Empty(detector.Observe(Snap(Item("a", DownloadStatus.Paused))));
@@ -104,7 +104,7 @@ public class NotificationBatcherTests {
 
 	[Fact]
 	public void Nothing_is_shown_until_the_window_has_passed() {
-		var batcher = new NotificationBatcher(TimeSpan.FromSeconds(3));
+		NotificationBatcher batcher = new NotificationBatcher(TimeSpan.FromSeconds(3));
 		batcher.Add([Note(NotificationKind.Completed, "a.zip")], T0);
 
 		Assert.Empty(batcher.TakeDue(T0.AddSeconds(2)));
@@ -114,10 +114,10 @@ public class NotificationBatcherTests {
 
 	[Fact]
 	public void One_event_keeps_its_download_for_the_click_actions() {
-		var batcher = new NotificationBatcher(TimeSpan.Zero);
+		NotificationBatcher batcher = new NotificationBatcher(TimeSpan.Zero);
 		batcher.Add([Note(NotificationKind.Completed, "a.zip")], T0);
 
-		var toast = Assert.Single(batcher.TakeDue(T0));
+		ToastContent toast = Assert.Single(batcher.TakeDue(T0));
 
 		Assert.Equal("Download complete", toast.Title);
 		Assert.Equal("a.zip", toast.Body);
@@ -126,10 +126,10 @@ public class NotificationBatcherTests {
 
 	[Fact]
 	public void Several_completions_become_one_summary_toast() {
-		var batcher = new NotificationBatcher(TimeSpan.Zero);
+		NotificationBatcher batcher = new NotificationBatcher(TimeSpan.Zero);
 		batcher.Add(Enumerable.Range(1, 5).Select(i => Note(NotificationKind.Completed, $"f{i}.zip")), T0);
 
-		var toast = Assert.Single(batcher.TakeDue(T0));
+		ToastContent toast = Assert.Single(batcher.TakeDue(T0));
 
 		Assert.Equal("5 downloads completed", toast.Title);
 		Assert.Equal("f1.zip, f2.zip, f3.zip and 2 more", toast.Body);
@@ -138,10 +138,10 @@ public class NotificationBatcherTests {
 
 	[Fact]
 	public void Each_kind_of_event_gets_its_own_toast() {
-		var batcher = new NotificationBatcher(TimeSpan.Zero);
+		NotificationBatcher batcher = new NotificationBatcher(TimeSpan.Zero);
 		batcher.Add([Note(NotificationKind.Completed, "a"), Note(NotificationKind.Failed, "b", "Not found"), Note(NotificationKind.TorrentFinished, "c")], T0);
 
-		var toasts = batcher.TakeDue(T0);
+		IReadOnlyList<ToastContent> toasts = batcher.TakeDue(T0);
 
 		Assert.Equal([NotificationKind.Completed, NotificationKind.Failed, NotificationKind.TorrentFinished], toasts.Select(t => t.Kind));
 		Assert.Equal("b\nNot found", toasts[1].Body);
@@ -149,7 +149,7 @@ public class NotificationBatcherTests {
 
 	[Fact]
 	public void Events_arriving_later_join_the_same_window() {
-		var batcher = new NotificationBatcher(TimeSpan.FromSeconds(3));
+		NotificationBatcher batcher = new NotificationBatcher(TimeSpan.FromSeconds(3));
 		batcher.Add([Note(NotificationKind.Completed, "a")], T0);
 		batcher.Add([Note(NotificationKind.Completed, "b")], T0.AddSeconds(2));
 
@@ -158,7 +158,7 @@ public class NotificationBatcherTests {
 
 	[Fact]
 	public void Notifications_default_on_except_the_focus_filter() {
-		var s = new AppSettings();
+		AppSettings s = new AppSettings();
 
 		Assert.True(s.NotifyOnComplete);
 		Assert.True(s.NotifyOnFailed);

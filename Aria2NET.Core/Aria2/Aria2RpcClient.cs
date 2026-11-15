@@ -27,11 +27,11 @@ public sealed class Aria2RpcClient(HttpClient http, Uri endpoint, string secret)
 	private int _nextId;
 
 	public async Task<Aria2Version> GetVersionAsync(CancellationToken ct = default) {
-		using var result = await CallAsync("aria2.getVersion", ct);
-		var root = result.RootElement;
-		var features = new List<string>();
-		if (root.TryGetProperty("enabledFeatures", out var f) && f.ValueKind == JsonValueKind.Array) {
-			foreach (var item in f.EnumerateArray()) {
+		using JsonDocument result = await CallAsync("aria2.getVersion", ct);
+		JsonElement root = result.RootElement;
+		List<string> features = [];
+		if (root.TryGetProperty("enabledFeatures", out JsonElement f) && f.ValueKind == JsonValueKind.Array) {
+			foreach (JsonElement item in f.EnumerateArray()) {
 				features.Add(item.GetString() ?? "");
 			}
 		}
@@ -39,50 +39,50 @@ public sealed class Aria2RpcClient(HttpClient http, Uri endpoint, string secret)
 	}
 
 	public async Task SaveSessionAsync(CancellationToken ct = default) {
-		using var _ = await CallAsync("aria2.saveSession", ct);
+		using JsonDocument _ = await CallAsync("aria2.saveSession", ct);
 	}
 
 	public async Task ShutdownAsync(CancellationToken ct = default) {
-		using var _ = await CallAsync("aria2.shutdown", ct);
+		using JsonDocument _ = await CallAsync("aria2.shutdown", ct);
 	}
 
 	/// <summary>Adds one download (the URIs are treated as mirrors of the same file). Returns its GID.</summary>
 	public async Task<string> AddUriAsync(IReadOnlyList<string> uris, IReadOnlyDictionary<string, string>? options = null, CancellationToken ct = default) {
-		using var result = await CallAsync("aria2.addUri", ct, uris, options ?? new Dictionary<string, string>());
+		using JsonDocument result = await CallAsync("aria2.addUri", ct, uris, options ?? new Dictionary<string, string>());
 		return result.RootElement.GetString() ?? throw new Aria2RpcException(0, "addUri returned no GID");
 	}
 
 	/// <summary>Adds a .torrent (its bytes, base64 in the request). Returns the GID. <paramref name="webSeeds"/> are extra HTTP sources for the same content.</summary>
 	public async Task<string> AddTorrentAsync(byte[] torrent, IReadOnlyDictionary<string, string>? options = null, IReadOnlyList<string>? webSeeds = null, CancellationToken ct = default) {
-		using var result = await CallAsync("aria2.addTorrent", ct, Convert.ToBase64String(torrent), webSeeds ?? [], options ?? new Dictionary<string, string>());
+		using JsonDocument result = await CallAsync("aria2.addTorrent", ct, Convert.ToBase64String(torrent), webSeeds ?? [], options ?? new Dictionary<string, string>());
 		return result.RootElement.GetString() ?? throw new Aria2RpcException(0, "addTorrent returned no GID");
 	}
 
 	/// <summary>Adds a metalink document. aria2 starts one download per file in it and returns all their GIDs.</summary>
 	public async Task<IReadOnlyList<string>> AddMetalinkAsync(byte[] metalink, IReadOnlyDictionary<string, string>? options = null, CancellationToken ct = default) {
-		using var result = await CallAsync("aria2.addMetalink", ct, Convert.ToBase64String(metalink), options ?? new Dictionary<string, string>());
-		return result.RootElement.EnumerateArray().Select(g => g.GetString() ?? "").Where(g => g.Length > 0).ToList();
+		using JsonDocument result = await CallAsync("aria2.addMetalink", ct, Convert.ToBase64String(metalink), options ?? new Dictionary<string, string>());
+		return [.. result.RootElement.EnumerateArray().Select(g => g.GetString() ?? "").Where(g => g.Length > 0)];
 	}
 
 	/// <summary>Files of a download with their selection state and progress.</summary>
 	public async Task<IReadOnlyList<DownloadFile>> GetFilesAsync(string gid, CancellationToken ct = default) {
-		using var result = await CallAsync("aria2.getFiles", ct, gid);
-		return result.RootElement.EnumerateArray().Select(DownloadFile.FromJson).ToList();
+		using JsonDocument result = await CallAsync("aria2.getFiles", ct, gid);
+		return [.. result.RootElement.EnumerateArray().Select(DownloadFile.FromJson)];
 	}
 
-	/// <summary>Connected peers of a torrent (empty for anything else or when nothing is connected).</summary>
+	/// <summary>Connected peers of a torrent (empty for anything else or when nothing is connected).</summary>	
 	public async Task<IReadOnlyList<PeerInfo>> GetPeersAsync(string gid, CancellationToken ct = default) {
-		using var result = await CallAsync("aria2.getPeers", ct, gid);
-		return result.RootElement.EnumerateArray().Select(PeerInfo.FromJson).ToList();
+		using JsonDocument result = await CallAsync("aria2.getPeers", ct, gid);
+		return [.. result.RootElement.EnumerateArray().Select(PeerInfo.FromJson)];
 	}
 
 	public async Task<DownloadItem> TellStatusAsync(string gid, CancellationToken ct = default) {
-		using var result = await CallAsync("aria2.tellStatus", ct, gid, StatusKeys);
+		using JsonDocument result = await CallAsync("aria2.tellStatus", ct, gid, StatusKeys);
 		return DownloadItem.FromJson(result.RootElement);
 	}
 
 	public async Task<GlobalStats> GetGlobalStatAsync(CancellationToken ct = default) {
-		using var result = await CallAsync("aria2.getGlobalStat", ct);
+		using JsonDocument result = await CallAsync("aria2.getGlobalStat", ct);
 		return GlobalStats.FromJson(result.RootElement);
 	}
 
@@ -92,35 +92,35 @@ public sealed class Aria2RpcClient(HttpClient http, Uri endpoint, string secret)
 
 	/// <summary>Per-download options as aria2 reports them (all values are strings).</summary>
 	public async Task<IReadOnlyDictionary<string, string>> GetOptionAsync(string gid, CancellationToken ct = default) {
-		using var result = await CallAsync("aria2.getOption", ct, gid);
+		using JsonDocument result = await CallAsync("aria2.getOption", ct, gid);
 		return ReadStringMap(result.RootElement);
 	}
 
 	public async Task<IReadOnlyDictionary<string, string>> GetGlobalOptionAsync(CancellationToken ct = default) {
-		using var result = await CallAsync("aria2.getGlobalOption", ct);
+		using JsonDocument result = await CallAsync("aria2.getGlobalOption", ct);
 		return ReadStringMap(result.RootElement);
 	}
 
 	public async Task ChangeOptionAsync(string gid, IReadOnlyDictionary<string, string> options, CancellationToken ct = default) {
-		using var _ = await CallAsync("aria2.changeOption", ct, gid, options);
+		using JsonDocument _ = await CallAsync("aria2.changeOption", ct, gid, options);
 	}
 
 	public async Task ChangeGlobalOptionAsync(IReadOnlyDictionary<string, string> options, CancellationToken ct = default) {
-		using var _ = await CallAsync("aria2.changeGlobalOption", ct, options);
+		using JsonDocument _ = await CallAsync("aria2.changeGlobalOption", ct, options);
 	}
 
 	/// <summary>Moves a waiting/paused download in the queue. <paramref name="how"/> is POS_SET, POS_CUR or POS_END.</summary>
 	public async Task<int> ChangePositionAsync(string gid, int position, string how, CancellationToken ct = default) {
-		using var result = await CallAsync("aria2.changePosition", ct, gid, position, how);
+		using JsonDocument result = await CallAsync("aria2.changePosition", ct, gid, position, how);
 		return result.RootElement.GetInt32();
 	}
 
 	public async Task PauseAllAsync(CancellationToken ct = default) {
-		using var _ = await CallAsync("aria2.forcePauseAll", ct);
+		using JsonDocument _ = await CallAsync("aria2.forcePauseAll", ct);
 	}
 
 	public async Task UnpauseAllAsync(CancellationToken ct = default) {
-		using var _ = await CallAsync("aria2.unpauseAll", ct);
+		using JsonDocument _ = await CallAsync("aria2.unpauseAll", ct);
 	}
 
 	/// <summary>Pauses (immediately, without waiting for peers to finish) the given downloads. Returns the failures, one per GID that failed.</summary>
@@ -136,30 +136,30 @@ public sealed class Aria2RpcClient(HttpClient http, Uri endpoint, string secret)
 
 	/// <summary>Calls <paramref name="method"/> once per GID in a single request. Returns one message per call that failed.</summary>
 	private async Task<IReadOnlyList<string>> BatchAsync(string method, IEnumerable<string> gids, CancellationToken ct) {
-		var list = gids.ToList();
+		List<string> list = [.. gids];
 		if (list.Count == 0) {
 			return [];
 		}
-		using var result = await SendAsync("system.multicall", ct, w => {
+		using JsonDocument result = await SendAsync("system.multicall", ct, w => {
 			w.WriteStartArray();
-			foreach (var gid in list) {
+			foreach (string gid in list) {
 				WriteMulticallEntry(w, method, gid);
 			}
 			w.WriteEndArray();
 		});
-		var failures = new List<string>();
-		foreach (var entry in result.RootElement.EnumerateArray()) {
+		List<string> failures = [];
+		foreach (JsonElement entry in result.RootElement.EnumerateArray()) {
 			if (entry.ValueKind == JsonValueKind.Object) {
-				failures.Add(entry.TryGetProperty("message", out var m) ? m.GetString() ?? "" : "Unknown error");
+				failures.Add(entry.TryGetProperty("message", out JsonElement m) ? m.GetString() ?? "" : "Unknown error");
 			}
 		}
 		return failures;
 	}
 
 	private static Dictionary<string, string> ReadStringMap(JsonElement e) {
-		var map = new Dictionary<string, string>();
+		Dictionary<string, string> map = [];
 		if (e.ValueKind == JsonValueKind.Object) {
-			foreach (var p in e.EnumerateObject()) {
+			foreach (JsonProperty p in e.EnumerateObject()) {
 				if (p.Value.ValueKind == JsonValueKind.String) {
 					map[p.Name] = p.Value.GetString() ?? "";
 				}
@@ -170,7 +170,7 @@ public sealed class Aria2RpcClient(HttpClient http, Uri endpoint, string secret)
 
 	/// <summary>Active, waiting and stopped downloads plus global stats in a single HTTP request.</summary>
 	public async Task<PollSnapshot> PollAsync(CancellationToken ct = default) {
-		using var result = await SendAsync("system.multicall", ct, w => {
+		using JsonDocument result = await SendAsync("system.multicall", ct, w => {
 			w.WriteStartArray();
 			WriteMulticallEntry(w, "aria2.tellActive", (object) StatusKeys); // cast: a bare string[] would bind to the params array itself
 			WriteMulticallEntry(w, "aria2.tellWaiting", 0, MaxListed, StatusKeys);
@@ -185,10 +185,10 @@ public sealed class Aria2RpcClient(HttpClient http, Uri endpoint, string secret)
 		if (multicallResult.ValueKind != JsonValueKind.Array || multicallResult.GetArrayLength() != 4) {
 			throw new Aria2RpcException(0, "Unexpected multicall response shape");
 		}
-		var parts = multicallResult.EnumerateArray().Select(UnwrapMulticallEntry).ToArray();
-		var items = new List<DownloadItem>();
-		foreach (var part in parts.Take(3)) {
-			foreach (var element in part.EnumerateArray()) {
+		JsonElement[] parts = [.. multicallResult.EnumerateArray().Select(UnwrapMulticallEntry)];
+		List<DownloadItem> items = [];
+		foreach (JsonElement part in parts.Take(3)) {
+			foreach (JsonElement element in part.EnumerateArray()) {
 				items.Add(DownloadItem.FromJson(element));
 			}
 		}
@@ -198,8 +198,8 @@ public sealed class Aria2RpcClient(HttpClient http, Uri endpoint, string secret)
 	// Each multicall entry is [result] on success or {code, message} on failure.
 	private static JsonElement UnwrapMulticallEntry(JsonElement entry) {
 		if (entry.ValueKind == JsonValueKind.Object) {
-			var code = entry.TryGetProperty("code", out var c) ? c.GetInt32() : 0;
-			var message = entry.TryGetProperty("message", out var m) ? m.GetString() ?? "" : "";
+			int code = entry.TryGetProperty("code", out JsonElement c) ? c.GetInt32() : 0;
+			string message = entry.TryGetProperty("message", out JsonElement m) ? m.GetString() ?? "" : "";
 			throw new Aria2RpcException(code, message);
 		}
 		return entry[0];
@@ -209,18 +209,18 @@ public sealed class Aria2RpcClient(HttpClient http, Uri endpoint, string secret)
 	public Task<JsonDocument> CallAsync(string method, CancellationToken ct = default, params object?[] args) =>
 		SendAsync(method, ct, w => {
 			w.WriteStringValue("token:" + _secret);
-			foreach (var arg in args) {
+			foreach (object? arg in args) {
 				WriteValue(w, arg);
 			}
 		});
 
 	/// <param name="writeParams">Writes the values inside the request's <c>params</c> array.</param>
 	private async Task<JsonDocument> SendAsync(string method, CancellationToken ct, Action<Utf8JsonWriter> writeParams) {
-		var body = BuildRequest(method, Interlocked.Increment(ref _nextId), writeParams);
-		using var content = new ByteArrayContent(body);
+		byte[] body = BuildRequest(method, Interlocked.Increment(ref _nextId), writeParams);
+		using ByteArrayContent content = new(body);
 		content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-		using var response = await _http.PostAsync(_endpoint, content, ct);
-		var bytes = await response.Content.ReadAsByteArrayAsync(ct);
+		using HttpResponseMessage response = await _http.PostAsync(_endpoint, content, ct);
+		byte[] bytes = await response.Content.ReadAsByteArrayAsync(ct);
 
 		// aria2 reports RPC errors with a non-2xx status plus a JSON error body, so parse before checking status.
 		JsonDocument doc;
@@ -230,25 +230,25 @@ public sealed class Aria2RpcClient(HttpClient http, Uri endpoint, string secret)
 			throw new HttpRequestException($"aria2 RPC returned HTTP {(int) response.StatusCode}");
 		}
 
-		if (doc.RootElement.TryGetProperty("error", out var error)) {
-			var code = error.TryGetProperty("code", out var c) ? c.GetInt32() : 0;
-			var message = error.TryGetProperty("message", out var m) ? m.GetString() ?? "" : "";
+		if (doc.RootElement.TryGetProperty("error", out JsonElement error)) {
+			int code = error.TryGetProperty("code", out JsonElement c) ? c.GetInt32() : 0;
+			string message = error.TryGetProperty("message", out JsonElement m) ? m.GetString() ?? "" : "";
 			doc.Dispose();
 			throw new Aria2RpcException(code, message);
 		}
-		if (!doc.RootElement.TryGetProperty("result", out var result)) {
+		if (!doc.RootElement.TryGetProperty("result", out JsonElement result)) {
 			doc.Dispose();
 			throw new Aria2RpcException(0, "RPC response had neither result nor error");
 		}
 
-		var clone = JsonDocument.Parse(result.GetRawText());
+		JsonDocument clone = JsonDocument.Parse(result.GetRawText());
 		doc.Dispose();
 		return clone;
 	}
 
 	private static byte[] BuildRequest(string method, int id, Action<Utf8JsonWriter> writeParams) {
-		using var stream = new MemoryStream();
-		using (var w = new Utf8JsonWriter(stream)) {
+		using MemoryStream stream = new();
+		using (Utf8JsonWriter w = new(stream)) {
 			w.WriteStartObject();
 			w.WriteString("jsonrpc", "2.0");
 			w.WriteString("id", id.ToString(CultureInfo.InvariantCulture));
@@ -267,7 +267,7 @@ public sealed class Aria2RpcClient(HttpClient http, Uri endpoint, string secret)
 		w.WriteString("methodName", method);
 		w.WriteStartArray("params");
 		w.WriteStringValue("token:" + _secret);
-		foreach (var arg in args) {
+		foreach (object? arg in args) {
 			WriteValue(w, arg);
 		}
 		w.WriteEndArray();
@@ -290,11 +290,11 @@ public sealed class Aria2RpcClient(HttpClient http, Uri endpoint, string secret)
 				break;
 			case IReadOnlyDictionary<string, string> map:
 				w.WriteStartObject();
-				foreach (var (k, v) in map) {
+				foreach ((string? k, string? v) in map) {
 					if (k == "header") {
 						// aria2 takes repeatable options as an array; one header per line in the value.
 						w.WriteStartArray(k);
-						foreach (var line in v.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)) {
+						foreach (string line in v.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)) {
 							w.WriteStringValue(line);
 						}
 						w.WriteEndArray();
@@ -306,7 +306,7 @@ public sealed class Aria2RpcClient(HttpClient http, Uri endpoint, string secret)
 				break;
 			case IEnumerable<string> list:
 				w.WriteStartArray();
-				foreach (var item in list) {
+				foreach (string item in list) {
 					w.WriteStringValue(item);
 				}
 				w.WriteEndArray();

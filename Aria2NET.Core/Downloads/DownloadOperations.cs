@@ -64,26 +64,26 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 	/// Returns file problems that did not stop the removal.
 	/// </summary>
 	public async Task<IReadOnlyList<string>> RemoveAsync(IReadOnlyCollection<DownloadItem> items, bool deleteFiles, CancellationToken ct = default) {
-		var rpc = Rpc;
+		Aria2RpcClient rpc = Rpc;
 		// Ask for the file lists first: once removed, aria2 forgets everything but the first file.
-		var plans = new List<(DownloadItem Item, DownloadFilePlan Plan)>();
+		List<(DownloadItem Item, DownloadFilePlan Plan)> plans = [];
 		if (deleteFiles) {
-			foreach (var item in items) {
+			foreach (DownloadItem item in items) {
 				plans.Add((item, await PlanFilesAsync(rpc, item, ct)));
 			}
 		}
-		var live = items.Where(DownloadCapabilities.IsLive).Select(i => i.Gid).ToList();
+		List<string> live = [.. items.Where(DownloadCapabilities.IsLive).Select(i => i.Gid)];
 		if (live.Count > 0) {
 			await rpc.RemoveAsync(live, ct);
 		}
 		// Live downloads become "removed" results, finished ones are results already; forget them all. Failures here mean it is already gone.
-		var leftover = await rpc.RemoveResultAsync(items.Select(i => i.Gid), ct);
+		IReadOnlyList<string> leftover = await rpc.RemoveResultAsync(items.Select(i => i.Gid), ct);
 		if (leftover.Count > 0) {
 			logger.LogDebug("removeDownloadResult reported {Count} already-gone entries", leftover.Count);
 		}
 
-		var problems = new List<string>();
-		foreach (var (item, plan) in plans) {
+		List<string> problems = [];
+		foreach ((DownloadItem? item, DownloadFilePlan? plan) in plans) {
 			// Off the UI thread: recycling or deleting a large (pre-allocated) torrent takes long enough to freeze the window.
 			await Task.Run(() => DeleteFilesAsync(item, plan, problems, ct), ct);
 		}
@@ -92,8 +92,8 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 
 	private async Task<DownloadFilePlan> PlanFilesAsync(Aria2RpcClient rpc, DownloadItem item, CancellationToken ct) {
 		try {
-			using var status = await rpc.TellStatusFullAsync(item.Gid, ct);
-			var plan = DownloadFilePlan.FromStatus(status.RootElement);
+			using JsonDocument status = await rpc.TellStatusFullAsync(item.Gid, ct);
+			DownloadFilePlan plan = DownloadFilePlan.FromStatus(status.RootElement);
 			if (plan.Files.Count > 0) {
 				return plan;
 			}
@@ -105,11 +105,11 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 
 	private async Task DeleteFilesAsync(DownloadItem item, DownloadFilePlan plan, List<string> problems, CancellationToken ct) {
 		// A finished download goes to the Recycle Bin (a multi-file torrent as its whole folder); partial data and control files are just deleted.
-		var recycle = item.Status is DownloadStatus.Complete or DownloadStatus.Seeding;
+		bool recycle = item.Status is DownloadStatus.Complete or DownloadStatus.Seeding;
 		if (recycle && plan.Folder is not null && Directory.Exists(plan.Folder)) {
 			await TryDeleteAsync(() => FileSystem.DeleteDirectory(plan.Folder, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin), plan.Folder, problems, ct);
 		}
-		foreach (var path in plan.Files) {
+		foreach (string path in plan.Files) {
 			if (File.Exists(path)) {
 				await TryDeleteAsync(() => {
 					if (recycle) {
@@ -120,7 +120,7 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 				}, path, problems, ct);
 			}
 		}
-		foreach (var path in plan.ControlFiles) {
+		foreach (string path in plan.ControlFiles) {
 			if (File.Exists(path)) {
 				await TryDeleteAsync(() => File.Delete(path), path, problems, ct);
 			}
@@ -133,7 +133,7 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 	/// <summary>Deletes <paramref name="root"/> and its sub-folders, but only the empty ones: anything the user put there stays.</summary>
 	private static void RemoveEmptyFolders(string root) {
 		try {
-			foreach (var folder in Directory.EnumerateDirectories(root, "*", System.IO.SearchOption.AllDirectories).OrderByDescending(d => d.Length)) {
+			foreach (string? folder in Directory.EnumerateDirectories(root, "*", System.IO.SearchOption.AllDirectories).OrderByDescending(d => d.Length)) {
 				if (!Directory.EnumerateFileSystemEntries(folder).Any()) {
 					Directory.Delete(folder);
 				}
@@ -148,7 +148,7 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 
 	// aria2 may still be closing the file; give it a moment.
 	private async Task TryDeleteAsync(Action delete, string path, List<string> problems, CancellationToken ct) {
-		for (var attempt = 0; attempt < 5; attempt++) {
+		for (int attempt = 0; attempt < 5; attempt++) {
 			try {
 				delete();
 				return;
@@ -168,15 +168,15 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 		if (!DownloadCapabilities.CanRetry(item)) {
 			throw new InvalidOperationException("This download cannot be retried.");
 		}
-		var rpc = Rpc;
-		var options = new Dictionary<string, string>();
+		Aria2RpcClient rpc = Rpc;
+		Dictionary<string, string> options = [];
 		if (!string.IsNullOrEmpty(item.Dir)) {
 			options["dir"] = item.Dir;
 		}
 		if (!string.IsNullOrEmpty(item.Path)) {
 			options["out"] = item.Name;
 		}
-		var gid = await rpc.AddUriAsync([item.FirstUri!], options, ct);
+		string gid = await rpc.AddUriAsync([item.FirstUri!], options, ct);
 		await rpc.RemoveResultAsync([item.Gid], ct);
 		return gid;
 	}
@@ -197,7 +197,7 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 		Check(Rpc.RemoveResultAsync(items.Where(i => !DownloadCapabilities.IsLive(i)).Select(i => i.Gid), ct));
 
 	public async Task MoveAsync(DownloadItem item, QueueMove move, CancellationToken ct = default) {
-		var (pos, how) = move switch {
+		(int pos, string? how) = move switch {
 			QueueMove.Top => (0, "POS_SET"),
 			QueueMove.Up => (-1, "POS_CUR"),
 			QueueMove.Down => (1, "POS_CUR"),
@@ -211,7 +211,7 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 	/// Call <see cref="OnSnapshot"/> with each poll so the limit is put back.
 	/// </summary>
 	public async Task ForceStartAsync(DownloadItem item, CancellationToken ct = default) {
-		var rpc = Rpc;
+		Aria2RpcClient rpc = Rpc;
 		await rpc.ChangePositionAsync(item.Gid, 0, "POS_SET", ct);
 		int target;
 		lock (_forceLock) {
@@ -223,8 +223,8 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 			}
 		}
 		if (_baseConcurrent == 0) {
-			var global = await rpc.GetGlobalOptionAsync(ct);
-			_baseConcurrent = global.TryGetValue(MaxConcurrent, out var v) && int.TryParse(v, NumberStyles.None, CultureInfo.InvariantCulture, out var n) ? n : 5;
+			IReadOnlyDictionary<string, string> global = await rpc.GetGlobalOptionAsync(ct);
+			_baseConcurrent = global.TryGetValue(MaxConcurrent, out string? v) && int.TryParse(v, NumberStyles.None, CultureInfo.InvariantCulture, out int n) ? n : 5;
 		}
 		lock (_forceLock) {
 			_forced.Add(item.Gid);
@@ -243,12 +243,12 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 			}
 			rpc = _forcedRpc;
 			// Still waiting for a slot or running: keep the extra slot.
-			var keep = _forced.Where(gid => snapshot.Items.Any(i => i.Gid == gid && i.Status is DownloadStatus.Active or DownloadStatus.Waiting)).ToList();
+			List<string> keep = [.. _forced.Where(gid => snapshot.Items.Any(i => i.Gid == gid && i.Status is DownloadStatus.Active or DownloadStatus.Waiting))];
 			if (keep.Count == _forced.Count) {
 				return;
 			}
 			_forced.Clear();
-			foreach (var gid in keep) {
+			foreach (string gid in keep) {
 				_forced.Add(gid);
 			}
 			target = _baseConcurrent + _forced.Count;
@@ -276,33 +276,33 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 		await Rpc.ChangeOptionAsync(item.Gid, new Dictionary<string, string> { ["max-download-limit"] = bytesPerSecond.ToString(CultureInfo.InvariantCulture) }, ct);
 
 	public async Task<DownloadDetails> GetDetailsAsync(string gid, CancellationToken ct = default) {
-		var rpc = Rpc;
-		using var status = await rpc.TellStatusFullAsync(gid, ct);
-		var root = status.RootElement;
-		var item = DownloadItem.FromJson(root);
-		var uris = new List<(string, string)>();
-		if (root.TryGetProperty("files", out var files) && files.ValueKind == JsonValueKind.Array && files.GetArrayLength() > 0
-			&& files[0].TryGetProperty("uris", out var list) && list.ValueKind == JsonValueKind.Array) {
-			foreach (var u in list.EnumerateArray()) {
+		Aria2RpcClient rpc = Rpc;
+		using JsonDocument status = await rpc.TellStatusFullAsync(gid, ct);
+		JsonElement root = status.RootElement;
+		DownloadItem item = DownloadItem.FromJson(root);
+		List<(string, string)> uris = [];
+		if (root.TryGetProperty("files", out JsonElement files) && files.ValueKind == JsonValueKind.Array && files.GetArrayLength() > 0
+			&& files[0].TryGetProperty("uris", out JsonElement list) && list.ValueKind == JsonValueKind.Array) {
+			foreach (JsonElement u in list.EnumerateArray()) {
 				uris.Add((Str(u, "uri") ?? "", Str(u, "status") ?? ""));
 			}
 		}
 
-		var options = await rpc.GetOptionAsync(gid, ct);
+		IReadOnlyDictionary<string, string> options = await rpc.GetOptionAsync(gid, ct);
 		return new DownloadDetails(
 			item, uris,
-			int.TryParse(Str(root, "connections"), NumberStyles.None, CultureInfo.InvariantCulture, out var c) ? c : 0,
+			int.TryParse(Str(root, "connections"), NumberStyles.None, CultureInfo.InvariantCulture, out int c) ? c : 0,
 			Str(root, "infoHash"),
 			options.GetValueOrDefault("referer"),
 			options.GetValueOrDefault("checksum"),
-			options.TryGetValue("max-download-limit", out var limit) && long.TryParse(limit, NumberStyles.None, CultureInfo.InvariantCulture, out var l) ? l : 0);
+			options.TryGetValue("max-download-limit", out string? limit) && long.TryParse(limit, NumberStyles.None, CultureInfo.InvariantCulture, out long l) ? l : 0);
 	}
 
 	private static string? Str(JsonElement e, string name) =>
-		e.ValueKind == JsonValueKind.Object && e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
+		e.ValueKind == JsonValueKind.Object && e.TryGetProperty(name, out JsonElement v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
 
 	private static async Task Check(Task<IReadOnlyList<string>> batch) {
-		var failures = await batch;
+		IReadOnlyList<string> failures = await batch;
 		if (failures.Count > 0) {
 			throw new Aria2RpcException(0, string.Join("; ", failures.Distinct()));
 		}

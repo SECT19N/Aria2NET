@@ -9,10 +9,10 @@ public sealed record DownloadFile(int Index, string Path, long Length, long Comp
 		(int) Num(e, "index"), Str(e, "path") ?? "", Num(e, "length"), Num(e, "completedLength"), Str(e, "selected") == "true");
 
 	internal static string? Str(JsonElement e, string name) =>
-		e.ValueKind == JsonValueKind.Object && e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
+		e.ValueKind == JsonValueKind.Object && e.TryGetProperty(name, out JsonElement v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
 
 	internal static long Num(JsonElement e, string name) =>
-		long.TryParse(Str(e, name), NumberStyles.None, CultureInfo.InvariantCulture, out var n) ? n : 0;
+		long.TryParse(Str(e, name), NumberStyles.None, CultureInfo.InvariantCulture, out long n) ? n : 0;
 }
 
 /// <summary>One connected peer, from <c>aria2.getPeers</c>.</summary>

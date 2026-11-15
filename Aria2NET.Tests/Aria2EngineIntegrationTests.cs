@@ -8,15 +8,15 @@ namespace Aria2NET.Tests;
 [Collection(RealAria2Collection.Name)]
 public class Aria2EngineIntegrationTests {
 	private static (Aria2Engine Engine, AppPaths Paths, TempDir Temp) Create() {
-		var temp = new TempDir();
-		var paths = new AppPaths(Path.Combine(temp.Path, "data"), RequiresAria2Fact.FindAria2Dir()!);
+		TempDir temp = new TempDir();
+		AppPaths paths = new AppPaths(Path.Combine(temp.Path, "data"), RequiresAria2Fact.FindAria2Dir()!);
 		return (new Aria2Engine(paths, Path.Combine(temp.Path, "dl"), NullLogger<Aria2Engine>.Instance), paths, temp);
 	}
 
 	private static List<Process> OurProcesses(AppPaths paths) {
-		var exe = Path.GetFullPath(paths.Aria2Exe);
-		var result = new List<Process>();
-		foreach (var p in Process.GetProcessesByName("aria2c")) {
+		string exe = Path.GetFullPath(paths.Aria2Exe);
+		List<Process> result = new List<Process>();
+		foreach (Process p in Process.GetProcessesByName("aria2c")) {
 			try {
 				if (string.Equals(p.MainModule?.FileName, exe, StringComparison.OrdinalIgnoreCase)) {
 					result.Add(p);
@@ -32,8 +32,8 @@ public class Aria2EngineIntegrationTests {
 
 	[RequiresAria2Fact]
 	public async Task Start_reports_version_and_Stop_removes_process() {
-		var (engine, paths, temp) = Create();
-		using var _ = temp;
+		(Aria2Engine? engine, AppPaths? paths, TempDir? temp) = Create();
+		using TempDir _ = temp;
 		await engine.StartAsync();
 		Assert.Equal(EngineState.Running, engine.State);
 		Assert.Equal("1.37.0", engine.Version?.Version);
@@ -48,8 +48,8 @@ public class Aria2EngineIntegrationTests {
 
 	[RequiresAria2Fact]
 	public async Task Restart_gives_a_working_engine() {
-		var (engine, _, temp) = Create();
-		using var _ = temp;
+		(Aria2Engine? engine, AppPaths _, TempDir? temp) = Create();
+		using TempDir _ = temp;
 		await engine.StartAsync();
 		await engine.RestartAsync();
 		Assert.Equal(EngineState.Running, engine.State);
@@ -59,17 +59,17 @@ public class Aria2EngineIntegrationTests {
 
 	[RequiresAria2Fact]
 	public async Task Killed_process_is_reported_as_Crashed() {
-		var (engine, paths, temp) = Create();
-		using var _ = temp;
+		(Aria2Engine? engine, AppPaths? paths, TempDir? temp) = Create();
+		using TempDir _ = temp;
 		await engine.StartAsync();
-		var crashed = new TaskCompletionSource();
+		TaskCompletionSource crashed = new TaskCompletionSource();
 		engine.StateChanged += (_, _) => {
 			if (engine.State == EngineState.Crashed) {
 				crashed.TrySetResult();
 			}
 		};
 
-		foreach (var p in OurProcesses(paths)) {
+		foreach (Process p in OurProcesses(paths)) {
 			p.Kill();
 		}
 		await crashed.Task.WaitAsync(TimeSpan.FromSeconds(10));
@@ -79,9 +79,9 @@ public class Aria2EngineIntegrationTests {
 
 	[RequiresAria2Fact]
 	public async Task Orphaned_process_is_killed_on_start() {
-		var (engine, paths, temp) = Create();
-		using var _ = temp;
-		var orphan = Process.Start(new ProcessStartInfo(paths.Aria2Exe, "--enable-rpc --rpc-listen-port=0") { CreateNoWindow = true, UseShellExecute = false })!;
+		(Aria2Engine? engine, AppPaths? paths, TempDir? temp) = Create();
+		using TempDir _ = temp;
+		Process orphan = Process.Start(new ProcessStartInfo(paths.Aria2Exe, "--enable-rpc --rpc-listen-port=0") { CreateNoWindow = true, UseShellExecute = false })!;
 		await Task.Delay(300);
 		await engine.StartAsync();
 		Assert.True(orphan.HasExited);
@@ -90,9 +90,9 @@ public class Aria2EngineIntegrationTests {
 
 	[Fact]
 	public async Task Missing_binary_gives_Failed_state() {
-		using var temp = new TempDir();
-		var paths = new AppPaths(Path.Combine(temp.Path, "data"), Path.Combine(temp.Path, "nope"));
-		var engine = new Aria2Engine(paths, Path.Combine(temp.Path, "dl"), NullLogger<Aria2Engine>.Instance);
+		using TempDir temp = new TempDir();
+		AppPaths paths = new AppPaths(Path.Combine(temp.Path, "data"), Path.Combine(temp.Path, "nope"));
+		Aria2Engine engine = new Aria2Engine(paths, Path.Combine(temp.Path, "dl"), NullLogger<Aria2Engine>.Instance);
 		await engine.StartAsync();
 		Assert.Equal(EngineState.Failed, engine.State);
 		Assert.Contains("aria2c.exe not found", engine.LastError);

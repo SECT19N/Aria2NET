@@ -45,9 +45,9 @@ public static class DownloadView {
 
 	/// <summary>Filters, then sorts. Ties keep aria2's order (the sort is stable).</summary>
 	public static List<DownloadItem> Apply(IEnumerable<DownloadItem> items, StatusFilter filter, SortColumn column, bool descending) {
-		var filtered = items.Where(i => Matches(filter, i));
+		IEnumerable<DownloadItem> filtered = items.Where(i => Matches(filter, i));
 		if (column == SortColumn.None) {
-			return filtered.ToList();
+			return [.. filtered];
 		}
 
 		IOrderedEnumerable<DownloadItem> ordered = (column, descending) switch {
@@ -65,6 +65,6 @@ public static class DownloadView {
 			(SortColumn.Status, false) => filtered.OrderBy(i => i.Status),
 			_ => filtered.OrderByDescending(i => i.Status),
 		};
-		return ordered.ToList();
+		return [.. ordered];
 	}
 }

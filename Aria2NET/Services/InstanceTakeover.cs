@@ -16,29 +16,29 @@ internal static class InstanceTakeover {
 	/// instance. Returns false when there was nothing older to replace (the launch should be handed over as usual) or the user declined.
 	/// </summary>
 	public static bool ReplaceOlderCopies(Version mine) {
-		var older = OlderCopies(mine);
+		List<Process> older = OlderCopies(mine);
 		if (older.Count == 0) {
 			return false;
 		}
 
 		// A copy that has this code listens for the event and exits cleanly. Older ones never created it.
-		if (EventWaitHandle.TryOpenExisting(InstanceRules.ReplaceEventName, out var request)) {
+		if (EventWaitHandle.TryOpenExisting(InstanceRules.ReplaceEventName, out EventWaitHandle? request)) {
 			using (request) {
 				request.Set();
 			}
 			WaitForExit(older, TimeSpan.FromSeconds(20));
-			older = older.Where(IsRunning).ToList();
+			older = [.. older.Where(IsRunning)];
 		}
 
 		if (older.Count > 0) {
-			var versions = string.Join(", ", older.Select(VersionOf).Distinct());
-			var answer = NativeMethods.MessageBox(IntPtr.Zero,
+			string versions = string.Join(", ", older.Select(VersionOf).Distinct());
+			int answer = NativeMethods.MessageBox(IntPtr.Zero,
 				$"An older version of Aria2NET ({versions}) is still running and would take over this one.\n\nClose it and start version {mine.ToString(3)}? Downloads continue where they stopped.",
 				"Aria2NET", 0x4 /* MB_YESNO */ | 0x20 /* MB_ICONQUESTION */);
 			if (answer != 6 /* IDYES */) {
 				return false;
 			}
-			foreach (var process in older) {
+			foreach (Process process in older) {
 				try {
 					process.Kill(entireProcessTree: true); // takes the old copy's aria2c with it
 				} catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception) {
@@ -48,8 +48,8 @@ internal static class InstanceTakeover {
 			WaitForExit(older, TimeSpan.FromSeconds(10));
 		}
 
-		var left = older.Where(IsRunning).ToList();
-		foreach (var process in older) {
+		List<Process> left = [.. older.Where(IsRunning)];
+		foreach (Process process in older) {
 			process.Dispose();
 		}
 		return left.Count == 0;
@@ -57,10 +57,10 @@ internal static class InstanceTakeover {
 
 	/// <summary>Other Aria2NET processes of this Windows session whose version is lower than <paramref name="mine"/>.</summary>
 	private static List<Process> OlderCopies(Version mine) {
-		var self = Environment.ProcessId;
-		var session = Process.GetCurrentProcess().SessionId;
-		var result = new List<Process>();
-		foreach (var process in Process.GetProcessesByName(ProcessName)) {
+		int self = Environment.ProcessId;
+		int session = Process.GetCurrentProcess().SessionId;
+		List<Process> result = [];
+		foreach (Process process in Process.GetProcessesByName(ProcessName)) {
 			if (process.Id != self && process.SessionId == session && InstanceRules.RunningCopyIsOlder(VersionOf(process), mine)) {
 				result.Add(process);
 			} else {
@@ -87,10 +87,10 @@ internal static class InstanceTakeover {
 	}
 
 	private static void WaitForExit(List<Process> processes, TimeSpan timeout) {
-		var deadline = DateTime.UtcNow + timeout;
-		foreach (var process in processes) {
+		DateTime deadline = DateTime.UtcNow + timeout;
+		foreach (Process process in processes) {
 			try {
-				var left = deadline - DateTime.UtcNow;
+				TimeSpan left = deadline - DateTime.UtcNow;
 				if (left > TimeSpan.Zero) {
 					process.WaitForExit(left);
 				}
@@ -105,7 +105,7 @@ internal static class InstanceTakeover {
 	/// is a background thread, so it never keeps the process alive.
 	/// </summary>
 	public static void ListenForReplaceRequest(DispatcherQueue dispatcher, Action exit) {
-		var request = new EventWaitHandle(false, EventResetMode.AutoReset, InstanceRules.ReplaceEventName);
+		EventWaitHandle request = new(false, EventResetMode.AutoReset, InstanceRules.ReplaceEventName);
 		new Thread(() => {
 			while (request.WaitOne()) {
 				dispatcher.TryEnqueue(() => exit());

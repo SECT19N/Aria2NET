@@ -5,10 +5,10 @@ public static class BackupRotation {
 	/// <summary>Path for a new backup of <paramref name="prefix"/>; names sort oldest to newest.</summary>
 	public static string NewPath(string dir, string prefix, string extension, DateTime? nowUtc = null) {
 		Directory.CreateDirectory(dir);
-		var stamp = (nowUtc ?? DateTime.UtcNow).ToString("yyyyMMddHHmmssfff");
-		var path = Path.Combine(dir, $"{prefix}-{stamp}{extension}");
+		string stamp = (nowUtc ?? DateTime.UtcNow).ToString("yyyyMMddHHmmssfff");
+		string path = Path.Combine(dir, $"{prefix}-{stamp}{extension}");
 		// Two backups inside the same millisecond (tests, or a restart loop) must not overwrite each other.
-		for (var n = 1; File.Exists(path); n++) {
+		for (int n = 1; File.Exists(path); n++) {
 			path = Path.Combine(dir, $"{prefix}-{stamp}-{n}{extension}");
 		}
 		return path;
@@ -19,8 +19,8 @@ public static class BackupRotation {
 		if (!Directory.Exists(dir)) {
 			return;
 		}
-		var files = Directory.GetFiles(dir, prefix + "-*").OrderByDescending(Path.GetFileName, StringComparer.Ordinal).Skip(Math.Max(keep, 0));
-		foreach (var file in files) {
+		IEnumerable<string> files = Directory.GetFiles(dir, prefix + "-*").OrderByDescending(Path.GetFileName, StringComparer.Ordinal).Skip(Math.Max(keep, 0));
+		foreach (string? file in files) {
 			try {
 				File.Delete(file);
 			} catch (IOException) {
@@ -40,7 +40,7 @@ public static class BackupRotation {
 		if (!File.Exists(source)) {
 			return null;
 		}
-		var target = NewPath(dir, prefix, Path.GetExtension(source), nowUtc);
+		string target = NewPath(dir, prefix, Path.GetExtension(source), nowUtc);
 		File.Copy(source, target);
 		Prune(dir, prefix, keep);
 		return target;

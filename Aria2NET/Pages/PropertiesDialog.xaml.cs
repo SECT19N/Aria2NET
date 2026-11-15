@@ -8,7 +8,7 @@ namespace Aria2NET.Pages;
 public sealed partial class PropertiesDialog : ContentDialog {
 	public PropertiesDialog(DownloadDetails details, DateTimeOffset? added, DateTimeOffset? finished) {
 		InitializeComponent();
-		var item = details.Item;
+		DownloadItem item = details.Item;
 
 		Add(Loc.S("Props_Name", "Name"), item.Name);
 		Add(Loc.S("Props_Status", "Status"), item.Status.ToString());
@@ -24,7 +24,7 @@ public sealed partial class PropertiesDialog : ContentDialog {
 		Add(Loc.S("Props_Added", "Added"), added?.LocalDateTime.ToString("g"));
 		Add(Loc.S("Props_Finished", "Finished"), finished?.LocalDateTime.ToString("g"));
 		if (item.Status == DownloadStatus.Error) {
-			var friendly = Aria2Errors.Describe(item.ErrorCode, item.ErrorMessage);
+			string friendly = Aria2Errors.Describe(item.ErrorCode, item.ErrorMessage);
 			Add(Loc.S("Props_Error", "Error"), item.ErrorMessage is { Length: > 0 } raw && raw != friendly ? $"{friendly} ({raw})" : friendly);
 		}
 	}
@@ -33,7 +33,7 @@ public sealed partial class PropertiesDialog : ContentDialog {
 		if (string.IsNullOrWhiteSpace(value)) {
 			return;
 		}
-		var panel = new StackPanel { Spacing = 2 };
+		StackPanel panel = new() { Spacing = 2 };
 		panel.Children.Add(new TextBlock { Text = label, Opacity = 0.7, FontSize = 12 });
 		panel.Children.Add(new TextBlock { Text = value, IsTextSelectionEnabled = true, TextWrapping = TextWrapping.Wrap, FontWeight = FontWeights.Normal });
 		Fields.Children.Add(panel);

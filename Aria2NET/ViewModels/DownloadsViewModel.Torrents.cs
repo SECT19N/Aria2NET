@@ -22,55 +22,55 @@ public sealed partial class DownloadsViewModel {
 	public Func<TorrentPrompt, Task<TorrentChoice>>? PromptTorrent { get; set; }
 
 	private async Task<bool> AddTorrentFileAsync(string path, string folder, AddOptions? extra = null) {
-		var info = new FileInfo(path);
+		FileInfo info = new(path);
 		if (!info.Exists) {
 			throw new FileNotFoundException("The file does not exist.");
 		}
 		if (info.Length > TorrentMetadata.MaxFileBytes) {
 			throw new FormatException("This is not a torrent file (it is far too large).");
 		}
-		var bytes = await File.ReadAllBytesAsync(path);
-		var meta = TorrentMetadata.Parse(bytes);
+		byte[] bytes = await File.ReadAllBytesAsync(path);
+		TorrentMetadata meta = TorrentMetadata.Parse(bytes);
 
-		var duplicate = TorrentOperations.FindDuplicate(meta.InfoHash, _items, _history.Store);
+		DuplicateTorrent? duplicate = TorrentOperations.FindDuplicate(meta.InfoHash, _items, _history.Store);
 		if (duplicate?.LiveGid is not null) {
 			AlreadyAdded(meta.Name, duplicate.LiveGid);
 			return false;
 		}
 
-		var note = duplicate?.Past is { } past ? Loc.F("Torrent_AddedBefore", "You added this torrent before ({0:d}).", past.AddedUtc.ToLocalTime()) : null;
-		var choice = await AskAsync(new TorrentPrompt(meta.Name, meta.Files, folder, FolderEditable: true, note))
+		string? note = duplicate?.Past is { } past ? Loc.F("Torrent_AddedBefore", "You added this torrent before ({0:d}).", past.AddedUtc.ToLocalTime()) : null;
+		TorrentChoice choice = await AskAsync(new TorrentPrompt(meta.Name, meta.Files, folder, FolderEditable: true, note))
 			?? DefaultChoice(folder, meta.Files);
 		if (choice.Files.Count == 0) {
 			return false; // cancelled
 		}
 
-		var gid = await _torrents.AddTorrentAsync(bytes, new TorrentAddRequest(choice.Folder, choice.Files, meta.Files.Count, choice.Seeding, choice.Allocation, extra));
+		string gid = await _torrents.AddTorrentAsync(bytes, new TorrentAddRequest(choice.Folder, choice.Files, meta.Files.Count, choice.Seeding, choice.Allocation, extra));
 		_added[gid] = DateTimeOffset.Now;
 		SaveSettings(s => s.LastUsedFolder = choice.Folder);
 		return true;
 	}
 
 	private async Task AddMetalinkFileAsync(string path, string folder, AddOptions? extra = null) {
-		var info = new FileInfo(path);
+		FileInfo info = new(path);
 		if (!info.Exists) {
 			throw new FileNotFoundException("The file does not exist.");
 		}
 		if (info.Length > TorrentMetadata.MaxFileBytes) {
 			throw new FormatException("This does not look like a metalink file (it is far too large).");
 		}
-		foreach (var gid in await _torrents.AddMetalinkAsync(await File.ReadAllBytesAsync(path), folder, extra)) {
+		foreach (string gid in await _torrents.AddMetalinkAsync(await File.ReadAllBytesAsync(path), folder, extra)) {
 			_added[gid] = DateTimeOffset.Now;
 		}
 	}
 
 	private async Task<bool> AddMagnetAsync(string magnet, string folder, AddOptions? extra = null) {
-		if (MagnetLink.TryGetInfoHash(magnet, out var hash)
+		if (MagnetLink.TryGetInfoHash(magnet, out string hash)
 			&& TorrentOperations.FindDuplicate(hash, _items, null) is { LiveGid: { } existing }) {
 			AlreadyAdded(MagnetLink.DisplayName(magnet) ?? hash, existing);
 			return false;
 		}
-		var gid = await _torrents.AddMagnetAsync(magnet, folder);
+		string gid = await _torrents.AddMagnetAsync(magnet, folder);
 		_added[gid] = DateTimeOffset.Now;
 		_ = ResolveMagnetAsync(gid, folder, extra);
 		return true;
@@ -80,13 +80,13 @@ public sealed partial class DownloadsViewModel {
 	private async Task ResolveMagnetAsync(string metadataGid, string folder, AddOptions? extra = null) {
 		string? followerGid = null;
 		try {
-			var resolved = await _torrents.WaitForMetadataAsync(metadataGid);
+			ResolvedMagnet? resolved = await _torrents.WaitForMetadataAsync(metadataGid);
 			if (resolved is null) {
 				return; // failed (the row shows the error) or removed by the user
 			}
 			followerGid = resolved.Gid;
-			var files = resolved.Files.Select(f => new TorrentFileEntry(f.Index, RelativeName(f.Path, folder, resolved.Name, resolved.Files.Count), f.Length)).ToList();
-			var choice = await AskAsync(new TorrentPrompt(resolved.Name, files, folder, FolderEditable: false, Note: null))
+			List<TorrentFileEntry> files = [.. resolved.Files.Select(f => new TorrentFileEntry(f.Index, RelativeName(f.Path, folder, resolved.Name, resolved.Files.Count), f.Length))];
+			TorrentChoice choice = await AskAsync(new TorrentPrompt(resolved.Name, files, folder, FolderEditable: false, Note: null))
 				?? DefaultChoice(folder, files);
 			if (choice.Files.Count == 0) {
 				await _torrents.DiscardAsync(resolved.Gid);
@@ -112,7 +112,7 @@ public sealed partial class DownloadsViewModel {
 		PromptTorrent is { } ask ? await ask(prompt) : null;
 
 	private static TorrentChoice DefaultChoice(string folder, IReadOnlyList<TorrentFileEntry> files) =>
-		new(folder, files.Select(f => f.Index).ToList(), SeedingOverride.Default, AllocationChoice.Default);
+		new(folder, [.. files.Select(f => f.Index)], SeedingOverride.Default, AllocationChoice.Default);
 
 	private void AlreadyAdded(string name, string gid) {
 		_notices.Post(new Notice(Loc.S("Torrent_AlreadyTitle", "Already in the list"), Loc.F("Torrent_AlreadyBody", "{0} is already being downloaded.", name), InfoBarSeverity.Informational));
@@ -121,8 +121,8 @@ public sealed partial class DownloadsViewModel {
 
 	/// <summary>The file's path relative to the torrent, as the .torrent lists it (aria2 reports absolute paths, with the torrent's folder in front for multi-file torrents).</summary>
 	private static string RelativeName(string path, string folder, string torrentName, int fileCount) {
-		var relative = Path.GetRelativePath(folder, path).Replace('\\', '/');
-		var root = torrentName + "/";
+		string relative = Path.GetRelativePath(folder, path).Replace('\\', '/');
+		string root = torrentName + "/";
 		return fileCount > 1 && relative.StartsWith(root, StringComparison.Ordinal) ? relative[root.Length..] : relative;
 	}
 
@@ -130,12 +130,12 @@ public sealed partial class DownloadsViewModel {
 
 	/// <summary>Warns once per download, as soon as its size is known, when the folder cannot hold the rest of it.</summary>
 	private void CheckDiskSpace(IReadOnlyList<DownloadItem> items) {
-		foreach (var item in items) {
+		foreach (DownloadItem item in items) {
 			if (item.Status is not (DownloadStatus.Active or DownloadStatus.Waiting or DownloadStatus.Paused) || item.IsMetadata
 				|| item.TotalBytes <= 0 || item.Dir is null || !_spaceChecked.Add(item.Gid)) {
 				continue;
 			}
-			var needed = item.TotalBytes - item.CompletedBytes;
+			long needed = item.TotalBytes - item.CompletedBytes;
 			if (!DiskSpace.Fits(needed, item.Dir)) {
 				_notices.Post(new Notice(Loc.S("Torrent_NoSpaceTitle", "Not enough disk space"),
 					Loc.F("Torrent_NoSpaceBody", "{0} needs {1} more, but {2} is free in {3}.", item.Name, ByteFormat.Size(needed), ByteFormat.Size(DiskSpace.FreeBytes(item.Dir) ?? 0), item.Dir),
@@ -146,22 +146,19 @@ public sealed partial class DownloadsViewModel {
 	}
 
 	public Task RecheckSelectedAsync() => Run(async () => {
-		foreach (var item in SelectedItems().Where(DownloadCapabilities.CanRecheck)) {
+		foreach (DownloadItem item in SelectedItems().Where(DownloadCapabilities.CanRecheck)) {
 			await _torrents.RecheckAsync(item.Gid);
 		}
 	});
 
 	public Task SetSeedingSelectedAsync(SeedingOverride seeding) => Run(async () => {
-		foreach (var item in SelectedItems().Where(DownloadCapabilities.CanChangeSeeding)) {
+		foreach (DownloadItem item in SelectedItems().Where(DownloadCapabilities.CanChangeSeeding)) {
 			await _torrents.ApplySeedingAsync(item.Gid, seeding);
 		}
 	});
 
-	/// <summary>The window with files, peers, trackers and pieces of the single selected torrent, or null when that is not what is selected.</summary>
-	public TorrentDetailViewModel? CreateDetailViewModel() =>
-		SingleSelected() is { IsTorrent: true, IsMetadata: false } item
-			? new TorrentDetailViewModel(_engine, item.Gid, _logger)
-			: null;
+	/// <summary>Live files, peers, trackers and pieces of one download, for the details pane.</summary>
+	public DownloadDetailViewModel CreateDetailViewModel(DownloadRowViewModel row) => new(_engine, _torrents, _notices, row.Gid, _logger);
 
 	private string? _pendingExternal;
 
@@ -175,7 +172,7 @@ public sealed partial class DownloadsViewModel {
 
 	/// <summary>The text for the Add dialog from the last <see cref="RequestExternalAdd"/>, once.</summary>
 	public string? TakePendingExternalText() {
-		var text = _pendingExternal;
+		string? text = _pendingExternal;
 		_pendingExternal = null;
 		return text;
 	}

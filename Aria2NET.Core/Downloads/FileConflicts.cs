@@ -21,9 +21,9 @@ public static class FileConflicts {
 	/// </summary>
 	public static string? FindExisting(string folder, string url, string? fileName) {
 		try {
-			var name = fileName?.Trim();
+			string? name = fileName?.Trim();
 			if (string.IsNullOrEmpty(name)) {
-				if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https" or "ftp")) {
+				if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) || uri.Scheme is not ("http" or "https" or "ftp")) {
 					return null;
 				}
 				name = Uri.UnescapeDataString(Path.GetFileName(uri.AbsolutePath));
@@ -31,7 +31,7 @@ public static class FileConflicts {
 			if (string.IsNullOrEmpty(name) || name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) {
 				return null;
 			}
-			var path = Path.Combine(folder, name);
+			string path = Path.Combine(folder, name);
 			return File.Exists(path) && !File.Exists(path + ".aria2") ? path : null;
 		} catch (Exception ex) when (ex is ArgumentException or NotSupportedException or IOException or UriFormatException) {
 			return null;
@@ -45,7 +45,7 @@ public static class FileConflicts {
 	public static IReadOnlyDictionary<string, string> OptionsFor(ConflictChoice choice) => choice switch {
 		ConflictChoice.Overwrite => new Dictionary<string, string> { ["allow-overwrite"] = "true", ["auto-file-renaming"] = "false", ["continue"] = "false" },
 		ConflictChoice.Rename => new Dictionary<string, string> { ["allow-overwrite"] = "false", ["auto-file-renaming"] = "true", ["continue"] = "false" },
-		_ => new Dictionary<string, string>(),
+		_ => [],
 	};
 
 	/// <summary>The choice that follows from the policy without asking; null for <see cref="ConflictPolicy.Ask"/>.</summary>

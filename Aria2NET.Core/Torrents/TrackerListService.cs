@@ -26,14 +26,14 @@ public sealed class TrackerListService(HttpClient http, AppPaths paths, ILogger<
 
 	/// <summary>Keeps tracker addresses only. The result is written into aria2's config file, so a line with a comma, space or newline could smuggle in another option and is rejected.</summary>
 	public static IReadOnlyList<string> Parse(string? text) {
-		var result = new List<string>();
-		var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-		foreach (var raw in (text ?? "").Split('\n')) {
-			var line = raw.Trim();
+		List<string> result = [];
+		HashSet<string> seen = [with(StringComparer.OrdinalIgnoreCase)];
+		foreach (string raw in (text ?? "").Split('\n')) {
+			string line = raw.Trim();
 			if (line.Length == 0 || line.StartsWith('#') || line.Any(c => char.IsWhiteSpace(c) || char.IsControl(c) || c == ',')) {
 				continue;
 			}
-			if (!Uri.TryCreate(line, UriKind.Absolute, out var uri)
+			if (!Uri.TryCreate(line, UriKind.Absolute, out Uri? uri)
 				|| !Schemes.Contains(uri.Scheme, StringComparer.OrdinalIgnoreCase)
 				|| string.IsNullOrEmpty(uri.Host)
 				|| !seen.Add(line)) {
@@ -71,15 +71,15 @@ public sealed class TrackerListService(HttpClient http, AppPaths paths, ILogger<
 	/// </summary>
 	public async Task<IReadOnlyList<string>?> RefreshAsync(string url = DefaultUrl, CancellationToken ct = default) {
 		try {
-			using var response = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
+			using HttpResponseMessage response = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
 			response.EnsureSuccessStatusCode();
 			if (response.Content.Headers.ContentLength > MaxDownloadBytes) {
 				logger?.LogWarning("Tracker list at {Url} is too large; ignored", url);
 				return null;
 			}
-			await using var stream = await response.Content.ReadAsStreamAsync(ct);
-			using var buffer = new MemoryStream();
-			var chunk = new byte[16 * 1024];
+			await using Stream stream = await response.Content.ReadAsStreamAsync(ct);
+			using MemoryStream buffer = new();
+			byte[] chunk = new byte[16 * 1024];
 			int read;
 			while ((read = await stream.ReadAsync(chunk, ct)) > 0) {
 				buffer.Write(chunk, 0, read);
@@ -89,13 +89,13 @@ public sealed class TrackerListService(HttpClient http, AppPaths paths, ILogger<
 				}
 			}
 
-			var list = Parse(System.Text.Encoding.UTF8.GetString(buffer.GetBuffer(), 0, (int) buffer.Length));
+			IReadOnlyList<string> list = Parse(System.Text.Encoding.UTF8.GetString(buffer.GetBuffer(), 0, (int) buffer.Length));
 			if (list.Count == 0) {
 				logger?.LogWarning("Tracker list at {Url} had no usable trackers; keeping the cached one", url);
 				return null;
 			}
 			Directory.CreateDirectory(Path.GetDirectoryName(paths.TrackerListFile)!);
-			var temp = paths.TrackerListFile + ".tmp";
+			string temp = paths.TrackerListFile + ".tmp";
 			await File.WriteAllLinesAsync(temp, list, ct);
 			File.Move(temp, paths.TrackerListFile, overwrite: true);
 			logger?.LogInformation("Tracker list refreshed: {Count} trackers", list.Count);

@@ -35,24 +35,23 @@ public sealed class HistoryRecorder(HistoryStore store, ILogger? logger = null, 
 
 	private void Record(IReadOnlyList<DownloadItem> allItems) {
 		// A magnet's metadata placeholder is only a stage of the torrent that follows it; the follower is the one that counts.
-		var items = allItems.Where(i => !i.IsMetadata).ToList();
-		var now = _clock();
+		List<DownloadItem> items = [.. allItems.Where(i => !i.IsMetadata)];
+		DateTime now = _clock();
 		if (_reconcileNext) {
-			var result = store.Reconcile(items, now);
+			ReconcileResult result = store.Reconcile(items, now);
 			_reconcileNext = false;
 			if (result.Interrupted > 0 || result.Relinked > 0) {
 				logger?.LogInformation("History reconciled: {Interrupted} interrupted, {Relinked} relinked", result.Interrupted, result.Relinked);
 			}
-			foreach (var item in items) {
+			foreach (DownloadItem item in items) {
 				_seen[item.Gid] = Seen.Of(item);
 			}
 			return;
 		}
 
-		var current = items.Select(i => i.Gid).ToHashSet(StringComparer.Ordinal);
-		var vanished = _seen.Where(p => !current.Contains(p.Key) && p.Value.Status is DownloadStatus.Active or DownloadStatus.Waiting or DownloadStatus.Paused)
-			.Select(p => p.Key).ToList();
-		var changed = items.Where(i => !_seen.TryGetValue(i.Gid, out var seen) || seen != Seen.Of(i)).ToList();
+		HashSet<string> current = items.Select(i => i.Gid).ToHashSet(StringComparer.Ordinal);
+		List<string> vanished = [.. _seen.Where(p => !current.Contains(p.Key) && p.Value.Status is DownloadStatus.Active or DownloadStatus.Waiting or DownloadStatus.Paused).Select(p => p.Key)];
+		List<DownloadItem> changed = [.. items.Where(i => !_seen.TryGetValue(i.Gid, out Seen seen) || seen != Seen.Of(i))];
 
 		if (vanished.Count > 0) {
 			store.MarkRemoved(vanished, now);
@@ -60,10 +59,10 @@ public sealed class HistoryRecorder(HistoryStore store, ILogger? logger = null, 
 		if (changed.Count > 0) {
 			store.Upsert(changed, now);
 		}
-		foreach (var gid in _seen.Keys.Where(g => !current.Contains(g)).ToList()) {
+		foreach (string? gid in _seen.Keys.Where(g => !current.Contains(g)).ToList()) {
 			_seen.Remove(gid);
 		}
-		foreach (var item in changed) {
+		foreach (DownloadItem item in changed) {
 			_seen[item.Gid] = Seen.Of(item);
 		}
 	}

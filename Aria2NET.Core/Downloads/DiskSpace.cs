@@ -25,7 +25,7 @@ public static class DiskSpace {
 		while (probe is not null && !Directory.Exists(probe)) {
 			probe = Path.GetDirectoryName(probe);
 		}
-		if (probe is null || !GetDiskFreeSpaceEx(probe, out var free, out _, out _)) {
+		if (probe is null || !GetDiskFreeSpaceEx(probe, out ulong free, out _, out _)) {
 			return null;
 		}
 		return free > long.MaxValue ? long.MaxValue : (long) free;

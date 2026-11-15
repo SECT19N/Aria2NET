@@ -36,9 +36,9 @@ public sealed class GeoIpResolver {
 			if (!File.Exists(path)) {
 				return Empty;
 			}
-			using var file = File.OpenRead(path);
-			using var stream = path.EndsWith(".gz", StringComparison.OrdinalIgnoreCase) ? new GZipStream(file, CompressionMode.Decompress) : (Stream) file;
-			using var reader = new StreamReader(stream);
+			using FileStream file = File.OpenRead(path);
+			using Stream stream = path.EndsWith(".gz", StringComparison.OrdinalIgnoreCase) ? new GZipStream(file, CompressionMode.Decompress) : (Stream) file;
+			using StreamReader reader = new(stream);
 			return FromCsv(reader);
 		} catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException) {
 			return Empty;
@@ -46,15 +46,15 @@ public sealed class GeoIpResolver {
 	}
 
 	public static GeoIpResolver FromCsv(TextReader reader) {
-		var v4 = new List<(uint Start, uint End, string Country)>();
-		var v6 = new List<(UInt128 Start, UInt128 End, string Country)>();
+		List<(uint Start, uint End, string Country)> v4 = [];
+		List<(UInt128 Start, UInt128 End, string Country)> v6 = [];
 		string? line;
 		while ((line = reader.ReadLine()) is not null) {
-			var parts = line.Split(',').Select(p => p.Trim().Trim('"')).ToArray();
-			if (parts.Length < 3 || parts[2].Length != 2 || !IPAddress.TryParse(parts[0], out var start) || !IPAddress.TryParse(parts[1], out var end)) {
+			string[] parts = [.. line.Split(',').Select(p => p.Trim().Trim('"'))];
+			if (parts.Length < 3 || parts[2].Length != 2 || !IPAddress.TryParse(parts[0], out IPAddress? start) || !IPAddress.TryParse(parts[1], out IPAddress? end)) {
 				continue;
 			}
-			var country = parts[2].ToUpperInvariant();
+			string country = parts[2].ToUpperInvariant();
 			if (start.AddressFamily == AddressFamily.InterNetwork && end.AddressFamily == AddressFamily.InterNetwork) {
 				v4.Add((ToUInt32(start), ToUInt32(end), country));
 			} else if (start.AddressFamily == AddressFamily.InterNetworkV6 && end.AddressFamily == AddressFamily.InterNetworkV6) {
@@ -70,23 +70,23 @@ public sealed class GeoIpResolver {
 
 	/// <summary>Two-letter country code, or null when unknown (or the address is not an address).</summary>
 	public string? Lookup(string? ip) {
-		if (RangeCount == 0 || !IPAddress.TryParse(ip, out var address)) {
+		if (RangeCount == 0 || !IPAddress.TryParse(ip, out IPAddress? address)) {
 			return null;
 		}
 		if (address.IsIPv4MappedToIPv6) {
 			address = address.MapToIPv4();
 		}
 		if (address.AddressFamily == AddressFamily.InterNetwork) {
-			var value = ToUInt32(address);
-			var i = Array.BinarySearch(_v4Start, value);
+			uint value = ToUInt32(address);
+			int i = Array.BinarySearch(_v4Start, value);
 			if (i < 0) {
 				i = ~i - 1;
 			}
 			return i >= 0 && value <= _v4End[i] ? _v4Country[i] : null;
 		}
 		if (address.AddressFamily == AddressFamily.InterNetworkV6) {
-			var value = ToUInt128(address);
-			var i = Array.BinarySearch(_v6Start, value);
+			UInt128 value = ToUInt128(address);
+			int i = Array.BinarySearch(_v6Start, value);
 			if (i < 0) {
 				i = ~i - 1;
 			}
@@ -96,14 +96,14 @@ public sealed class GeoIpResolver {
 	}
 
 	private static uint ToUInt32(IPAddress a) {
-		var b = a.GetAddressBytes();
+		byte[] b = a.GetAddressBytes();
 		return ((uint) b[0] << 24) | ((uint) b[1] << 16) | ((uint) b[2] << 8) | b[3];
 	}
 
 	private static UInt128 ToUInt128(IPAddress a) {
-		var b = a.GetAddressBytes();
+		byte[] b = a.GetAddressBytes();
 		UInt128 value = 0;
-		foreach (var x in b) {
+		foreach (byte x in b) {
 			value = (value << 8) | x;
 		}
 		return value;

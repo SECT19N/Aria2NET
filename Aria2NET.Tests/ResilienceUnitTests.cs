@@ -6,7 +6,7 @@ namespace Aria2NET.Tests;
 
 public class SessionFileTests {
 	private static AppPaths Paths(TempDir temp) {
-		var paths = new AppPaths(Path.Combine(temp.Path, "data"), Path.Combine(temp.Path, "tools"));
+		AppPaths paths = new AppPaths(Path.Combine(temp.Path, "data"), Path.Combine(temp.Path, "tools"));
 		paths.EnsureDirectories();
 		return paths;
 	}
@@ -15,8 +15,8 @@ public class SessionFileTests {
 
 	[Fact]
 	public void Check_tells_the_four_states_apart() {
-		using var temp = new TempDir();
-		var file = Path.Combine(temp.Path, "s");
+		using TempDir temp = new TempDir();
+		string file = Path.Combine(temp.Path, "s");
 
 		Assert.Equal(SessionHealth.Missing, SessionFile.Check(file));
 		File.WriteAllBytes(file, []);
@@ -31,10 +31,10 @@ public class SessionFileTests {
 
 	[Fact]
 	public void A_missing_file_is_created_empty() {
-		using var temp = new TempDir();
-		var paths = Paths(temp);
+		using TempDir temp = new TempDir();
+		AppPaths paths = Paths(temp);
 
-		var result = SessionFile.PrepareForStart(paths);
+		SessionPrepareResult result = SessionFile.PrepareForStart(paths);
 
 		Assert.False(result.Repaired);
 		Assert.Equal(0, new FileInfo(paths.Aria2SessionFile).Length);
@@ -43,8 +43,8 @@ public class SessionFileTests {
 
 	[Fact]
 	public void A_healthy_file_is_backed_up_but_an_unchanged_one_is_not_backed_up_twice() {
-		using var temp = new TempDir();
-		var paths = Paths(temp);
+		using TempDir temp = new TempDir();
+		AppPaths paths = Paths(temp);
 		File.WriteAllText(paths.Aria2SessionFile, "http://h/a.zip\n");
 
 		SessionFile.PrepareForStart(paths);
@@ -58,9 +58,9 @@ public class SessionFileTests {
 
 	[Fact]
 	public void Only_the_newest_backups_are_kept() {
-		using var temp = new TempDir();
-		var paths = Paths(temp);
-		for (var i = 0; i < SessionFile.KeepBackups + 3; i++) {
+		using TempDir temp = new TempDir();
+		AppPaths paths = Paths(temp);
+		for (int i = 0; i < SessionFile.KeepBackups + 3; i++) {
 			File.WriteAllText(paths.Aria2SessionFile, $"http://h/{i}.zip\n");
 			SessionFile.PrepareForStart(paths);
 		}
@@ -69,15 +69,15 @@ public class SessionFileTests {
 
 	[Fact]
 	public void A_damaged_file_is_replaced_by_the_newest_healthy_backup() {
-		using var temp = new TempDir();
-		var paths = Paths(temp);
+		using TempDir temp = new TempDir();
+		AppPaths paths = Paths(temp);
 		File.WriteAllText(paths.Aria2SessionFile, "http://h/old.zip\n");
 		SessionFile.PrepareForStart(paths);
 		File.WriteAllText(paths.Aria2SessionFile, "http://h/new.zip\n");
 		SessionFile.PrepareForStart(paths);
 		File.WriteAllBytes(paths.Aria2SessionFile, new byte[128]);
 
-		var result = SessionFile.PrepareForStart(paths);
+		SessionPrepareResult result = SessionFile.PrepareForStart(paths);
 
 		Assert.True(result.Repaired);
 		Assert.NotNull(result.RestoredFrom);
@@ -87,11 +87,11 @@ public class SessionFileTests {
 
 	[Fact]
 	public void A_damaged_backup_is_skipped_and_with_no_usable_backup_the_file_starts_empty() {
-		using var temp = new TempDir();
-		var paths = Paths(temp);
+		using TempDir temp = new TempDir();
+		AppPaths paths = Paths(temp);
 		File.WriteAllBytes(paths.Aria2SessionFile, new byte[16]);
 
-		var result = SessionFile.PrepareForStart(paths);
+		SessionPrepareResult result = SessionFile.PrepareForStart(paths);
 
 		Assert.True(result.Repaired);
 		Assert.Null(result.RestoredFrom);
@@ -104,7 +104,7 @@ public class RestartPolicyTests {
 
 	[Fact]
 	public void Delays_grow_and_the_policy_gives_up_after_the_limit() {
-		var policy = new RestartPolicy(maxRestarts: 3);
+		RestartPolicy policy = new RestartPolicy(maxRestarts: 3);
 
 		Assert.Equal(TimeSpan.FromSeconds(1), policy.NextDelay(T0));
 		Assert.Equal(TimeSpan.FromSeconds(3), policy.NextDelay(T0.AddSeconds(5)));
@@ -114,7 +114,7 @@ public class RestartPolicyTests {
 
 	[Fact]
 	public void Old_crashes_stop_counting_after_the_window() {
-		var policy = new RestartPolicy(maxRestarts: 2, window: TimeSpan.FromMinutes(5));
+		RestartPolicy policy = new RestartPolicy(maxRestarts: 2, window: TimeSpan.FromMinutes(5));
 		policy.NextDelay(T0);
 		policy.NextDelay(T0.AddSeconds(10));
 		Assert.Null(policy.NextDelay(T0.AddSeconds(20)));
@@ -124,7 +124,7 @@ public class RestartPolicyTests {
 
 	[Fact]
 	public void Reset_forgets_earlier_crashes() {
-		var policy = new RestartPolicy(maxRestarts: 1);
+		RestartPolicy policy = new RestartPolicy(maxRestarts: 1);
 		policy.NextDelay(T0);
 		Assert.Null(policy.NextDelay(T0));
 		policy.Reset();
@@ -168,9 +168,9 @@ public class EngineSupervisorTests {
 
 	[Fact]
 	public async Task A_crash_restarts_the_engine_and_reports_it() {
-		var engine = new FakeEngine();
-		var restarted = new TaskCompletionSource();
-		using var supervisor = Create(engine);
+		FakeEngine engine = new FakeEngine();
+		TaskCompletionSource restarted = new TaskCompletionSource();
+		using EngineSupervisor supervisor = Create(engine);
 		supervisor.Restarted += (_, _) => restarted.TrySetResult();
 
 		engine.Crash();
@@ -182,9 +182,9 @@ public class EngineSupervisorTests {
 
 	[Fact]
 	public async Task Repeated_failures_end_with_GaveUp_and_a_crashed_engine() {
-		var engine = new FakeEngine { Outcomes = { [0] = EngineState.Crashed } };
-		var gaveUp = new TaskCompletionSource();
-		using var supervisor = Create(engine, new RestartPolicy(maxRestarts: 2));
+		FakeEngine engine = new FakeEngine { Outcomes = { [0] = EngineState.Crashed } };
+		TaskCompletionSource gaveUp = new TaskCompletionSource();
+		using EngineSupervisor supervisor = Create(engine, new RestartPolicy(maxRestarts: 2));
 		supervisor.GaveUp += (_, _) => gaveUp.TrySetResult();
 
 		engine.Crash();
@@ -196,10 +196,10 @@ public class EngineSupervisorTests {
 
 	[Fact]
 	public async Task It_does_not_restart_an_engine_the_user_already_restarted() {
-		var engine = new FakeEngine();
-		var release = new TaskCompletionSource();
-		var delayStarted = new TaskCompletionSource();
-		using var supervisor = new EngineSupervisor(engine, new RestartPolicy(), delay: async (_, _) => {
+		FakeEngine engine = new FakeEngine();
+		TaskCompletionSource release = new TaskCompletionSource();
+		TaskCompletionSource delayStarted = new TaskCompletionSource();
+		using EngineSupervisor supervisor = new EngineSupervisor(engine, new RestartPolicy(), delay: async (_, _) => {
 			delayStarted.TrySetResult();
 			await release.Task;
 		});
@@ -215,8 +215,8 @@ public class EngineSupervisorTests {
 
 	[Fact]
 	public async Task Stopping_the_engine_on_purpose_is_not_a_crash() {
-		var engine = new FakeEngine();
-		using var supervisor = Create(engine);
+		FakeEngine engine = new FakeEngine();
+		using EngineSupervisor supervisor = Create(engine);
 
 		engine.State = EngineState.Stopped;
 		await Task.Delay(100);
@@ -231,10 +231,10 @@ public class OrphanFilesTests {
 
 	[Fact]
 	public void Finds_control_files_that_no_live_download_owns_and_reports_the_partial_data() {
-		using var temp = new TempDir();
-		var owned = Path.Combine(temp.Path, "busy.zip");
-		var stray = Path.Combine(temp.Path, "stray.zip");
-		var strayNoData = Path.Combine(temp.Path, "gone.zip");
+		using TempDir temp = new TempDir();
+		string owned = Path.Combine(temp.Path, "busy.zip");
+		string stray = Path.Combine(temp.Path, "stray.zip");
+		string strayNoData = Path.Combine(temp.Path, "gone.zip");
 		File.WriteAllText(owned, "x");
 		File.WriteAllText(owned + ".aria2", "c");
 		File.WriteAllText(stray, "12345");
@@ -242,10 +242,10 @@ public class OrphanFilesTests {
 		File.WriteAllText(strayNoData + ".aria2", "c");
 		File.WriteAllText(Path.Combine(temp.Path, "notes.txt"), "unrelated");
 
-		var orphans = OrphanFiles.Find([temp.Path, temp.Path.ToUpperInvariant(), Path.Combine(temp.Path, "missing")], [Live(owned)]);
+		IReadOnlyList<OrphanFile> orphans = OrphanFiles.Find([temp.Path, temp.Path.ToUpperInvariant(), Path.Combine(temp.Path, "missing")], [Live(owned)]);
 
 		Assert.Equal(2, orphans.Count);
-		var withData = orphans.Single(o => o.DataFile == stray);
+		OrphanFile withData = orphans.Single(o => o.DataFile == stray);
 		Assert.True(withData.DataExists);
 		Assert.Equal(5, withData.DataBytes);
 		Assert.False(orphans.Single(o => o.DataFile == strayNoData).DataExists);
@@ -253,11 +253,11 @@ public class OrphanFilesTests {
 
 	[Fact]
 	public void Clean_removes_the_control_file_and_only_removes_the_data_when_asked() {
-		using var temp = new TempDir();
-		var data = Path.Combine(temp.Path, "a.zip");
+		using TempDir temp = new TempDir();
+		string data = Path.Combine(temp.Path, "a.zip");
 		File.WriteAllText(data, "partial");
 		File.WriteAllText(data + ".aria2", "c");
-		var orphan = OrphanFiles.Find([temp.Path], []).Single();
+		OrphanFile orphan = OrphanFiles.Find([temp.Path], []).Single();
 
 		Assert.Equal(1, OrphanFiles.Clean([orphan], deleteData: false));
 		Assert.False(File.Exists(data + ".aria2"));

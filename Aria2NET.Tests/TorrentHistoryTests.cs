@@ -1,6 +1,7 @@
 using Aria2NET.Core.Data;
 using Aria2NET.Core.Downloads;
 using Aria2NET.Core.History;
+using Microsoft.Data.Sqlite;
 
 namespace Aria2NET.Tests;
 
@@ -8,7 +9,7 @@ public class TorrentHistoryTests {
 	private const string Hash = "2b23b147743538b694a5049fc9f9ba676000e7d4";
 
 	private static (HistoryStore Store, Database Db) Create(TempDir temp) {
-		var db = new Database(Path.Combine(temp.Path, "history.db"), Path.Combine(temp.Path, "backups"));
+		Database db = new Database(Path.Combine(temp.Path, "history.db"), Path.Combine(temp.Path, "backups"));
 		db.EnsureReady();
 		return (new HistoryStore(db), db);
 	}
@@ -18,23 +19,23 @@ public class TorrentHistoryTests {
 
 	[Fact]
 	public void Schema_v2_adds_the_torrent_columns_and_keeps_old_rows() {
-		using var temp = new TempDir();
-		var path = Path.Combine(temp.Path, "history.db");
-		var backups = Path.Combine(temp.Path, "backups");
-		var v1Only = Migrations.All.Take(1).ToList();
-		var old = new Database(path, backups, migrations: v1Only);
+		using TempDir temp = new TempDir();
+		string path = Path.Combine(temp.Path, "history.db");
+		string backups = Path.Combine(temp.Path, "backups");
+		List<Migration> v1Only = Migrations.All.Take(1).ToList();
+		Database old = new Database(path, backups, migrations: v1Only);
 		old.EnsureReady();
-		using (var c = old.Open()) {
+		using (SqliteConnection c = old.Open()) {
 			// The store now writes the v2 columns, so a row from the old app is inserted by hand.
-			using var insert = c.CreateCommand();
+			using SqliteCommand insert = c.CreateCommand();
 			insert.CommandText = "INSERT INTO downloads (gid, name, status, added_utc, updated_utc) VALUES ('old', 'a.zip', 'complete', '2026-01-01T00:00:00.0000000Z', '2026-01-01T00:00:00.0000000Z')";
 			insert.ExecuteNonQuery();
 		}
 
-		var upgraded = new Database(path, backups);
+		Database upgraded = new Database(path, backups);
 		Assert.Equal(DatabaseStatus.Ready, upgraded.EnsureReady().Status);
 
-		var entry = new HistoryStore(upgraded).Get("old")!;
+		HistoryEntry entry = new HistoryStore(upgraded).Get("old")!;
 		Assert.Equal("a.zip", entry.Name);
 		Assert.Null(entry.InfoHash);
 		Assert.False(entry.IsTorrent);
@@ -44,12 +45,12 @@ public class TorrentHistoryTests {
 
 	[Fact]
 	public void Upsert_stores_the_hash_and_looks_it_up_case_insensitively() {
-		using var temp = new TempDir();
-		var (store, _) = Create(temp);
+		using TempDir temp = new TempDir();
+		(HistoryStore? store, Database _) = Create(temp);
 
 		store.Upsert([Torrent("t1", uploaded: 123)], DateTime.UtcNow);
 
-		var found = store.FindByInfoHash(Hash.ToUpperInvariant())!;
+		HistoryEntry found = store.FindByInfoHash(Hash.ToUpperInvariant())!;
 		Assert.Equal("t1", found.Gid);
 		Assert.True(found.IsTorrent);
 		Assert.Equal(123, found.UploadedBytes);
@@ -58,14 +59,14 @@ public class TorrentHistoryTests {
 
 	[Fact]
 	public void Update_never_loses_the_hash_or_lowers_the_uploaded_total() {
-		using var temp = new TempDir();
-		var (store, _) = Create(temp);
+		using TempDir temp = new TempDir();
+		(HistoryStore? store, Database _) = Create(temp);
 		store.Upsert([Torrent("t1", uploaded: 500)], DateTime.UtcNow);
 
 		// After a restart aria2 may report no hash for a moment and an upload counter that started over.
 		store.Upsert([Torrent("t1", hash: "", uploaded: 10) with { InfoHash = null, IsTorrent = false }], DateTime.UtcNow);
 
-		var entry = store.Get("t1")!;
+		HistoryEntry entry = store.Get("t1")!;
 		Assert.Equal(Hash, entry.InfoHash);
 		Assert.True(entry.IsTorrent);
 		Assert.Equal(500, entry.UploadedBytes);
@@ -73,8 +74,8 @@ public class TorrentHistoryTests {
 
 	[Fact]
 	public void FindByInfoHash_returns_the_newest_row() {
-		using var temp = new TempDir();
-		var (store, _) = Create(temp);
+		using TempDir temp = new TempDir();
+		(HistoryStore? store, Database _) = Create(temp);
 		store.Upsert([Torrent("old")], DateTime.UtcNow.AddHours(-2));
 		store.Upsert([Torrent("new")], DateTime.UtcNow);
 
@@ -83,12 +84,12 @@ public class TorrentHistoryTests {
 
 	[Fact]
 	public void Reconcile_relinks_a_torrent_whose_gid_changed_by_its_info_hash() {
-		using var temp = new TempDir();
-		var (store, _) = Create(temp);
+		using TempDir temp = new TempDir();
+		(HistoryStore? store, Database _) = Create(temp);
 		store.Upsert([Torrent("before")], DateTime.UtcNow.AddMinutes(-5));
 
 		// No URL and a different folder would defeat the URL match: only the hash identifies it.
-		var result = store.Reconcile([Torrent("after") with { Dir = @"D:\elsewhere" }], DateTime.UtcNow);
+		ReconcileResult result = store.Reconcile([Torrent("after") with { Dir = @"D:\elsewhere" }], DateTime.UtcNow);
 
 		Assert.Equal(new ReconcileResult(Interrupted: 0, Relinked: 1), result);
 		Assert.Null(store.Get("before"));
@@ -98,11 +99,11 @@ public class TorrentHistoryTests {
 
 	[Fact]
 	public void Reconcile_marks_a_torrent_aria2_no_longer_knows_as_interrupted() {
-		using var temp = new TempDir();
-		var (store, _) = Create(temp);
+		using TempDir temp = new TempDir();
+		(HistoryStore? store, Database _) = Create(temp);
 		store.Upsert([Torrent("gone")], DateTime.UtcNow.AddMinutes(-5));
 
-		var result = store.Reconcile([], DateTime.UtcNow);
+		ReconcileResult result = store.Reconcile([], DateTime.UtcNow);
 
 		Assert.Equal(1, result.Interrupted);
 		Assert.Equal(HistoryStatus.Interrupted, store.Get("gone")!.Status);
@@ -110,8 +111,8 @@ public class TorrentHistoryTests {
 
 	[Fact]
 	public void Seeding_is_recorded_as_complete() {
-		using var temp = new TempDir();
-		var (store, _) = Create(temp);
+		using TempDir temp = new TempDir();
+		(HistoryStore? store, Database _) = Create(temp);
 
 		store.Upsert([Torrent("s", DownloadStatus.Seeding)], DateTime.UtcNow);
 
@@ -121,9 +122,9 @@ public class TorrentHistoryTests {
 
 	[Fact]
 	public void Recorder_ignores_metadata_placeholders_and_records_the_follower() {
-		using var temp = new TempDir();
-		var (store, _) = Create(temp);
-		var recorder = new HistoryRecorder(store);
+		using TempDir temp = new TempDir();
+		(HistoryStore? store, Database _) = Create(temp);
+		HistoryRecorder recorder = new HistoryRecorder(store);
 		recorder.OnSnapshot(new PollSnapshot([], GlobalStats.Empty)); // the reconcile pass
 
 		recorder.OnSnapshot(new PollSnapshot([Torrent("meta", metadata: true)], GlobalStats.Empty));
@@ -144,10 +145,10 @@ public class TorrentHistoryTests {
 
 	[Fact]
 	public void Index_on_the_hash_exists() {
-		using var temp = new TempDir();
-		var (_, db) = Create(temp);
-		using var c = db.Open();
-		using var cmd = c.CreateCommand();
+		using TempDir temp = new TempDir();
+		(HistoryStore _, Database? db) = Create(temp);
+		using SqliteConnection c = db.Open();
+		using SqliteCommand cmd = c.CreateCommand();
 		cmd.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = 'ix_downloads_hash'";
 
 		Assert.Equal(1L, cmd.ExecuteScalar());

@@ -34,6 +34,9 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 	private List<DownloadItem> _pendingRemoval = [];
 	private bool _baselineTaken;
 
+	/// <summary>Every download in the list, whatever the filter (the title-bar search looks through these).</summary>
+	public IReadOnlyList<DownloadItem> AllItems => [.. _items.Where(i => !_hidden.Contains(i.Gid))];
+
 	/// <summary>Rows currently shown (after filter and sort).</summary>
 	public ObservableCollection<DownloadRowViewModel> Rows { get; } = [];
 
@@ -52,9 +55,6 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 	public bool IsEngineDown => !IsEngineUp;
 
 	public bool HasRows => !IsEmpty;
-
-	[ObservableProperty]
-	public partial string StatsText { get; private set; } = "";
 
 	// ---- Filter and sort ----
 	[ObservableProperty]
@@ -96,8 +96,24 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 	[ObservableProperty]
 	public partial bool CanChangeSeeding { get; private set; }
 
+	/// <summary>The one selected download, which the details pane shows; null when none or several are selected.</summary>
 	[ObservableProperty]
-	public partial bool CanShowTorrentDetails { get; private set; }
+	public partial DownloadRowViewModel? DetailRow { get; private set; }
+
+	/// <summary>The user wants the details pane (it still only appears while one download is selected).</summary>
+	[ObservableProperty]
+	public partial bool ShowDetails { get; private set; }
+
+	public double DetailsHeight => Math.Clamp(_settings.Load().DetailsPaneHeight, 120, 2000);
+
+	public void SetShowDetails(bool show) {
+		if (ShowDetails != show) {
+			ShowDetails = show;
+			SaveSettings(s => s.ShowDetailsPane = show);
+		}
+	}
+
+	public void SaveDetailsHeight(double height) => SaveSettings(s => s.DetailsPaneHeight = Math.Round(height));
 
 	[ObservableProperty]
 	public partial string NameHeader { get; private set; } = Loc.S("Downloads_ColName", "Name");
@@ -194,10 +210,11 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		_history = history;
 		_logger = logger;
 
-		var saved = settings.Load();
-		Filter = Enum.TryParse<StatusFilter>(saved.StatusFilter, out var f) ? f : StatusFilter.All;
-		SortColumn = Enum.TryParse<SortColumn>(saved.SortColumn, out var c) ? c : SortColumn.None;
+		AppSettings saved = settings.Load();
+		Filter = Enum.TryParse<StatusFilter>(saved.StatusFilter, out StatusFilter f) ? f : StatusFilter.All;
+		SortColumn = Enum.TryParse<SortColumn>(saved.SortColumn, out SortColumn c) ? c : SortColumn.None;
 		SortDescending = saved.SortDescending;
+		ShowDetails = saved.ShowDetailsPane;
 		RefreshHeaders();
 
 		_undoTimer = _dispatcher.CreateTimer();
@@ -227,9 +244,9 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 	public partial string AltSpeedTip { get; private set; } = "";
 
 	private void RefreshAltSpeed() {
-		var s = _settings.Load();
+		AppSettings s = _settings.Load();
 		AltSpeedActive = s.AltSpeedActive;
-		var (down, up) = (s.AltDownloadLimitKiBps, s.AltUploadLimitKiBps);
+		(int down, int up) = (s.AltDownloadLimitKiBps, s.AltUploadLimitKiBps);
 		static string Limit(int kib) => kib <= 0 ? Loc.S("Downloads_Unlimited", "unlimited") : $"{kib} KiB/s";
 		AltSpeedTip = AltSpeedActive
 			? Loc.S("Downloads_AltSpeedOn", "Alternative speeds are on. Click to go back to the normal limits.")
@@ -241,9 +258,21 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 	/// <summary>Set by the page: asks what to do about a file that already exists (the "Ask" name-clash setting). Without it, both files are kept.</summary>
 	public Func<string, Task<ConflictChoice>>? PromptConflict { get; set; }
 
+	/// <summary>
+	/// Takes a download the browser extension caught: into the folder the Add dialog would offer, without asking anything (the window may
+	/// be hidden in the tray). Waits a little for the engine, since the browser may only just have started the app.
+	/// </summary>
+	public async Task<string?> AddFromBrowserAsync(BrowserDownloadRequest request) {
+		for (int i = 0; i < 100 && !IsEngineUp; i++) {
+			await Task.Delay(200);
+		}
+		return await AddAsync(new[] { request.Url }, InitialFolder(), request.FileName, request.ToAddOptions(), quiet: true);
+	}
+
 	/// <summary>Adds each link or file as its own download. Returns an error message, or null when everything was accepted.</summary>
-	public async Task<string?> AddAsync(IReadOnlyList<string> urls, string folder, string? fileName, AddOptions? extra = null) {
-		var rpc = _engine.Rpc;
+	/// <param name="quiet">Never ask about a file that already exists; keep both instead.</param>
+	public async Task<string?> AddAsync(IReadOnlyList<string> urls, string folder, string? fileName, AddOptions? extra = null, bool quiet = false) {
+		Aria2RpcClient? rpc = _engine.Rpc;
 		if (rpc is null) {
 			return Loc.S("Downloads_EngineNotRunning", "The download engine is not running.");
 		}
@@ -251,9 +280,9 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 			return invalid;
 		}
 
-		var failures = new List<string>();
-		var accepted = 0;
-		foreach (var url in urls) {
+		List<string> failures = [];
+		int accepted = 0;
+		foreach (string url in urls) {
 			try {
 				switch (UrlParser.Classify(url)) {
 					case LinkKind.TorrentFile:
@@ -272,23 +301,23 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 						continue;
 				}
 
-				var options = (extra ?? AddOptions.None).ToOptions().ToDictionary(p => p.Key, p => p.Value);
+				Dictionary<string, string> options = (extra ?? AddOptions.None).ToOptions().ToDictionary(p => p.Key, p => p.Value);
 				options["dir"] = folder;
 				if (urls.Count == 1 && !string.IsNullOrWhiteSpace(fileName)) {
 					options["out"] = fileName.Trim();
 				}
 				if (FileConflicts.FindExisting(folder, url, urls.Count == 1 ? fileName : null) is { } existing) {
-					var policy = _settings.Load().Conflict;
-					var choice = FileConflicts.FromPolicy(policy)
-						?? (PromptConflict is { } ask ? await ask(existing) : ConflictChoice.Rename);
+					ConflictPolicy policy = _settings.Load().Conflict;
+					ConflictChoice choice = FileConflicts.FromPolicy(policy)
+						?? (!quiet && PromptConflict is { } ask ? await ask(existing) : ConflictChoice.Rename);
 					if (choice == ConflictChoice.Skip) {
 						continue;
 					}
-					foreach (var (k, v) in FileConflicts.OptionsFor(choice)) {
+					foreach ((string k, string v) in FileConflicts.OptionsFor(choice)) {
 						options[k] = v;
 					}
 				}
-				var gid = await rpc.AddUriAsync([url], options);
+				string gid = await rpc.AddUriAsync([url], options);
 				_added[gid] = DateTimeOffset.Now;
 				accepted++;
 			} catch (Exception ex) {
@@ -317,7 +346,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		if (_restoring is not null || _syncing) {
 			return;
 		}
-		_selection = rows.ToList();
+		_selection = [.. rows];
 		RefreshCapabilities();
 	}
 
@@ -326,11 +355,11 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		SetSelection(actual);
 	}
 
-	private List<DownloadItem> SelectedItems() => _selection.Select(r => r.Item).ToList();
+	private List<DownloadItem> SelectedItems() => [.. _selection.Select(r => r.Item)];
 
 	private void RefreshCapabilities() {
-		var items = SelectedItems();
-		var single = items.Count == 1 ? items[0] : null;
+		List<DownloadItem> items = SelectedItems();
+		DownloadItem? single = items.Count == 1 ? items[0] : null;
 		CanPause = items.Any(DownloadCapabilities.CanPause);
 		CanResume = items.Any(DownloadCapabilities.CanResume);
 		CanRetry = items.Any(DownloadCapabilities.CanRetry);
@@ -347,9 +376,9 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		CanShowProperties = single is not null;
 		CanRecheck = items.Count > 0 && items.All(DownloadCapabilities.CanRecheck);
 		CanChangeSeeding = items.Count > 0 && items.All(DownloadCapabilities.CanChangeSeeding);
-		CanShowTorrentDetails = single is { IsTorrent: true, IsMetadata: false };
+		DetailRow = _selection.Count == 1 ? _selection[0] : null;
 
-		var visible = _items.Where(i => !_hidden.Contains(i.Gid)).ToList();
+		List<DownloadItem> visible = [.. _items.Where(i => !_hidden.Contains(i.Gid))];
 		CanPauseAll = IsEngineUp && visible.Any(i => i.Status is DownloadStatus.Active or DownloadStatus.Seeding or DownloadStatus.Waiting);
 		CanResumeAll = IsEngineUp && visible.Any(i => i.Status == DownloadStatus.Paused);
 		CanClearCompleted = visible.Any(i => i.Status == DownloadStatus.Complete);
@@ -370,13 +399,13 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 	public Task ResumeAllAsync() => Run(() => _ops.ResumeAllAsync());
 
 	public Task RetrySelectedAsync() => Run(async () => {
-		foreach (var item in SelectedItems().Where(DownloadCapabilities.CanRetry)) {
+		foreach (DownloadItem item in SelectedItems().Where(DownloadCapabilities.CanRetry)) {
 			_added[await _ops.RetryAsync(item)] = DateTimeOffset.Now;
 		}
 	});
 
 	public Task ForceStartSelectedAsync() => Run(async () => {
-		foreach (var item in SelectedItems().Where(DownloadCapabilities.CanForceStart)) {
+		foreach (DownloadItem item in SelectedItems().Where(DownloadCapabilities.CanForceStart)) {
 			await _ops.ForceStartAsync(item);
 		}
 	});
@@ -397,13 +426,13 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 	});
 
 	public Task SetFolderSelectedAsync(string folder) => Run(async () => {
-		foreach (var item in SelectedItems().Where(DownloadCapabilities.CanChangeFolder)) {
+		foreach (DownloadItem item in SelectedItems().Where(DownloadCapabilities.CanChangeFolder)) {
 			await _ops.SetFolderAsync(item, folder);
 		}
 	});
 
 	public Task SetSpeedLimitSelectedAsync(long bytesPerSecond) => Run(async () => {
-		foreach (var item in SelectedItems().Where(DownloadCapabilities.CanSetSpeedLimit)) {
+		foreach (DownloadItem item in SelectedItems().Where(DownloadCapabilities.CanSetSpeedLimit)) {
 			await _ops.SetSpeedLimitAsync(item, bytesPerSecond);
 		}
 	});
@@ -433,12 +462,12 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		} catch (Exception ex) {
 			_logger.LogWarning(ex, "Could not read history for {Gid}", gid);
 		}
-		return (_added.TryGetValue(gid, out var a) ? a : null, _finished.TryGetValue(gid, out var fin) ? fin : null);
+		return (_added.TryGetValue(gid, out DateTimeOffset a) ? a : null, _finished.TryGetValue(gid, out DateTimeOffset fin) ? fin : null);
 	}
 
 	public void OpenFile() {
 		if (SingleSelected() is { Path: { } path } item && DownloadCapabilities.CanOpenFile(item)) {
-			ReportOpen(ShellLauncher.TryOpenFile(path, out var error), path, error);
+			ReportOpen(ShellLauncher.TryOpenFile(path, out string error), path, error);
 		}
 	}
 
@@ -446,15 +475,15 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		if (SingleSelected() is not { Dir: { Length: > 0 } dir } item) {
 			return;
 		}
-		ReportOpen(ShellLauncher.TryOpenFolder(dir, item.Path, out var error), dir, error);
+		ReportOpen(ShellLauncher.TryOpenFolder(dir, item.Path, out string error), dir, error);
 	}
 
 	public void CopyUrl() {
-		var urls = SelectedItems().Select(i => i.FirstUri).Where(u => !string.IsNullOrEmpty(u)).ToList();
+		List<string?> urls = [.. SelectedItems().Select(i => i.FirstUri).Where(u => !string.IsNullOrEmpty(u))];
 		if (urls.Count == 0) {
 			return;
 		}
-		var package = new DataPackage();
+		DataPackage package = new();
 		package.SetText(string.Join(Environment.NewLine, urls));
 		Clipboard.SetContent(package);
 	}
@@ -470,13 +499,13 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 
 	/// <summary>Removes the selection. Without file deletion the removal is deferred for a few seconds so it can be undone.</summary>
 	public async Task RemoveSelectedAsync(bool deleteFiles) {
-		var items = SelectedItems();
+		List<DownloadItem> items = SelectedItems();
 		if (items.Count == 0) {
 			return;
 		}
 		if (deleteFiles) {
 			await Run(async () => {
-				var problems = await _ops.RemoveAsync(items, deleteFiles: true);
+				IReadOnlyList<string> problems = await _ops.RemoveAsync(items, deleteFiles: true);
 				if (problems.Count > 0) {
 					ShowMessage("Some files could not be deleted:\n" + string.Join("\n", problems));
 				}
@@ -486,7 +515,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 
 		await FinalizePendingAsync();
 		_pendingRemoval = items;
-		foreach (var item in items) {
+		foreach (DownloadItem item in items) {
 			_hidden.Add(item.Gid);
 		}
 		UndoText = items.Count == 1 ? Loc.F("Downloads_RemovedOne", "Removed “{0}”", items[0].Name) : Loc.F("Downloads_RemovedMany", "Removed {0} downloads", items.Count);
@@ -498,7 +527,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 
 	public void UndoRemove() {
 		_undoTimer.Stop();
-		foreach (var item in _pendingRemoval) {
+		foreach (DownloadItem item in _pendingRemoval) {
 			_hidden.Remove(item.Gid);
 		}
 		_pendingRemoval = [];
@@ -509,7 +538,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 	/// <summary>Makes a pending removal final. Also called when the window closes.</summary>
 	public async Task FinalizePendingAsync() {
 		_undoTimer.Stop();
-		var pending = _pendingRemoval;
+		List<DownloadItem> pending = _pendingRemoval;
 		_pendingRemoval = [];
 		IsUndoVisible = false;
 		if (pending.Count == 0) {
@@ -519,7 +548,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 			await _ops.RemoveAsync(pending, deleteFiles: false);
 		} catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException or InvalidOperationException or TaskCanceledException) {
 			_logger.LogWarning(ex, "Removal failed");
-			foreach (var item in pending) {
+			foreach (DownloadItem item in pending) {
 				_hidden.Remove(item.Gid);
 			}
 			ShowMessage(Loc.F("Downloads_RemoveFailed", "Could not remove: {0}", ex.Message));
@@ -580,7 +609,6 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 			_hidden.Clear();
 			_baselineTaken = false;
 			Rows.Clear();
-			StatsText = "";
 			IsEmpty = true;
 			IsFilteredEmpty = false;
 			RefreshCapabilities();
@@ -593,12 +621,10 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		}
 
 		TrackTimes(snapshot.Items);
-		_items = snapshot.Items.Where(i => !DownloadView.IsSuperseded(i)).ToList();
+		_items = [.. snapshot.Items.Where(i => !DownloadView.IsSuperseded(i))];
 		_hidden.RemoveWhere(gid => !snapshot.Items.Any(i => i.Gid == gid));
 		CheckDiskSpace(_items);
 
-		var stats = snapshot.Stats;
-		StatsText = Loc.F("Downloads_Stats", "↓ {0}  ·  {1} active  ·  {2} waiting", ByteFormat.Speed(stats.DownloadSpeed), stats.NumActive, stats.NumWaiting);
 		Rebuild();
 		_ = RestoreForcedLimitAsync(snapshot);
 	}
@@ -612,9 +638,9 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 	}
 
 	private void TrackTimes(IReadOnlyList<DownloadItem> items) {
-		var now = DateTimeOffset.Now;
-		foreach (var item in items) {
-			var known = _byGid.TryGetValue(item.Gid, out var row);
+		DateTimeOffset now = DateTimeOffset.Now;
+		foreach (DownloadItem item in items) {
+			bool known = _byGid.TryGetValue(item.Gid, out DownloadRowViewModel? row);
 			// Downloads already present at launch have no known add time (that needs history, 0.4).
 			if (_baselineTaken && !known) {
 				_added.TryAdd(item.Gid, now);
@@ -628,24 +654,30 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 
 	/// <summary>Updates the rows from the latest snapshot, filter and sort. Rows are changed in place, never rebuilt.</summary>
 	private void Rebuild() {
-		var visible = _items.Where(i => !_hidden.Contains(i.Gid)).ToList();
+		List<DownloadItem> visible = [.. _items.Where(i => !_hidden.Contains(i.Gid))];
 
 		// Keep a row object per GID that still exists, so selection and scroll survive refreshes.
-		var present = new HashSet<string>(_items.Select(i => i.Gid));
-		foreach (var gid in _byGid.Keys.Where(g => !present.Contains(g)).ToList()) {
+		HashSet<string> present = [.. _items.Select(i => i.Gid)];
+		foreach (string gid in _byGid.Keys.Where(g => !present.Contains(g)).ToList()) {
 			_byGid.Remove(gid);
 		}
-		foreach (var item in _items) {
-			if (_byGid.TryGetValue(item.Gid, out var row)) {
+		foreach (DownloadItem item in _items) {
+			if (_byGid.TryGetValue(item.Gid, out DownloadRowViewModel? row)) {
 				row.Update(item);
 			} else {
 				_byGid[item.Gid] = new DownloadRowViewModel(item);
 			}
 		}
 
-		var desired = DownloadView.Apply(visible, Filter, SortColumn, SortDescending).Select(i => _byGid[i.Gid]).ToList();
+		foreach (DownloadRowViewModel row in _byGid.Values.Where(r => r.NeedsTimes && r.TimeLookups < 5)) {
+			row.TimeLookups++;
+			(DateTimeOffset? added, DateTimeOffset? finished) = Times(row.Gid);
+			row.SetTimes(added, finished);
+		}
+
+		List<DownloadRowViewModel> desired = [.. DownloadView.Apply(visible, Filter, SortColumn, SortDescending).Select(i => _byGid[i.Gid])];
 		// ListView reports a lost selection while rows move, so remember it first and ignore those events.
-		var before = _selection.ToList();
+		List<DownloadRowViewModel> before = [.. _selection];
 		bool changed;
 		_syncing = true;
 		try {
@@ -672,25 +704,25 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 	}
 
 	private static string Label(string name, StatusFilter filter, List<DownloadItem> items) {
-		var count = DownloadView.Count(filter, items);
+		int count = DownloadView.Count(filter, items);
 		return count == 0 ? name : $"{name} ({count})";
 	}
 
 	private bool SyncRows(List<DownloadRowViewModel> desired) {
-		var changed = false;
-		var keep = new HashSet<DownloadRowViewModel>(desired);
-		for (var i = Rows.Count - 1; i >= 0; i--) {
+		bool changed = false;
+		HashSet<DownloadRowViewModel> keep = [.. desired];
+		for (int i = Rows.Count - 1; i >= 0; i--) {
 			if (!keep.Contains(Rows[i])) {
 				Rows.RemoveAt(i);
 				changed = true;
 			}
 		}
-		for (var i = 0; i < desired.Count; i++) {
+		for (int i = 0; i < desired.Count; i++) {
 			if (i < Rows.Count && ReferenceEquals(Rows[i], desired[i])) {
 				continue;
 			}
 			changed = true;
-			var current = Rows.IndexOf(desired[i]);
+			int current = Rows.IndexOf(desired[i]);
 			if (current >= 0) {
 				Rows.Move(current, i);
 			} else {
@@ -726,7 +758,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 
 	private void SaveSettings(Action<AppSettings> change) {
 		try {
-			var s = _settings.Load();
+			AppSettings s = _settings.Load();
 			change(s);
 			_settings.Save(s);
 		} catch (IOException ex) {

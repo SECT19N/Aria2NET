@@ -8,9 +8,9 @@ public static class HistoryExport {
 	private static readonly string[] Header = ["Name", "Status", "Size (bytes)", "URL", "Folder", "Path", "Category", "Added (UTC)", "Finished (UTC)", "Error"];
 
 	public static string ToCsv(IEnumerable<HistoryEntry> entries) {
-		var sb = new StringBuilder();
+		StringBuilder sb = new();
 		sb.AppendJoin(',', Header.Select(Quote)).Append("\r\n");
-		foreach (var e in entries) {
+		foreach (HistoryEntry e in entries) {
 			sb.AppendJoin(',', new[] {
 				e.Name, e.Status, e.TotalBytes.ToString(CultureInfo.InvariantCulture), e.Uri, e.Dir, e.Path, e.Category,
 				Iso(e.AddedUtc), e.FinishedUtc is { } f ? Iso(f) : null, e.ErrorMessage,
@@ -20,10 +20,10 @@ public static class HistoryExport {
 	}
 
 	public static string ToJson(IEnumerable<HistoryEntry> entries) {
-		using var stream = new MemoryStream();
-		using (var w = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true })) {
+		using MemoryStream stream = new();
+		using (Utf8JsonWriter w = new(stream, new JsonWriterOptions { Indented = true })) {
 			w.WriteStartArray();
-			foreach (var e in entries) {
+			foreach (HistoryEntry e in entries) {
 				w.WriteStartObject();
 				w.WriteString("name", e.Name);
 				w.WriteString("status", e.Status);

@@ -27,10 +27,10 @@ public sealed class Database(string path, string backupsDir, ILogger? logger = n
 	public string Path => path;
 
 	public SqliteConnection Open() {
-		var connection = new SqliteConnection(_connectionString);
+		SqliteConnection connection = new(_connectionString);
 		try {
 			connection.Open();
-			using var pragma = connection.CreateCommand();
+			using SqliteCommand pragma = connection.CreateCommand();
 			pragma.CommandText = "PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;";
 			pragma.ExecuteNonQuery();
 			return connection;
@@ -45,34 +45,34 @@ public sealed class Database(string path, string backupsDir, ILogger? logger = n
 		try {
 			return Prepare(movedTo: null);
 		} catch (SqliteException ex) when (IsCorrupt(ex)) {
-			var moved = MoveAside();
+			string moved = MoveAside();
 			logger?.LogError(ex, "History database unreadable; moved to {Path} and starting a new one", moved);
 			return Prepare(moved);
 		}
 	}
 
 	private DatabaseOpenResult Prepare(string? movedTo) {
-		using var connection = Open();
-		var current = ReadVersion(connection);
+		using SqliteConnection connection = Open();
+		int current = ReadVersion(connection);
 		if (current > _migrations[^1].Version) {
 			logger?.LogError("History database is version {Found}, newer than this app understands ({Known}); leaving it alone", current, _migrations[^1].Version);
 			return new DatabaseOpenResult(DatabaseStatus.TooNew);
 		}
 
 		string? backup = null;
-		var pending = _migrations.Where(m => m.Version > current).OrderBy(m => m.Version).ToList();
+		List<Migration> pending = [.. _migrations.Where(m => m.Version > current).OrderBy(m => m.Version)];
 		if (pending.Count > 0 && current > 0) {
 			backup = Backup(connection, $"history-v{current}", keep: 5);
 			logger?.LogInformation("Backed up history database to {Backup} before migrating from v{From}", backup, current);
 		}
-		foreach (var migration in pending) {
-			using var tx = connection.BeginTransaction();
-			using (var command = connection.CreateCommand()) {
+		foreach (Migration migration in pending) {
+			using SqliteTransaction tx = connection.BeginTransaction();
+			using (SqliteCommand command = connection.CreateCommand()) {
 				command.Transaction = tx;
 				command.CommandText = migration.Sql;
 				command.ExecuteNonQuery();
 			}
-			using (var setVersion = connection.CreateCommand()) {
+			using (SqliteCommand setVersion = connection.CreateCommand()) {
 				setVersion.Transaction = tx;
 				setVersion.CommandText = $"PRAGMA user_version = {migration.Version}";
 				setVersion.ExecuteNonQuery();
@@ -81,14 +81,14 @@ public sealed class Database(string path, string backupsDir, ILogger? logger = n
 			logger?.LogInformation("History database migrated to v{Version}", migration.Version);
 		}
 
-		var startBackup = Backup(connection, "history-start", startBackups);
+		string startBackup = Backup(connection, "history-start", startBackups);
 		return new DatabaseOpenResult(movedTo is null ? DatabaseStatus.Ready : DatabaseStatus.Recovered, movedTo, backup ?? startBackup);
 	}
 
 	/// <summary>Consistent copy of the live database (also correct while it is in WAL mode).</summary>
 	public string Backup(SqliteConnection connection, string prefix, int keep) {
-		var target = BackupRotation.NewPath(backupsDir, prefix, ".db");
-		using var command = connection.CreateCommand();
+		string target = BackupRotation.NewPath(backupsDir, prefix, ".db");
+		using SqliteCommand command = connection.CreateCommand();
 		command.CommandText = $"VACUUM INTO '{target.Replace("'", "''")}'";
 		command.ExecuteNonQuery();
 		BackupRotation.Prune(backupsDir, prefix, keep);
@@ -96,7 +96,7 @@ public sealed class Database(string path, string backupsDir, ILogger? logger = n
 	}
 
 	private static int ReadVersion(SqliteConnection connection) {
-		using var command = connection.CreateCommand();
+		using SqliteCommand command = connection.CreateCommand();
 		command.CommandText = "PRAGMA user_version";
 		return Convert.ToInt32(command.ExecuteScalar());
 	}
@@ -105,9 +105,9 @@ public sealed class Database(string path, string backupsDir, ILogger? logger = n
 	private static bool IsCorrupt(SqliteException ex) => ex.SqliteErrorCode is 11 or 26;
 
 	private string MoveAside() {
-		var target = $"{path}.corrupt-{DateTime.UtcNow:yyyyMMddHHmmss}";
+		string target = $"{path}.corrupt-{DateTime.UtcNow:yyyyMMddHHmmss}";
 		File.Move(path, target, overwrite: true);
-		foreach (var suffix in new[] { "-wal", "-shm" }) {
+		foreach (string? suffix in new[] { "-wal", "-shm" }) {
 			if (File.Exists(path + suffix)) {
 				File.Delete(path + suffix);
 			}

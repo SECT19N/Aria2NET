@@ -52,8 +52,8 @@ public class ControlUnitTests {
 
 	[Fact]
 	public void OpenFile_needs_a_completed_file_that_exists() {
-		using var temp = new TempDir();
-		var file = Path.Combine(temp.Path, "a.txt");
+		using TempDir temp = new TempDir();
+		string file = Path.Combine(temp.Path, "a.txt");
 		Assert.False(DownloadCapabilities.CanOpenFile(Item(DownloadStatus.Complete, path: file)));
 		File.WriteAllText(file, "x");
 		Assert.True(DownloadCapabilities.CanOpenFile(Item(DownloadStatus.Complete, path: file)));
@@ -75,13 +75,13 @@ public class ControlUnitTests {
 
 	[Fact]
 	public void DownloadItem_reads_path_and_error_code() {
-		var item = DownloadItem.FromJson(JsonDocument.Parse("""
+		DownloadItem item = DownloadItem.FromJson(JsonDocument.Parse("""
 			{"gid":"g","status":"error","errorCode":"9","errorMessage":"disk","files":[{"path":"C:/dl/a.bin","uris":[]}]}
 			""").RootElement);
 		Assert.Equal("C:/dl/a.bin", item.Path);
 		Assert.Equal(9, item.ErrorCode);
 
-		var none = DownloadItem.FromJson(JsonDocument.Parse("""{"gid":"g","status":"waiting","files":[{"path":""}]}""").RootElement);
+		DownloadItem none = DownloadItem.FromJson(JsonDocument.Parse("""{"gid":"g","status":"waiting","files":[{"path":""}]}""").RootElement);
 		Assert.Null(none.Path);
 		Assert.Null(none.ErrorCode);
 	}
@@ -119,13 +119,13 @@ public class ControlUnitTests {
 
 	[Fact]
 	public void Sort_is_stable_for_ties() {
-		var items = new[] { Item(DownloadStatus.Waiting, "a", total: 5), Item(DownloadStatus.Waiting, "b", total: 5), Item(DownloadStatus.Waiting, "c", total: 1) };
+		DownloadItem[] items = new[] { Item(DownloadStatus.Waiting, "a", total: 5), Item(DownloadStatus.Waiting, "b", total: 5), Item(DownloadStatus.Waiting, "c", total: 1) };
 		Assert.Equal(["c", "a", "b"], DownloadView.Apply(items, StatusFilter.All, SortColumn.Size, false).Select(i => i.Gid));
 	}
 
 	[Fact]
 	public void Old_settings_files_load_with_new_defaults() {
-		var s = JsonSerializer.Deserialize("""{"SchemaVersion":1,"LastUsedFolder":"C:/x"}""", AppSettingsJsonContext.Default.AppSettings)!;
+		AppSettings s = JsonSerializer.Deserialize("""{"SchemaVersion":1,"LastUsedFolder":"C:/x"}""", AppSettingsJsonContext.Default.AppSettings)!;
 		Assert.True(s.ConfirmDeleteFiles);
 		Assert.Equal("All", s.StatusFilter);
 		Assert.Equal("None", s.SortColumn);
@@ -140,13 +140,13 @@ public class ControlUnitTests {
 
 	[Fact]
 	public async Task Batch_pause_is_one_multicall_with_token_in_each_call() {
-		var handler = new FakeHandler((_, _) => Ok("""{"jsonrpc":"2.0","id":"1","result":[["a"],["b"]]}"""));
-		var failures = await Client(handler).PauseAsync(["a", "b"]);
+		FakeHandler handler = new FakeHandler((_, _) => Ok("""{"jsonrpc":"2.0","id":"1","result":[["a"],["b"]]}"""));
+		IReadOnlyList<string> failures = await Client(handler).PauseAsync(["a", "b"]);
 
 		Assert.Empty(failures);
-		using var req = JsonDocument.Parse(handler.Bodies.Single());
+		using JsonDocument req = JsonDocument.Parse(handler.Bodies.Single());
 		Assert.Equal("system.multicall", req.RootElement.GetProperty("method").GetString());
-		var calls = req.RootElement.GetProperty("params")[0];
+		JsonElement calls = req.RootElement.GetProperty("params")[0];
 		Assert.Equal(2, calls.GetArrayLength());
 		Assert.Equal("aria2.forcePause", calls[0].GetProperty("methodName").GetString());
 		Assert.Equal("token:sekret", calls[1].GetProperty("params")[0].GetString());
@@ -155,8 +155,8 @@ public class ControlUnitTests {
 
 	[Fact]
 	public async Task Batch_reports_failed_calls_and_skips_the_request_when_empty() {
-		var handler = new FakeHandler((_, _) => Ok("""{"jsonrpc":"2.0","id":"1","result":[["a"],{"code":1,"message":"GID b is not found"}]}"""));
-		var client = Client(handler);
+		FakeHandler handler = new FakeHandler((_, _) => Ok("""{"jsonrpc":"2.0","id":"1","result":[["a"],{"code":1,"message":"GID b is not found"}]}"""));
+		Aria2RpcClient client = Client(handler);
 
 		Assert.Equal(["GID b is not found"], await client.RemoveResultAsync(["a", "b"]));
 		Assert.Empty(await client.RemoveAsync([]));
@@ -165,13 +165,13 @@ public class ControlUnitTests {
 
 	[Fact]
 	public async Task ChangePosition_sends_gid_offset_and_mode() {
-		var handler = new FakeHandler((_, _) => Ok("""{"jsonrpc":"2.0","id":"1","result":2}"""));
-		var pos = await Client(handler).ChangePositionAsync("g1", -1, "POS_CUR");
+		FakeHandler handler = new FakeHandler((_, _) => Ok("""{"jsonrpc":"2.0","id":"1","result":2}"""));
+		int pos = await Client(handler).ChangePositionAsync("g1", -1, "POS_CUR");
 
 		Assert.Equal(2, pos);
-		using var req = JsonDocument.Parse(handler.Bodies.Single());
+		using JsonDocument req = JsonDocument.Parse(handler.Bodies.Single());
 		Assert.Equal("aria2.changePosition", req.RootElement.GetProperty("method").GetString());
-		var p = req.RootElement.GetProperty("params");
+		JsonElement p = req.RootElement.GetProperty("params");
 		Assert.Equal("g1", p[1].GetString());
 		Assert.Equal(-1, p[2].GetInt32());
 		Assert.Equal("POS_CUR", p[3].GetString());
@@ -179,15 +179,15 @@ public class ControlUnitTests {
 
 	[Fact]
 	public async Task ChangeOption_sends_option_map_and_GetOption_reads_it_back() {
-		var handler = new FakeHandler((_, body) => body.Contains("getOption")
+		FakeHandler handler = new FakeHandler((_, body) => body.Contains("getOption")
 			? Ok("""{"jsonrpc":"2.0","id":"1","result":{"max-download-limit":"1024","referer":"https://r"}}""")
 			: Ok("""{"jsonrpc":"2.0","id":"1","result":"OK"}"""));
-		var client = Client(handler);
+		Aria2RpcClient client = Client(handler);
 
 		await client.ChangeOptionAsync("g", new Dictionary<string, string> { ["out"] = "n.bin" });
-		var options = await client.GetOptionAsync("g");
+		IReadOnlyDictionary<string, string> options = await client.GetOptionAsync("g");
 
-		using var req = JsonDocument.Parse(handler.Bodies[0]);
+		using JsonDocument req = JsonDocument.Parse(handler.Bodies[0]);
 		Assert.Equal("n.bin", req.RootElement.GetProperty("params")[2].GetProperty("out").GetString());
 		Assert.Equal("1024", options["max-download-limit"]);
 	}

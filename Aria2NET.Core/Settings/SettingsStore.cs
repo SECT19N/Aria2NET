@@ -15,10 +15,10 @@ public sealed class SettingsStore<T>(string path, JsonTypeInfo<T> typeInfo, ILog
 			return new T();
 		}
 		try {
-			using var stream = File.OpenRead(_path);
+			using FileStream stream = File.OpenRead(_path);
 			return JsonSerializer.Deserialize(stream, _typeInfo) ?? new T();
 		} catch (Exception ex) when (ex is JsonException or IOException) {
-			var backup = $"{_path}.corrupt-{DateTime.UtcNow:yyyyMMddHHmmss}.bak";
+			string backup = $"{_path}.corrupt-{DateTime.UtcNow:yyyyMMddHHmmss}.bak";
 			_logger?.LogWarning(ex, "Settings file unreadable; moving it to {Backup} and using defaults", backup);
 			try {
 				File.Move(_path, backup, overwrite: true);
@@ -31,8 +31,8 @@ public sealed class SettingsStore<T>(string path, JsonTypeInfo<T> typeInfo, ILog
 
 	public void Save(T value) {
 		Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
-		var temp = _path + ".tmp";
-		using (var stream = File.Create(temp)) {
+		string temp = _path + ".tmp";
+		using (FileStream stream = File.Create(temp)) {
 			JsonSerializer.Serialize(stream, value, _typeInfo);
 		}
 		File.Move(temp, _path, overwrite: true);

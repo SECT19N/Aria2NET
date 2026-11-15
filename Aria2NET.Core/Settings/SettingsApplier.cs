@@ -18,7 +18,7 @@ public sealed class SettingsApplier(IAria2Engine engine, SettingsStore<AppSettin
 			new Dictionary<string, string>(s.RawOptions ?? []));
 
 		private static bool Same(IReadOnlyDictionary<string, string> a, IReadOnlyDictionary<string, string> b) =>
-			a.Count == b.Count && a.All(o => b.TryGetValue(o.Key, out var v) && v == o.Value);
+			a.Count == b.Count && a.All(o => b.TryGetValue(o.Key, out string? v) && v == o.Value);
 
 		public bool Matches(RestartOnly other) =>
 			string.Equals(Folder, other.Folder, StringComparison.OrdinalIgnoreCase) && Same(Launch, other.Launch) && Same(Raw, other.Raw);
@@ -47,10 +47,10 @@ public sealed class SettingsApplier(IAria2Engine engine, SettingsStore<AppSettin
 			return false;
 		}
 		try {
-			var options = new Dictionary<string, string>(EngineOptions.LiveOptions(s));
+			Dictionary<string, string> options = [with(EngineOptions.LiveOptions(s))];
 			// Hand-typed options go one by one afterwards: aria2 may refuse one, and that must not stop the rest from being applied.
-			var raw = (s.RawOptions ?? []).Where(o => RawOptionRules.Validate(o.Key, o.Value) is null).ToList();
-			foreach (var (key, _) in raw) {
+			List<KeyValuePair<string, string>> raw = [.. (s.RawOptions ?? []).Where(o => RawOptionRules.Validate(o.Key, o.Value) is null)];
+			foreach ((string? key, string _) in raw) {
 				options.Remove(key);
 			}
 			// Force-start bookkeeping owns this option while downloads are forced; hand it the new base instead.
@@ -63,8 +63,8 @@ public sealed class SettingsApplier(IAria2Engine engine, SettingsStore<AppSettin
 			}
 			await rpc.ChangeGlobalOptionAsync(options, ct);
 			await operations.SetBaseConcurrentAsync(Math.Max(1, s.MaxConcurrentDownloads), ct);
-			var allApplied = true;
-			foreach (var (key, value) in raw) {
+			bool allApplied = true;
+			foreach ((string? key, string? value) in raw) {
 				try {
 					await rpc.ChangeGlobalOptionAsync(new Dictionary<string, string> { [key] = value }, ct);
 				} catch (Aria2RpcException ex) {

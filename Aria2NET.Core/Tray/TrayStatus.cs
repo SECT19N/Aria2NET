@@ -24,10 +24,10 @@ public sealed record TrayStatus(TrayState State, string Tooltip) {
 			return new TrayStatus(TrayState.Idle, Name);
 		}
 
-		var active = 0;
-		var seeding = 0;
-		var paused = 0;
-		foreach (var item in snapshot.Items) {
+		int active = 0;
+		int seeding = 0;
+		int paused = 0;
+		foreach (DownloadItem item in snapshot.Items) {
 			switch (item.Status) {
 				case DownloadStatus.Active: active++; break;
 				case DownloadStatus.Seeding: seeding++; break;

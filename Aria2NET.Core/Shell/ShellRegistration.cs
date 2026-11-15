@@ -26,27 +26,27 @@ public sealed class ShellRegistration(string exePath, RegistryKey? software = nu
 	private string Command => $"\"{exePath}\" \"%1\"";
 
 	public void Register() {
-		using var classes = _software.CreateSubKey("Classes", writable: true);
+		using RegistryKey classes = _software.CreateSubKey("Classes", writable: true);
 		WriteProgId(classes, TorrentProgId, "BitTorrent file");
 		WriteProgId(classes, MetalinkProgId, "Metalink file");
 		WriteProgId(classes, MagnetProgId, "Magnet link", urlProtocol: true);
 
-		foreach (var (extension, progId) in Files) {
-			using var key = classes.CreateSubKey($@"{extension}\OpenWithProgids", writable: true);
+		foreach ((string? extension, string? progId) in Files) {
+			using RegistryKey key = classes.CreateSubKey($@"{extension}\OpenWithProgids", writable: true);
 			key.SetValue(progId, Array.Empty<byte>(), RegistryValueKind.None);
 		}
 
-		using (var caps = _software.CreateSubKey($@"{AppKey}\Capabilities", writable: true)) {
+		using (RegistryKey caps = _software.CreateSubKey($@"{AppKey}\Capabilities", writable: true)) {
 			caps.SetValue("ApplicationName", "Aria2NET");
 			caps.SetValue("ApplicationDescription", "Download manager for links, torrents and magnet links");
-			using var fileAssociations = caps.CreateSubKey("FileAssociations", writable: true);
-			foreach (var (extension, progId) in Files) {
+			using RegistryKey fileAssociations = caps.CreateSubKey("FileAssociations", writable: true);
+			foreach ((string? extension, string? progId) in Files) {
 				fileAssociations.SetValue(extension, progId);
 			}
-			using var urlAssociations = caps.CreateSubKey("URLAssociations", writable: true);
+			using RegistryKey urlAssociations = caps.CreateSubKey("URLAssociations", writable: true);
 			urlAssociations.SetValue("magnet", MagnetProgId);
 		}
-		using (var registered = _software.CreateSubKey("RegisteredApplications", writable: true)) {
+		using (RegistryKey registered = _software.CreateSubKey("RegisteredApplications", writable: true)) {
 			registered.SetValue(AppKey, $@"Software\{AppKey}\Capabilities");
 		}
 		NotifyShell();
@@ -54,18 +54,18 @@ public sealed class ShellRegistration(string exePath, RegistryKey? software = nu
 
 	/// <summary>Removes everything <see cref="Register"/> wrote. Safe to call when nothing is registered.</summary>
 	public void Unregister() {
-		using (var classes = _software.OpenSubKey("Classes", writable: true)) {
+		using (RegistryKey? classes = _software.OpenSubKey("Classes", writable: true)) {
 			if (classes is not null) {
-				foreach (var progId in new[] { TorrentProgId, MetalinkProgId, MagnetProgId }) {
+				foreach (string? progId in new[] { TorrentProgId, MetalinkProgId, MagnetProgId }) {
 					classes.DeleteSubKeyTree(progId, throwOnMissingSubKey: false);
 				}
-				foreach (var (extension, progId) in Files) {
-					using var key = classes.OpenSubKey($@"{extension}\OpenWithProgids", writable: true);
+				foreach ((string? extension, string? progId) in Files) {
+					using RegistryKey? key = classes.OpenSubKey($@"{extension}\OpenWithProgids", writable: true);
 					key?.DeleteValue(progId, throwOnMissingValue: false);
 				}
 			}
 		}
-		using (var registered = _software.OpenSubKey("RegisteredApplications", writable: true)) {
+		using (RegistryKey? registered = _software.OpenSubKey("RegisteredApplications", writable: true)) {
 			registered?.DeleteValue(AppKey, throwOnMissingValue: false);
 		}
 		_software.DeleteSubKeyTree(AppKey, throwOnMissingSubKey: false);
@@ -73,8 +73,8 @@ public sealed class ShellRegistration(string exePath, RegistryKey? software = nu
 	}
 
 	public ShellRegistrationState GetState() {
-		using var command = _software.OpenSubKey($@"Classes\{TorrentProgId}\shell\open\command");
-		var registered = string.Equals(command?.GetValue("") as string, Command, StringComparison.OrdinalIgnoreCase)
+		using RegistryKey? command = _software.OpenSubKey($@"Classes\{TorrentProgId}\shell\open\command");
+		bool registered = string.Equals(command?.GetValue("") as string, Command, StringComparison.OrdinalIgnoreCase)
 			&& _software.OpenSubKey($@"{AppKey}\Capabilities") is { } caps && Dispose(caps);
 		return new ShellRegistrationState(
 			registered,
@@ -83,7 +83,7 @@ public sealed class ShellRegistration(string exePath, RegistryKey? software = nu
 	}
 
 	private string? UserChoice(string path) {
-		using var key = _software.OpenSubKey(path);
+		using RegistryKey? key = _software.OpenSubKey(path);
 		return key?.GetValue("ProgId") as string;
 	}
 
@@ -93,15 +93,15 @@ public sealed class ShellRegistration(string exePath, RegistryKey? software = nu
 	}
 
 	private void WriteProgId(RegistryKey classes, string progId, string description, bool urlProtocol = false) {
-		using var key = classes.CreateSubKey(progId, writable: true);
+		using RegistryKey key = classes.CreateSubKey(progId, writable: true);
 		key.SetValue("", description);
 		if (urlProtocol) {
 			key.SetValue("URL Protocol", "");
 		}
-		using (var icon = key.CreateSubKey("DefaultIcon", writable: true)) {
+		using (RegistryKey icon = key.CreateSubKey("DefaultIcon", writable: true)) {
 			icon.SetValue("", $"\"{exePath}\",0");
 		}
-		using var command = key.CreateSubKey(@"shell\open\command", writable: true);
+		using RegistryKey command = key.CreateSubKey(@"shell\open\command", writable: true);
 		command.SetValue("", Command);
 	}
 

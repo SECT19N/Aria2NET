@@ -17,7 +17,7 @@ public static class SettingsTransfer {
 
 	/// <summary>The settings as JSON for another PC: without the proxy password (it is encrypted for this account only), window position and last folder.</summary>
 	public static string Export(AppSettings s) {
-		var copy = JsonSerializer.Deserialize(JsonSerializer.Serialize(s, AppSettingsJsonContext.Default.AppSettings), AppSettingsJsonContext.Default.AppSettings)!;
+		AppSettings copy = JsonSerializer.Deserialize(JsonSerializer.Serialize(s, AppSettingsJsonContext.Default.AppSettings), AppSettingsJsonContext.Default.AppSettings)!;
 		copy.ProxyPasswordProtected = null;
 		copy.Window = null;
 		copy.LastUsedFolder = null;
@@ -46,7 +46,7 @@ public static class SettingsTransfer {
 		if (imported.SchemaVersion != 1) {
 			return (null, "This settings file is from a different version of Aria2NET.");
 		}
-		var problem = ValidateChoices(imported)
+		string? problem = ValidateChoices(imported)
 			?? ValidateText(imported)
 			?? EngineOptions.ValidateProxy(imported)
 			?? EngineOptions.ValidateTorrent(imported)
@@ -60,7 +60,7 @@ public static class SettingsTransfer {
 
 	/// <summary>Defaults for every preference; the machine state stays.</summary>
 	public static AppSettings ResetAll(AppSettings current) {
-		var fresh = new AppSettings();
+		AppSettings fresh = new();
 		KeepMachineState(current, fresh);
 		fresh.ProxyPasswordProtected = null; // the proxy is reset to none, so its password goes too
 		return fresh;
@@ -76,7 +76,7 @@ public static class SettingsTransfer {
 
 	/// <summary>Free text ends up in aria2's config file, so a line break or other control character is refused outright.</summary>
 	private static string? ValidateText(AppSettings s) {
-		foreach (var text in new[] { s.DefaultDownloadFolder, s.UserAgent, s.ProxyAddress, s.ProxyUser, s.TrackerUrl }) {
+		foreach (string? text in new[] { s.DefaultDownloadFolder, s.UserAgent, s.ProxyAddress, s.ProxyUser, s.TrackerUrl }) {
 			if (text is not null && (text.Length > 1000 || text.Any(char.IsControl))) {
 				return "This file contains text that is too long or has characters that are not allowed.";
 			}

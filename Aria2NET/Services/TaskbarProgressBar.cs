@@ -11,7 +11,7 @@ internal sealed class TaskbarProgressBar(IntPtr hwnd) {
 	private bool _unavailable;
 
 	public void Apply(TaskbarProgress progress) {
-		if (!TryGetList(out var list)) {
+		if (!TryGetList(out ITaskbarList3 list)) {
 			return;
 		}
 		switch (progress.State) {
@@ -37,7 +37,7 @@ internal sealed class TaskbarProgressBar(IntPtr hwnd) {
 			return false;
 		}
 		try {
-			var created = (ITaskbarList3) Activator.CreateInstance(Type.GetTypeFromCLSID(new Guid("56FDF344-FD6D-11d0-958A-006097C9A090"))!)!;
+			ITaskbarList3 created = (ITaskbarList3) Activator.CreateInstance(Type.GetTypeFromCLSID(new Guid("56FDF344-FD6D-11d0-958A-006097C9A090"))!)!;
 			created.HrInit();
 			_list = list = created;
 			return true;

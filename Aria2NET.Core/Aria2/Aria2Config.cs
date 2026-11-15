@@ -17,7 +17,7 @@ public sealed record Aria2Config(int Port, string Secret, int ParentPid, string 
 		Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
 
 	public static int FindFreeLoopbackPort() {
-		var listener = new TcpListener(IPAddress.Loopback, 0);
+		TcpListener listener = new(IPAddress.Loopback, 0);
 		listener.Start();
 		try {
 			return ((IPEndPoint) listener.LocalEndpoint).Port;
@@ -30,7 +30,7 @@ public sealed record Aria2Config(int Port, string Secret, int ParentPid, string 
 	public static string TrackerOptionValue(IEnumerable<string> trackers) => string.Join(",", trackers);
 
 	public string Render(AppPaths paths) {
-		var sb = new StringBuilder();
+		StringBuilder sb = new();
 		sb.AppendLine("enable-rpc=true");
 		sb.AppendLine($"rpc-listen-port={Port}");
 		sb.AppendLine($"rpc-secret={Secret}");
@@ -58,7 +58,7 @@ public sealed record Aria2Config(int Port, string Secret, int ParentPid, string 
 		// file, which blocks the engine for minutes on a big torrent. Files grow as data arrives instead.
 		sb.AppendLine("file-allocation=none");
 		// The user's settings come last, so they win over the defaults above (aria2 uses the last occurrence).
-		foreach (var (key, value) in Options ?? new Dictionary<string, string>()) {
+		foreach ((string? key, string? value) in Options ?? new Dictionary<string, string>()) {
 			// An empty value means "not set", which is what leaving the line out does. A control character (a line break in a hand-edited
 			// settings file, say) could start another option such as rpc-secret, so such a line is never written.
 			if (value.Length > 0 && !key.Any(char.IsControl) && !value.Any(char.IsControl)) {

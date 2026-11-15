@@ -8,13 +8,13 @@ public static class LaunchArguments {
 	/// <summary>The links and files among the command-line arguments, in order. Other arguments (and files that are not torrents) are ignored.</summary>
 	/// <param name="baseDirectory">Relative file names are resolved against this (the working directory by default).</param>
 	public static IReadOnlyList<string> Extract(IEnumerable<string> args, string? baseDirectory = null) {
-		var result = new List<string>();
-		foreach (var raw in args) {
-			var arg = raw.Trim();
+		List<string> result = [];
+		foreach (string raw in args) {
+			string arg = raw.Trim();
 			if (arg.Length == 0 || arg.StartsWith('-') || arg.StartsWith('/') && !Path.IsPathFullyQualified(arg)) {
 				continue;
 			}
-			var token = arg;
+			string token = arg;
 			if (!arg.StartsWith("magnet:", StringComparison.OrdinalIgnoreCase) && !Path.IsPathFullyQualified(arg)) {
 				try {
 					token = Path.GetFullPath(arg, baseDirectory ?? Directory.GetCurrentDirectory());
@@ -32,23 +32,30 @@ public static class LaunchArguments {
 	/// <summary>Passed by the Run key entry so the app can tell a start at sign-in from a launch by the user.</summary>
 	public const string AutostartArgument = "--autostart";
 
+	/// <summary>Passed when the browser extension starts the app to hand it a download: start quietly, like at sign-in.</summary>
+	public const string BackgroundArgument = "--background";
+
+	/// <summary>True when the app was started to work in the background rather than opened by the user.</summary>
+	public static bool IsBackgroundStart(IEnumerable<string> args) =>
+		args.Any(a => string.Equals(a.Trim(), BackgroundArgument, StringComparison.OrdinalIgnoreCase));
+
 	/// <summary>True when Windows started the app at sign-in.</summary>
 	public static bool IsAutostart(IEnumerable<string> args) =>
 		args.Any(a => string.Equals(a.Trim(), AutostartArgument, StringComparison.OrdinalIgnoreCase));
 
 	/// <summary>Splits a command line into arguments the way Windows does (spaces separate, double quotes group, backslashes before a quote escape it).</summary>
 	public static IReadOnlyList<string> Split(string? commandLine) {
-		var args = new List<string>();
+		List<string> args = [];
 		if (string.IsNullOrWhiteSpace(commandLine)) {
 			return args;
 		}
-		var current = new StringBuilder();
-		var inQuotes = false;
-		var started = false;
-		for (var i = 0; i < commandLine.Length; i++) {
-			var c = commandLine[i];
+		StringBuilder current = new();
+		bool inQuotes = false;
+		bool started = false;
+		for (int i = 0; i < commandLine.Length; i++) {
+			char c = commandLine[i];
 			if (c == '\\') {
-				var slashes = 0;
+				int slashes = 0;
 				while (i < commandLine.Length && commandLine[i] == '\\') {
 					slashes++;
 					i++;

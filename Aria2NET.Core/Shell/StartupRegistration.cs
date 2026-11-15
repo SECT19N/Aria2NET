@@ -21,13 +21,13 @@ public sealed class StartupRegistration(string exePath, RegistryKey? software = 
 	public bool IsEnabled => Current() is not null;
 
 	public void Enable() {
-		using var key = _software.CreateSubKey(RunKey, writable: true);
+		using RegistryKey key = _software.CreateSubKey(RunKey, writable: true);
 		key.SetValue(ValueName, Command);
 	}
 
 	/// <summary>Removes the entry. Safe to call when it is not there.</summary>
 	public void Disable() {
-		using var key = _software.OpenSubKey(RunKey, writable: true);
+		using RegistryKey? key = _software.OpenSubKey(RunKey, writable: true);
 		key?.DeleteValue(ValueName, throwOnMissingValue: false);
 	}
 
@@ -41,7 +41,7 @@ public sealed class StartupRegistration(string exePath, RegistryKey? software = 
 	}
 
 	private string? Current() {
-		using var key = _software.OpenSubKey(RunKey);
+		using RegistryKey? key = _software.OpenSubKey(RunKey);
 		return key?.GetValue(ValueName) as string;
 	}
 }
