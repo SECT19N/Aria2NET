@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Aria2NET</title>
+  <style>
+    body { font: 13px/1.4 "Segoe UI", system-ui, sans-serif; margin: 0; padding: 14px 16px; width: 320px; color-scheme: light dark; }
+    h1 { font-size: 15px; margin: 0 0 10px; }
+    label { display: block; margin: 10px 0 4px; }
+    .row { display: flex; align-items: center; gap: 8px; }
+    .row label { margin: 0; }
+    input[type=number] { width: 80px; }
+    textarea { width: 100%; box-sizing: border-box; height: 70px; font: inherit; }
+    .hint { opacity: 0.7; font-size: 12px; margin-top: 2px; }
+    #status { margin-top: 12px; padding: 8px; border-radius: 4px; border: 1px solid color-mix(in srgb, currentColor 25%, transparent); }
+  </style>
+</head>
+<body>
+  <h1>Aria2NET</h1>
+  <div class="row">
+    <input type="checkbox" id="enabled">
+    <label for="enabled">Send downloads to Aria2NET</label>
+  </div>
+
+  <label for="minSizeMb">Only files of at least (MB, 0 = every file)</label>
+  <input type="number" id="minSizeMb" min="0" max="100000" step="1">
+  <div class="hint">When the size is not known yet, the download is sent anyway.</div>
+
+  <label for="skipHosts">Never send downloads from these sites</label>
+  <textarea id="skipHosts" placeholder="example.com" spellcheck="false"></textarea>
+  <div class="hint">One per line. A site also covers its subdomains.</div>
+
+  <div id="status">Checking Aria2NET…</div>
+  <script src="options.js"></script>
+</body>
+</html>

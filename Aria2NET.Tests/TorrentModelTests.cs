@@ -237,29 +237,40 @@ public class TorrentRpcTests {
 	}
 }
 
-public class TorrentSummaryTests {
-	private static DownloadItem T(DownloadStatus status, int connections, bool metadata = false) =>
-		new("g", "n", status, 1, 1, 0, null, null, null, IsTorrent: true, Connections: connections, IsMetadata: metadata);
+public class StatusCountsTests {
+	private static DownloadItem T(DownloadStatus status, int connections, bool metadata = false, bool torrent = true) =>
+		new("g", "n", status, 1, 1, 0, null, null, null, IsTorrent: torrent, Connections: connections, IsMetadata: metadata);
 
 	[Fact]
-	public void Says_nothing_without_running_torrents() {
-		Assert.Equal("", TorrentSummary.Describe(new PollSnapshot([T(DownloadStatus.Paused, 0), T(DownloadStatus.Complete, 0)], GlobalStats.Empty)));
-		Assert.Equal("", TorrentSummary.Describe(new PollSnapshot([], GlobalStats.Empty)));
+	public void Is_all_zero_without_downloads() {
+		Assert.Equal(StatusCounts.Empty, StatusCounts.From(new PollSnapshot([], GlobalStats.Empty)));
 	}
 
 	[Fact]
-	public void Summarises_seeding_upload_speed_and_peers() {
-		var snapshot = new PollSnapshot([T(DownloadStatus.Seeding, 4), T(DownloadStatus.Active, 7), T(DownloadStatus.Seeding, 1, metadata: true)], new GlobalStats(0, 2, 0, 0, 2048));
+	public void Counts_each_state_and_takes_the_speeds_from_aria2() {
+		var snapshot = new PollSnapshot([
+			T(DownloadStatus.Active, 7),
+			T(DownloadStatus.Active, 2, torrent: false),
+			T(DownloadStatus.Waiting, 0),
+			T(DownloadStatus.Paused, 0),
+			T(DownloadStatus.Seeding, 4),
+			T(DownloadStatus.Complete, 0),
+			T(DownloadStatus.Complete, 0),
+			T(DownloadStatus.Error, 0),
+			T(DownloadStatus.Removed, 0),
+		], new GlobalStats(4096, 2, 1, 4, 2048));
 
-		Assert.Equal("1 seeding · ↑ 2.00 KiB/s · 11 peers", TorrentSummary.Describe(snapshot));
+		Assert.Equal(new StatusCounts(4096, 2048, Active: 2, Waiting: 1, Paused: 1, Seeding: 1, Completed: 2, Failed: 2, Peers: 11), StatusCounts.From(snapshot));
 	}
 
 	[Fact]
-	public void Leaves_out_the_seeding_part_when_nothing_seeds() {
-		var text = TorrentSummary.Describe(new PollSnapshot([T(DownloadStatus.Active, 3)], GlobalStats.Empty));
+	public void Leaves_out_a_finished_magnet_placeholder_and_the_peers_of_metadata_fetches() {
+		var snapshot = new PollSnapshot([T(DownloadStatus.Complete, 0, metadata: true), T(DownloadStatus.Active, 5, metadata: true), T(DownloadStatus.Paused, 9)], GlobalStats.Empty);
 
-		Assert.StartsWith("↑ ", text);
-		Assert.EndsWith(" · 3 peers", text);
-		Assert.DoesNotContain("seeding", text);
+		var counts = StatusCounts.From(snapshot);
+
+		Assert.Equal(0, counts.Completed);
+		Assert.Equal(1, counts.Active);
+		Assert.Equal(0, counts.Peers);
 	}
 }

@@ -13,6 +13,12 @@ public sealed class AppSettings {
 	public string StatusFilter { get; set; } = "All";
 	public string SortColumn { get; set; } = "None";
 	public bool SortDescending { get; set; }
+	/// <summary>Show the details pane under the downloads list while one download is selected.</summary>
+	public bool ShowDetailsPane { get; set; } = true;
+	/// <summary>Height of the details pane, in pixels.</summary>
+	public double DetailsPaneHeight { get; set; } = 240;
+	/// <summary>Take over downloads started in Chrome and Edge (needs the browser extension). Off until the user asks for it.</summary>
+	public bool CatchBrowserDownloads { get; set; }
 	/// <summary>How long finished downloads stay in History: 0 keeps them forever, otherwise a number of days (30, 90, 365).</summary>
 	public int HistoryRetentionDays { get; set; }
 	/// <summary>The one-time offer to open .torrent files and magnet links with Aria2NET has been shown.</summary>

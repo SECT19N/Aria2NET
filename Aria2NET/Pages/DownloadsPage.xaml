@@ -4,6 +4,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="using:Aria2NET.ViewModels"
+    xmlns:controls="using:Aria2NET.Controls"
     Background="Transparent" AllowDrop="True" DragOver="Page_DragOver" Drop="Page_Drop"
     Loaded="Page_Loaded" Unloaded="Page_Unloaded" KeyboardAcceleratorPlacementMode="Hidden">
 
@@ -69,6 +70,11 @@
                                 ToolTipService.ToolTip="{x:Bind ViewModel.AltSpeedTip, Mode=OneWay}">
                 <AppBarToggleButton.Icon><FontIcon Glyph="&#xEC4A;" /></AppBarToggleButton.Icon>
             </AppBarToggleButton>
+            <AppBarToggleButton x:Uid="DownloadsPage_DetailsButton" Label="Details" Click="Details_Click"
+                                IsChecked="{x:Bind ViewModel.ShowDetails, Mode=OneWay}"
+                                ToolTipService.ToolTip="Show details of the selected download under the list">
+                <AppBarToggleButton.Icon><FontIcon Glyph="&#xE8A0;" /></AppBarToggleButton.Icon>
+            </AppBarToggleButton>
 
             <CommandBar.SecondaryCommands>
                 <AppBarButton x:Uid="DownloadsPage_AppBarButton6" Label="Pause all" Click="PauseAll_Click" IsEnabled="{x:Bind ViewModel.CanPauseAll, Mode=OneWay}"/>
@@ -79,12 +85,7 @@
             </CommandBar.SecondaryCommands>
         </CommandBar>
 
-        <Grid Grid.Row="1" ColumnSpacing="16">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <SelectorBar x:Name="FilterBar" SelectionChanged="Filter_SelectionChanged" HorizontalAlignment="Left">
+            <SelectorBar x:Name="FilterBar" Grid.Row="1" SelectionChanged="Filter_SelectionChanged" HorizontalAlignment="Left">
                 <SelectorBarItem Tag="All" Text="{x:Bind ViewModel.AllLabel, Mode=OneWay}" />
                 <SelectorBarItem Tag="Downloading" Text="{x:Bind ViewModel.DownloadingLabel, Mode=OneWay}" />
                 <SelectorBarItem Tag="Waiting" Text="{x:Bind ViewModel.WaitingLabel, Mode=OneWay}" />
@@ -94,8 +95,6 @@
                 <SelectorBarItem Tag="Seeding" Text="{x:Bind ViewModel.SeedingLabel, Mode=OneWay}" />
                 <SelectorBarItem Tag="Torrents" Text="{x:Bind ViewModel.TorrentsLabel, Mode=OneWay}" />
             </SelectorBar>
-            <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.StatsText, Mode=OneWay}" VerticalAlignment="Center" Opacity="0.8" />
-        </Grid>
 
         <InfoBar x:Uid="DownloadsPage_InfoBar1" Grid.Row="2" IsOpen="{x:Bind ViewModel.IsEngineDown, Mode=OneWay}" IsClosable="False" Severity="Warning"
                  Title="Download engine is not running"
@@ -104,10 +103,12 @@
         <InfoBar x:Uid="DownloadsPage_InfoBar2" Grid.Row="3" IsOpen="{x:Bind ViewModel.HasActionMessage, Mode=OneWay}" Severity="Error" Title="That did not work"
                  Message="{x:Bind ViewModel.ActionMessage, Mode=OneWay}" CloseButtonClick="ActionMessage_Closed"/>
 
-        <Grid Grid.Row="4">
+        <Grid x:Name="ListArea" Grid.Row="4" SizeChanged="ListArea_SizeChanged">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <Grid x:Name="ColumnHeader" Padding="12,0,12,6" ColumnSpacing="12" Visibility="{x:Bind ViewModel.HasRows, Mode=OneWay}">
@@ -157,7 +158,7 @@
                         <MenuFlyoutItem x:Uid="DownloadsPage_MenuFlyoutItem10" Text="Rename…" Click="Rename_Click" IsEnabled="{x:Bind ViewModel.CanRename, Mode=OneWay}"/>
                         <MenuFlyoutItem x:Uid="DownloadsPage_MenuFlyoutItem11" Text="Change folder…" Click="ChangeFolder_Click" IsEnabled="{x:Bind ViewModel.CanChangeFolder, Mode=OneWay}"/>
                         <MenuFlyoutSeparator />
-                        <MenuFlyoutItem x:Uid="DownloadsPage_MenuFlyoutItem12" Text="Torrent details…" Click="TorrentDetails_Click" IsEnabled="{x:Bind ViewModel.CanShowTorrentDetails, Mode=OneWay}"/>
+                        <MenuFlyoutItem x:Uid="DownloadsPage_MenuFlyoutItem12" Text="Show details" Click="ShowDetails_Click" IsEnabled="{x:Bind ViewModel.CanShowProperties, Mode=OneWay}"/>
                         <MenuFlyoutItem x:Uid="DownloadsPage_MenuFlyoutItem13" Text="Check files again" Click="Recheck_Click" IsEnabled="{x:Bind ViewModel.CanRecheck, Mode=OneWay}" ToolTipService.ToolTip="Verify the files against the torrent and download whatever is damaged or missing"/>
                         <MenuFlyoutItem x:Uid="DownloadsPage_MenuFlyoutItem14" Text="Seeding…" Click="Seeding_Click" IsEnabled="{x:Bind ViewModel.CanChangeSeeding, Mode=OneWay}"/>
                         <MenuFlyoutSeparator />
@@ -223,6 +224,11 @@
                 <Button x:Uid="DownloadsPage_Button1" Click="Add_Click" HorizontalAlignment="Center" Padding="24,10" Style="{StaticResource AccentButtonStyle}"
                         IsEnabled="{x:Bind ViewModel.IsEngineUp, Mode=OneWay}" Content="Add URL"/>
             </StackPanel>
+
+            <controls:RowSizer x:Name="PaneSizer" Grid.Row="2" Height="10" Visibility="Collapsed" Dragged="PaneSizer_Dragged" DragStarted="PaneSizer_DragStarted" DragCompleted="PaneSizer_DragCompleted">
+                <Border Width="36" Height="3" CornerRadius="1.5" HorizontalAlignment="Center" VerticalAlignment="Center" Background="{ThemeResource ControlStrongStrokeColorDefaultBrush}" />
+            </controls:RowSizer>
+            <controls:DownloadDetailPane x:Name="DetailPane" Grid.Row="3" Height="240" Visibility="Collapsed" CloseRequested="DetailPane_CloseRequested" />
         </Grid>
 
         <InfoBar Grid.Row="5" IsOpen="{x:Bind ViewModel.IsUndoVisible, Mode=OneWay}" IsClosable="False" Severity="Informational"

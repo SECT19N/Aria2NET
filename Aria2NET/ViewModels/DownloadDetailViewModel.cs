@@ -11,43 +11,70 @@ using Windows.UI;
 
 namespace Aria2NET.ViewModels;
 
-public sealed record DetailFileRow(string Path, string Size, string Done, bool Selected);
+/// <summary>One file of a download. Updated in place so the list keeps its scroll position while the numbers change.</summary>
+public sealed partial class DetailFileRow(string path) : ObservableObject {
+	public string Path { get; } = path;
+
+	[ObservableProperty]
+	public partial string Size { get; set; } = "";
+
+	/// <summary>0 to 100.</summary>
+	[ObservableProperty]
+	public partial double Progress { get; set; }
+
+	/// <summary>The percentage as text, or "skipped" for a file the user left out.</summary>
+	[ObservableProperty]
+	public partial string Done { get; set; } = "";
+
+	[ObservableProperty]
+	public partial bool Selected { get; set; } = true;
+}
 
 public sealed record DetailPeerRow(string Address, string Client, string Country, string CountryTip, string Down, string Up, string Progress, string Flags);
 
 public sealed record DetailTrackerRow(string Url, string Tier);
 
-/// <summary>Live data of the torrent details window. Refreshes itself once a second until <see cref="Stop"/>.</summary>
-public sealed partial class TorrentDetailViewModel : ObservableObject {
+/// <summary>Live data of the details pane for one download (a torrent or a plain one). Refreshes itself once a second until <see cref="Stop"/>.</summary>
+public sealed partial class DownloadDetailViewModel : ObservableObject {
 	private static readonly Lazy<Task<GeoIpResolver>> Geo = new(() => Task.Run(() => GeoIpResolver.Load(App.Services.GetService(typeof(AppPaths)) is AppPaths p ? p.GeoIpFile : "")));
 
 	private readonly IAria2Engine _engine;
-	private readonly string _gid;
 	private readonly ILogger _logger;
 	private readonly DispatcherQueueTimer _timer;
 	private bool _busy;
+	private bool _stopped;
+
+	public string Gid { get; }
 
 	public ObservableCollection<DetailFileRow> Files { get; } = [];
 	public ObservableCollection<DetailPeerRow> Peers { get; } = [];
 	public ObservableCollection<DetailTrackerRow> Trackers { get; } = [];
 
+	/// <summary>Peers, trackers and pieces only exist for torrents.</summary>
 	[ObservableProperty]
-	public partial string Title { get; private set; } = "";
+	public partial bool IsTorrent { get; private set; }
 
 	[ObservableProperty]
-	public partial string Summary { get; private set; } = "Loading…";
+	public partial string Downloaded { get; private set; } = Loc.S("Detail_Loading", "Loading…");
 
 	[ObservableProperty]
-	public partial string InfoHash { get; private set; } = "";
+	public partial string Speed { get; private set; } = "";
+
+	[ObservableProperty]
+	public partial string Uploaded { get; private set; } = "";
+
+	[ObservableProperty]
+	public partial string Connections { get; private set; } = "";
 
 	[ObservableProperty]
 	public partial string SavedTo { get; private set; } = "";
 
+	/// <summary>Where a plain download comes from; empty for a torrent.</summary>
 	[ObservableProperty]
-	public partial string Transfer { get; private set; } = "";
+	public partial string Source { get; private set; } = "";
 
 	[ObservableProperty]
-	public partial string Swarm { get; private set; } = "";
+	public partial string InfoHash { get; private set; } = "";
 
 	[ObservableProperty]
 	public partial string Created { get; private set; } = "";
@@ -65,6 +92,9 @@ public sealed partial class TorrentDetailViewModel : ObservableObject {
 	public partial Brush? AvailabilityBrush { get; private set; }
 
 	[ObservableProperty]
+	public partial string FilesHeader { get; private set; } = Loc.S("Detail_Files", "Files");
+
+	[ObservableProperty]
 	public partial string PeersHeader { get; private set; } = Loc.S("Detail_Peers", "Peers");
 
 	[ObservableProperty]
@@ -72,9 +102,9 @@ public sealed partial class TorrentDetailViewModel : ObservableObject {
 
 	public bool HasGeoIp { get; private set; }
 
-	public TorrentDetailViewModel(IAria2Engine engine, string gid, ILogger logger) {
+	public DownloadDetailViewModel(IAria2Engine engine, string gid, ILogger logger) {
 		_engine = engine;
-		_gid = gid;
+		Gid = gid;
 		_logger = logger;
 		_timer = DispatcherQueue.GetForCurrentThread().CreateTimer();
 		_timer.Interval = TimeSpan.FromSeconds(1);
@@ -83,45 +113,60 @@ public sealed partial class TorrentDetailViewModel : ObservableObject {
 
 	public async Task StartAsync() {
 		await RefreshAsync();
-		_timer.Start();
+		if (!_stopped) {
+			_timer.Start();
+		}
 	}
 
-	public void Stop() => _timer.Stop();
+	public void Stop() {
+		_stopped = true;
+		_timer.Stop();
+	}
 
 	private async Task RefreshAsync() {
-		if (_busy || _engine.Rpc is not { } rpc) {
+		if (_busy || _stopped || _engine.Rpc is not { } rpc) {
 			return;
 		}
 		_busy = true;
 		try {
 			var geo = await Geo.Value;
 			HasGeoIp = geo.RangeCount > 0;
-			Apply(await TorrentDetailLoader.LoadAsync(rpc, _gid, geo));
-			Problem = "";
+			var snapshot = await TorrentDetailLoader.LoadAsync(rpc, Gid, geo);
+			if (!_stopped) {
+				Apply(snapshot);
+				Problem = "";
+			}
 		} catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException or TaskCanceledException) {
 			// The download was removed, or the engine is restarting; keep showing the last data.
-			_logger.LogDebug(ex, "Refreshing torrent details failed");
-			Problem = ex is Aria2RpcException ? "This torrent is no longer in the list." : "Waiting for the download engine…";
+			_logger.LogDebug(ex, "Refreshing download details failed");
+			Problem = ex is Aria2RpcException ? Loc.S("Detail_Gone", "This download is no longer in the list.") : Loc.S("Detail_WaitingEngine", "Waiting for the download engine…");
 		} finally {
 			_busy = false;
 		}
 	}
 
 	private void Apply(TorrentDetailSnapshot s) {
-		Title = s.Name;
-		Summary = Loc.F("Detail_Summary", "{0} · {1} of {2} ({3:0.#}%) · ratio {4:0.00}", s.Status, ByteFormat.Size(s.CompletedBytes), ByteFormat.Size(s.TotalBytes), s.Progress, s.Ratio);
-		InfoHash = s.InfoHash;
+		IsTorrent = s.IsTorrent;
+		Downloaded = s.TotalBytes > 0
+			? Loc.F("Detail_Downloaded", "{0} of {1} ({2:0.#}%)", ByteFormat.Size(s.CompletedBytes), ByteFormat.Size(s.TotalBytes), s.Progress)
+			: ByteFormat.Size(s.CompletedBytes);
+		Speed = s.IsTorrent
+			? Loc.F("Detail_SpeedBoth", "↓ {0}   ↑ {1}", ByteFormat.Speed(s.DownloadSpeed), ByteFormat.Speed(s.UploadSpeed))
+			: Loc.F("Detail_SpeedDown", "↓ {0}", ByteFormat.Speed(s.DownloadSpeed));
+		Uploaded = s.IsTorrent ? Loc.F("Detail_Uploaded", "{0} · ratio {1:0.00}", ByteFormat.Size(s.UploadedBytes), s.Ratio) : "";
+		Connections = s.IsTorrent
+			? Loc.F("Detail_Swarm", "{0} seeders · {1} connections", s.SeedersInSwarm, s.Connections)
+			: Loc.F("Detail_Connections", "{0} connections", s.Connections);
 		SavedTo = s.Directory;
-		Transfer = Loc.F("Detail_Transfer", "↓ {0}   ↑ {1}   uploaded {2}", ByteFormat.Speed(s.DownloadSpeed), ByteFormat.Speed(s.UploadSpeed), ByteFormat.Size(s.UploadedBytes));
-		Swarm = Loc.F("Detail_Swarm", "{0} seeders · {1} connections", s.SeedersInSwarm, s.Connections);
+		Source = s.IsTorrent ? "" : s.Uri ?? "";
+		InfoHash = s.InfoHash;
 		Created = s.CreatedAt is { } at ? at.LocalDateTime.ToString("g") : "";
 		Comment = s.Comment ?? "";
 		PieceInfo = s.PieceCount > 0 ? Loc.F("Detail_Pieces", "{0:N0} pieces of {1}", s.PieceCount, ByteFormat.Size(s.PieceLength)) : Loc.S("Detail_NoPieces", "No piece information yet");
+		FilesHeader = Loc.F("Detail_FilesCount", "Files ({0})", s.Files.Count);
 		PeersHeader = Loc.F("Detail_PeersCount", "Peers ({0})", s.Peers.Count);
 
-		Replace(Files, s.Files.Select(f => new DetailFileRow(
-			RelativeName(f.Path, s.Directory), ByteFormat.Size(f.Length),
-			!f.Selected ? Loc.S("Detail_Skipped", "skipped") : f.Length > 0 ? $"{f.CompletedLength * 100.0 / f.Length:0.#}%" : "", f.Selected)));
+		ApplyFiles(s);
 		Replace(Peers, s.Peers.OrderByDescending(p => p.DownloadSpeed + p.UploadSpeed).ThenBy(p => p.Address).Select(p => new DetailPeerRow(
 			p.Address, p.Client, p.Country ?? "", GeoIpResolver.CountryName(p.Country),
 			p.DownloadSpeed > 0 ? ByteFormat.Speed(p.DownloadSpeed) : "", p.UploadSpeed > 0 ? ByteFormat.Speed(p.UploadSpeed) : "",
@@ -133,6 +178,26 @@ public sealed partial class TorrentDetailViewModel : ObservableObject {
 		AvailabilityBrush = Bar(s.AvailabilityBar, Color.FromArgb(0xFF, 0x0F, 0x9D, 0x8A), Color.FromArgb(0x40, 0x80, 0x80, 0x80));
 	}
 
+	/// <summary>Rebuilds the file rows only when the set of files changes; otherwise just moves their numbers.</summary>
+	private void ApplyFiles(TorrentDetailSnapshot s) {
+		var names = s.Files.Select(f => RelativeName(f.Path, s.Directory)).ToList();
+		if (!Files.Select(f => f.Path).SequenceEqual(names)) {
+			Files.Clear();
+			foreach (var name in names) {
+				Files.Add(new DetailFileRow(name));
+			}
+		}
+		for (var i = 0; i < s.Files.Count; i++) {
+			var file = s.Files[i];
+			var percent = file.Length > 0 ? Math.Min(100.0, file.CompletedLength * 100.0 / file.Length) : 0;
+			var row = Files[i];
+			row.Size = file.Length > 0 ? ByteFormat.Size(file.Length) : "";
+			row.Selected = file.Selected;
+			row.Progress = file.Selected ? percent : 0;
+			row.Done = !file.Selected ? Loc.S("Detail_Skipped", "skipped") : file.Length > 0 ? $"{percent:0.#}%" : "";
+		}
+	}
+
 	private static string Flags(TorrentPeer p) => string.Join(' ', new[] {
 		p.IsSeeder ? "seed" : null,
 		p.DownloadSpeed > 0 ? "↓" : null,
@@ -141,6 +206,9 @@ public sealed partial class TorrentDetailViewModel : ObservableObject {
 	}.Where(x => x is not null));
 
 	private static string RelativeName(string path, string dir) {
+		if (string.IsNullOrEmpty(path)) {
+			return "";
+		}
 		var relative = string.IsNullOrEmpty(dir) ? path : System.IO.Path.GetRelativePath(dir, path);
 		return relative.Replace('\\', '/');
 	}

@@ -34,16 +34,80 @@ public sealed partial class DownloadsPage : Page {
 		ViewModel.PromptConflict = PromptConflictAsync;
 		ViewModel.ExternalAddRequested += OnExternalAddRequested;
 		ViewModel.Rows.CollectionChanged += Rows_Changed;
+		ViewModel.PropertyChanged += OnViewModelChanged;
+		DetailPane.Height = ViewModel.DetailsHeight;
 		_ = HandleStartupAsync();
 		ViewModel.SetSelection([]);
+		if (_pendingReveal is { } gid) {
+			_pendingReveal = null;
+			DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => RevealDownload(gid));
+		}
+	}
+
+	private string? _pendingReveal;
+
+	protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e) {
+		base.OnNavigatedTo(e);
+		_pendingReveal = (e.Parameter as DownloadTarget)?.Gid;
+	}
+
+	/// <summary>Selects a download found by the title-bar search and scrolls to it, switching to the All filter when the current one hides it.</summary>
+	public void RevealDownload(string gid) {
+		if (ViewModel.Rows.All(r => r.Gid != gid)) {
+			ViewModel.SetFilter(StatusFilter.All);
+			FilterBar.SelectedItem = FilterBar.Items[0];
+		}
+		if (ViewModel.Rows.FirstOrDefault(r => r.Gid == gid) is { } row) {
+			DownloadList.SelectedItem = row;
+			DownloadList.ScrollIntoView(row);
+			DownloadList.Focus(FocusState.Programmatic);
+		}
 	}
 
 	private void Page_Unloaded(object sender, RoutedEventArgs e) {
 		ViewModel.SelectionRestoreNeeded -= OnSelectionRestoreNeeded;
 		ViewModel.ExternalAddRequested -= OnExternalAddRequested;
 		ViewModel.Rows.CollectionChanged -= Rows_Changed;
+		ViewModel.PropertyChanged -= OnViewModelChanged;
+		DetailPane.Show(null, null);
 		ViewModel.FinishRestore([]);
 	}
+
+	// ---------------------------------------------------------------- details pane
+
+	private void OnViewModelChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) {
+		if (e.PropertyName is nameof(DownloadsViewModel.DetailRow) or nameof(DownloadsViewModel.ShowDetails)) {
+			UpdateDetailPane();
+		}
+	}
+
+	/// <summary>Shows the pane for the one selected download; hides it when none or several are selected, or when the user closed it.</summary>
+	private void UpdateDetailPane() {
+		var row = ViewModel.ShowDetails ? ViewModel.DetailRow : null;
+		if (!ReferenceEquals(row, DetailPane.Row)) {
+			DetailPane.Show(row, row is null ? null : ViewModel.CreateDetailViewModel(row));
+		}
+		var visibility = row is null ? Visibility.Collapsed : Visibility.Visible;
+		DetailPane.Visibility = visibility;
+		PaneSizer.Visibility = visibility;
+	}
+
+	private void Details_Click(object sender, RoutedEventArgs e) => ViewModel.SetShowDetails(((AppBarToggleButton) sender).IsChecked == true);
+
+	private void ShowDetails_Click(object sender, RoutedEventArgs e) => ViewModel.SetShowDetails(true);
+
+	private void DetailPane_CloseRequested(object? sender, EventArgs e) => ViewModel.SetShowDetails(false);
+
+	// The list always keeps room for a few rows, however small the window gets.
+	private void ListArea_SizeChanged(object sender, SizeChangedEventArgs e) => DetailPane.MaxHeight = Math.Max(120, ListArea.ActualHeight - 150);
+
+	private double _paneStartHeight;
+
+	private void PaneSizer_DragStarted(object? sender, EventArgs e) => _paneStartHeight = DetailPane.ActualHeight;
+
+	private void PaneSizer_Dragged(object? sender, double delta) => DetailPane.Height = Math.Clamp(_paneStartHeight - delta, 120, DetailPane.MaxHeight);
+
+	private void PaneSizer_DragCompleted(object? sender, EventArgs e) => ViewModel.SaveDetailsHeight(DetailPane.Height);
 
 	private void Rows_Changed(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) => RowStripes.RefreshLater(DownloadList);
 
@@ -277,8 +341,8 @@ public sealed partial class DownloadsPage : Page {
 	private void List_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e) {
 		if (ViewModel.CanOpenFile) {
 			ViewModel.OpenFile();
-		} else if (ViewModel.CanShowTorrentDetails) {
-			TorrentDetails_Click(sender, new RoutedEventArgs());
+		} else if (ViewModel.DetailRow is not null) {
+			ViewModel.SetShowDetails(true);
 		}
 	}
 
@@ -378,12 +442,6 @@ public sealed partial class DownloadsPage : Page {
 		var dialog = new RenameDialog(item.Name);
 		if (await ShowDialogAsync(dialog) == ContentDialogResult.Primary) {
 			await ViewModel.RenameSelectedAsync(dialog.NewName);
-		}
-	}
-
-	private async void TorrentDetails_Click(object sender, RoutedEventArgs e) {
-		if (ViewModel.CreateDetailViewModel() is { } detail) {
-			await ShowDialogAsync(new TorrentDetailDialog(detail));
 		}
 	}
 

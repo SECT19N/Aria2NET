@@ -139,8 +139,78 @@ public sealed partial class MainWindow : Window {
 				"about" => typeof(AboutPage),
 				_ => null,
 			};
-		if (page is not null && ContentFrame.CurrentSourcePageType != page) {
-			ContentFrame.Navigate(page, null, new SuppressNavigationTransitionInfo());
+		var parameter = _navParameter;
+		_navParameter = null;
+		if (page is not null && (parameter is not null || ContentFrame.CurrentSourcePageType != page)) {
+			ContentFrame.Navigate(page, parameter, new SuppressNavigationTransitionInfo());
+		}
+	}
+
+	// ---------------------------------------------------------------- search
+
+	private static readonly SearchResult NoResult = new("", Loc.S("Search_None", "No results"), "", null);
+	private int _searchVersion;
+	private object? _navParameter;
+
+	private void SearchAccelerator_Invoked(Microsoft.UI.Xaml.Input.KeyboardAccelerator sender, Microsoft.UI.Xaml.Input.KeyboardAcceleratorInvokedEventArgs args) {
+		args.Handled = true;
+		GlobalSearchBox.Focus(FocusState.Keyboard);
+	}
+
+	private async void GlobalSearch_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args) {
+		if (args.Reason != AutoSuggestionBoxTextChangeReason.UserInput) {
+			return;
+		}
+		var version = ++_searchVersion;
+		var text = sender.Text;
+		IReadOnlyList<SearchResult> results;
+		try {
+			results = await App.Services.GetRequiredService<GlobalSearch>().FindAsync(text);
+		} catch (Exception ex) {
+			_logger.LogWarning(ex, "Search failed");
+			results = Array.Empty<SearchResult>();
+		}
+		// A slower, older search must not replace the results of what is typed now.
+		if (version == _searchVersion) {
+			sender.ItemsSource = results.Count > 0 || string.IsNullOrWhiteSpace(text) ? results : new[] { NoResult };
+		}
+	}
+
+	private void GlobalSearch_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args) {
+		// Enter without picking a suggestion opens the first one.
+		var result = args.ChosenSuggestion as SearchResult ?? (sender.ItemsSource as IReadOnlyList<SearchResult>)?.FirstOrDefault();
+		if (result?.Target is not { } target) {
+			return;
+		}
+		_searchVersion++;
+		sender.Text = "";
+		sender.ItemsSource = null;
+		switch (target) {
+			case DownloadTarget download when ContentFrame.Content is DownloadsPage page:
+				page.RevealDownload(download.Gid);
+				break;
+			case DownloadTarget:
+				Go(Nav.MenuItems[0], typeof(DownloadsPage), target);
+				break;
+			case HistoryTarget entry when ContentFrame.Content is HistoryPage page:
+				_ = page.RevealEntryAsync(entry);
+				break;
+			case HistoryTarget:
+				Go(Nav.MenuItems[1], typeof(HistoryPage), target);
+				break;
+			case SettingsTarget:
+				Go(Nav.SettingsItem, typeof(SettingsPage), target);
+				break;
+		}
+	}
+
+	/// <summary>Opens a page with a parameter and keeps the navigation pane's selection in step with it.</summary>
+	private void Go(object navItem, Type page, object parameter) {
+		if (ReferenceEquals(Nav.SelectedItem, navItem)) {
+			ContentFrame.Navigate(page, parameter, new SuppressNavigationTransitionInfo());
+		} else {
+			_navParameter = parameter;
+			Nav.SelectedItem = navItem; // Nav_SelectionChanged navigates
 		}
 	}
 

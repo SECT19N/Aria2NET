@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Aria2NET",
+  "version": "0.8.0",
+  "description": "Sends browser downloads to the Aria2NET download manager.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAprEKOkzGAz9XHQZA3IVYXpLAkPKGNQnm4ecmMpJ7xPEMh2AkppWZ4CcRqUraiv9Y/idRigPHVWtY0I40WFdSRrQhJ+ki05EAqe5wENIMm8Bn4V7/YKTiQDMtMOKkSiXgDYFQJhwz2AoI/m/p5mMBmV8PCmTQ4IEPFWWtZAalNMzYK5K0fgB6Y265LYyLMwXel4K68OAZBbYgN9DjPzbpgASntIcMMFrCqymwe/nHwll2QLgbyXk4B+f9D4oJJKk8HFPt2dhlQ01mC4IaFPh9imqxLmaDgvNhP5uX75XFpk0VgikSwv8B+lNUHEm3mZgkjBoVhQPz7I7xilO1dPyDGQIDAQAB",
+  "minimum_chrome_version": "110",
+  "permissions": ["downloads", "nativeMessaging", "cookies", "storage", "contextMenus"],
+  "host_permissions": ["<all_urls>"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_title": "Aria2NET", "default_popup": "options.html" },
+  "options_ui": { "page": "options.html", "open_in_tab": false }
+}

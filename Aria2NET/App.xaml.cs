@@ -98,6 +98,8 @@ public partial class App : Application {
 			sp.GetRequiredService<IAria2Engine>(), sp.GetRequiredService<ILogger<DownloadOperations>>()));
 		services.AddSingleton<ShellViewModel>();
 		services.AddSingleton<DownloadsViewModel>();
+		services.AddSingleton<GlobalSearch>();
+		services.AddSingleton<BrowserCatch>();
 		services.AddTransient<AboutViewModel>();
 		services.AddTransient<SettingsViewModel>();
 		services.AddTransient<HistoryViewModel>();
@@ -115,6 +117,7 @@ public partial class App : Application {
 		var background = Services.GetRequiredService<BackgroundCoordinator>();
 		background.Start(_window);
 		Services.GetRequiredService<ToastService>().Start(_window);
+		Services.GetRequiredService<BrowserCatch>().Start();
 		RefreshStartupEntry();
 		// A newer copy asks this one to leave instead of being handed over to it (see InstanceTakeover).
 		InstanceTakeover.ListenForReplaceRequest(_window.DispatcherQueue, () => _window.RequestExit(confirm: false));

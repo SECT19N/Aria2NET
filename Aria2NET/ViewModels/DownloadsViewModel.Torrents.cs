@@ -157,11 +157,8 @@ public sealed partial class DownloadsViewModel {
 		}
 	});
 
-	/// <summary>The window with files, peers, trackers and pieces of the single selected torrent, or null when that is not what is selected.</summary>
-	public TorrentDetailViewModel? CreateDetailViewModel() =>
-		SingleSelected() is { IsTorrent: true, IsMetadata: false } item
-			? new TorrentDetailViewModel(_engine, item.Gid, _logger)
-			: null;
+	/// <summary>Live files, peers, trackers and pieces of one download, for the details pane.</summary>
+	public DownloadDetailViewModel CreateDetailViewModel(DownloadRowViewModel row) => new(_engine, row.Gid, _logger);
 
 	private string? _pendingExternal;
 

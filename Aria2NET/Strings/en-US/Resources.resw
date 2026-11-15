@@ -244,9 +244,6 @@
   <data name="DownloadsPage_MenuFlyoutItem11.Text" xml:space="preserve">
     <value>Change folder…</value>
   </data>
-  <data name="DownloadsPage_MenuFlyoutItem12.Text" xml:space="preserve">
-    <value>Torrent details…</value>
-  </data>
   <data name="DownloadsPage_MenuFlyoutItem13.Text" xml:space="preserve">
     <value>Check files again</value>
   </data>
@@ -460,11 +457,23 @@
   <data name="SettingsPage_SearchBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Search settings</value>
   </data>
-  <data name="SettingsPage_JumpBox.PlaceholderText" xml:space="preserve">
-    <value>Jump to…</value>
+  <data name="SettingsPage_TabGeneral.Text" xml:space="preserve">
+    <value>General</value>
   </data>
-  <data name="SettingsPage_JumpBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Jump to a section</value>
+  <data name="SettingsPage_TabDownloads.Text" xml:space="preserve">
+    <value>Downloads</value>
+  </data>
+  <data name="SettingsPage_TabSpeed.Text" xml:space="preserve">
+    <value>Speed</value>
+  </data>
+  <data name="SettingsPage_TabNetwork.Text" xml:space="preserve">
+    <value>Network</value>
+  </data>
+  <data name="SettingsPage_TabTorrents.Text" xml:space="preserve">
+    <value>Torrents</value>
+  </data>
+  <data name="SettingsPage_TabAdvanced.Text" xml:space="preserve">
+    <value>Advanced</value>
   </data>
   <data name="SettingsPage_SearchEmpty.Text" xml:space="preserve">
     <value>No settings match your search.</value>
@@ -617,7 +626,7 @@
     <value>Reset network settings to defaults</value>
   </data>
   <data name="SettingsPage_TextBlock14.Text" xml:space="preserve">
-    <value>General: startup and tray</value>
+    <value>Startup and tray</value>
   </data>
   <data name="SettingsPage_CloseToTrayBox.Content" xml:space="preserve">
     <value>Closing the window keeps Aria2NET running in the tray</value>
@@ -810,81 +819,6 @@
   </data>
   <data name="SpeedLimitDialog_TextBlock1.Text" xml:space="preserve">
     <value>0 means no limit.</value>
-  </data>
-  <data name="TorrentDetailDialog_ContentDialog1.CloseButtonText" xml:space="preserve">
-    <value>Close</value>
-  </data>
-  <data name="TorrentDetailDialog_PivotItem1.Header" xml:space="preserve">
-    <value>Overview</value>
-  </data>
-  <data name="TorrentDetailDialog_TextBlock1.Text" xml:space="preserve">
-    <value>Transfer</value>
-  </data>
-  <data name="TorrentDetailDialog_TextBlock2.Text" xml:space="preserve">
-    <value>Swarm</value>
-  </data>
-  <data name="TorrentDetailDialog_TextBlock3.Text" xml:space="preserve">
-    <value>Saved to</value>
-  </data>
-  <data name="TorrentDetailDialog_TextBlock4.Text" xml:space="preserve">
-    <value>Info hash</value>
-  </data>
-  <data name="TorrentDetailDialog_TextBlock5.Text" xml:space="preserve">
-    <value>Pieces</value>
-  </data>
-  <data name="TorrentDetailDialog_TextBlock6.Text" xml:space="preserve">
-    <value>Created</value>
-  </data>
-  <data name="TorrentDetailDialog_TextBlock7.Text" xml:space="preserve">
-    <value>Comment</value>
-  </data>
-  <data name="TorrentDetailDialog_PivotItem2.Header" xml:space="preserve">
-    <value>Files</value>
-  </data>
-  <data name="TorrentDetailDialog_TextBlock8.Text" xml:space="preserve">
-    <value>Address</value>
-  </data>
-  <data name="TorrentDetailDialog_TextBlock9.Text" xml:space="preserve">
-    <value>Client</value>
-  </data>
-  <data name="TorrentDetailDialog_TextBlock10.Text" xml:space="preserve">
-    <value>Country</value>
-  </data>
-  <data name="TorrentDetailDialog_TextBlock11.Text" xml:space="preserve">
-    <value>Down</value>
-  </data>
-  <data name="TorrentDetailDialog_TextBlock12.Text" xml:space="preserve">
-    <value>Up</value>
-  </data>
-  <data name="TorrentDetailDialog_TextBlock13.Text" xml:space="preserve">
-    <value>Has</value>
-  </data>
-  <data name="TorrentDetailDialog_TextBlock14.Text" xml:space="preserve">
-    <value>Flags</value>
-  </data>
-  <data name="TorrentDetailDialog_PivotItem3.Header" xml:space="preserve">
-    <value>Trackers</value>
-  </data>
-  <data name="TorrentDetailDialog_TextBlock15.Text" xml:space="preserve">
-    <value>aria2 does not report tracker status and cannot change the trackers of a torrent that is already added. Public trackers from the cached list are added when a torrent is first added.</value>
-  </data>
-  <data name="TorrentDetailDialog_PivotItem4.Header" xml:space="preserve">
-    <value>Pieces</value>
-  </data>
-  <data name="TorrentDetailDialog_TextBlock16.Text" xml:space="preserve">
-    <value>What you have</value>
-  </data>
-  <data name="TorrentDetailDialog_Rectangle1.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Pieces downloaded</value>
-  </data>
-  <data name="TorrentDetailDialog_TextBlock17.Text" xml:space="preserve">
-    <value>Where it can be had (connected peers)</value>
-  </data>
-  <data name="TorrentDetailDialog_Rectangle2.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Piece availability among connected peers</value>
-  </data>
-  <data name="TorrentDetailDialog_TextBlock18.Text" xml:space="preserve">
-    <value>Green: downloaded. Teal: how many of the connected peers have that part (grey means none of them). Each slice is a share of the whole torrent.</value>
   </data>
   <data name="TorrentFilesDialog_ContentDialog1.Title" xml:space="preserve">
     <value>Choose what to download</value>
@@ -1154,8 +1088,26 @@ Keep both files (the new one gets a number), or replace the existing file?</valu
   <data name="Downloads_RemoveFailed" xml:space="preserve">
     <value>Could not remove: {0}</value>
   </data>
-  <data name="Downloads_Stats" xml:space="preserve">
-    <value>↓ {0}  ·  {1} active  ·  {2} waiting</value>
+  <data name="Bar_Down" xml:space="preserve">
+    <value>↓ {0}</value>
+  </data>
+  <data name="Bar_Up" xml:space="preserve">
+    <value>↑ {0}</value>
+  </data>
+  <data name="Bar_Active" xml:space="preserve">
+    <value>Active: {0}</value>
+  </data>
+  <data name="Bar_Waiting" xml:space="preserve">
+    <value>Waiting: {0}</value>
+  </data>
+  <data name="Bar_Seeding" xml:space="preserve">
+    <value>Seeding: {0}</value>
+  </data>
+  <data name="Bar_Completed" xml:space="preserve">
+    <value>Completed: {0}</value>
+  </data>
+  <data name="Bar_Peers" xml:space="preserve">
+    <value>Peers: {0}</value>
   </data>
   <data name="Downloads_Busy" xml:space="preserve">
     <value>aria2 is busy preparing files and did not answer in time. Try again in a moment.</value>
@@ -1267,12 +1219,6 @@ Keep both files (the new one gets a number), or replace the existing file?</valu
   </data>
   <data name="Detail_Peers" xml:space="preserve">
     <value>Peers</value>
-  </data>
-  <data name="Detail_Summary" xml:space="preserve">
-    <value>{0} · {1} of {2} ({3:0.#}%) · ratio {4:0.00}</value>
-  </data>
-  <data name="Detail_Transfer" xml:space="preserve">
-    <value>↓ {0}   ↑ {1}   uploaded {2}</value>
   </data>
   <data name="Detail_Swarm" xml:space="preserve">
     <value>{0} seeders · {1} connections</value>
@@ -1675,5 +1621,185 @@ Keep both files (the new one gets a number), or replace the existing file?</valu
   </data>
   <data name="Update_Failed" xml:space="preserve">
     <value>Could not check for updates: {0}</value>
+  </data>
+  <data name="DetailPane_TabGeneral.Text" xml:space="preserve">
+    <value>General</value>
+  </data>
+  <data name="DetailPane_TabTrackers.Text" xml:space="preserve">
+    <value>Trackers</value>
+  </data>
+  <data name="DetailPane_TabPieces.Text" xml:space="preserve">
+    <value>Pieces</value>
+  </data>
+  <data name="DetailPane_CloseButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Hide details</value>
+  </data>
+  <data name="DetailPane_CloseButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Hide details</value>
+  </data>
+  <data name="DetailPane_LabelStatus.Text" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="DetailPane_LabelDownloaded.Text" xml:space="preserve">
+    <value>Downloaded</value>
+  </data>
+  <data name="DetailPane_LabelSpeed.Text" xml:space="preserve">
+    <value>Speed</value>
+  </data>
+  <data name="DetailPane_LabelEta.Text" xml:space="preserve">
+    <value>Time left</value>
+  </data>
+  <data name="DetailPane_LabelConnections.Text" xml:space="preserve">
+    <value>Connections</value>
+  </data>
+  <data name="DetailPane_LabelUploaded.Text" xml:space="preserve">
+    <value>Uploaded</value>
+  </data>
+  <data name="DetailPane_LabelSavedTo.Text" xml:space="preserve">
+    <value>Saved to</value>
+  </data>
+  <data name="DetailPane_LabelSource.Text" xml:space="preserve">
+    <value>Source</value>
+  </data>
+  <data name="DetailPane_LabelInfoHash.Text" xml:space="preserve">
+    <value>Info hash</value>
+  </data>
+  <data name="DetailPane_LabelPieces.Text" xml:space="preserve">
+    <value>Pieces</value>
+  </data>
+  <data name="DetailPane_LabelCreated.Text" xml:space="preserve">
+    <value>Created</value>
+  </data>
+  <data name="DetailPane_LabelComment.Text" xml:space="preserve">
+    <value>Comment</value>
+  </data>
+  <data name="DetailPane_LabelError.Text" xml:space="preserve">
+    <value>Problem</value>
+  </data>
+  <data name="DetailPane_FileName.Text" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="DetailPane_FileProgress.Text" xml:space="preserve">
+    <value>Progress</value>
+  </data>
+  <data name="DetailPane_FileSize.Text" xml:space="preserve">
+    <value>Size</value>
+  </data>
+  <data name="DetailPane_PeerAddress.Text" xml:space="preserve">
+    <value>Address</value>
+  </data>
+  <data name="DetailPane_PeerClient.Text" xml:space="preserve">
+    <value>Client</value>
+  </data>
+  <data name="DetailPane_PeerCountry.Text" xml:space="preserve">
+    <value>Country</value>
+  </data>
+  <data name="DetailPane_PeerDown.Text" xml:space="preserve">
+    <value>Down</value>
+  </data>
+  <data name="DetailPane_PeerUp.Text" xml:space="preserve">
+    <value>Up</value>
+  </data>
+  <data name="DetailPane_PeerHas.Text" xml:space="preserve">
+    <value>Has</value>
+  </data>
+  <data name="DetailPane_PeerFlags.Text" xml:space="preserve">
+    <value>Flags</value>
+  </data>
+  <data name="DetailPane_TrackerNote.Text" xml:space="preserve">
+    <value>aria2 does not report tracker status and cannot change the trackers of a torrent that is already added. Public trackers from the cached list are added when a torrent is first added.</value>
+  </data>
+  <data name="DetailPane_HaveLabel.Text" xml:space="preserve">
+    <value>What you have</value>
+  </data>
+  <data name="DetailPane_HaveBar.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Pieces downloaded</value>
+  </data>
+  <data name="DetailPane_AvailabilityLabel.Text" xml:space="preserve">
+    <value>Where it can be had (connected peers)</value>
+  </data>
+  <data name="DetailPane_AvailabilityBar.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Piece availability among connected peers</value>
+  </data>
+  <data name="DetailPane_Legend.Text" xml:space="preserve">
+    <value>Green: downloaded. Teal: how many of the connected peers have that part (grey means none of them). Each slice is a share of the whole torrent.</value>
+  </data>
+  <data name="Detail_Loading" xml:space="preserve">
+    <value>Loading…</value>
+  </data>
+  <data name="Detail_Gone" xml:space="preserve">
+    <value>This download is no longer in the list.</value>
+  </data>
+  <data name="Detail_WaitingEngine" xml:space="preserve">
+    <value>Waiting for the download engine…</value>
+  </data>
+  <data name="Detail_Downloaded" xml:space="preserve">
+    <value>{0} of {1} ({2:0.#}%)</value>
+  </data>
+  <data name="Detail_SpeedBoth" xml:space="preserve">
+    <value>↓ {0}   ↑ {1}</value>
+  </data>
+  <data name="Detail_SpeedDown" xml:space="preserve">
+    <value>↓ {0}</value>
+  </data>
+  <data name="Detail_Uploaded" xml:space="preserve">
+    <value>{0} · ratio {1:0.00}</value>
+  </data>
+  <data name="Detail_Connections" xml:space="preserve">
+    <value>{0} connections</value>
+  </data>
+  <data name="Detail_Files" xml:space="preserve">
+    <value>Files</value>
+  </data>
+  <data name="Detail_FilesCount" xml:space="preserve">
+    <value>Files ({0})</value>
+  </data>
+  <data name="DownloadsPage_DetailsButton.Label" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="DownloadsPage_DetailsButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Show details of the selected download under the list</value>
+  </data>
+  <data name="DownloadsPage_MenuFlyoutItem12.Text" xml:space="preserve">
+    <value>Show details</value>
+  </data>
+  <data name="MainWindow_SearchBox.PlaceholderText" xml:space="preserve">
+    <value>Search downloads, history and settings (Ctrl+E)</value>
+  </data>
+  <data name="MainWindow_SearchBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Search downloads, history and settings</value>
+  </data>
+  <data name="Search_Download" xml:space="preserve">
+    <value>Download · {0}</value>
+  </data>
+  <data name="Search_History" xml:space="preserve">
+    <value>History · {0}</value>
+  </data>
+  <data name="Search_Setting" xml:space="preserve">
+    <value>Settings · {0}</value>
+  </data>
+  <data name="Search_None" xml:space="preserve">
+    <value>No results</value>
+  </data>
+  <data name="SettingsPage_BrowserHeader.Text" xml:space="preserve">
+    <value>Browser</value>
+  </data>
+  <data name="SettingsPage_BrowserCatchBox.Content" xml:space="preserve">
+    <value>Catch downloads from Chrome and Edge</value>
+  </data>
+  <data name="SettingsPage_BrowserCatchNote.Text" xml:space="preserve">
+    <value>Needs the Aria2NET browser extension. Until it is in the browser stores, add it by hand: open chrome://extensions or edge://extensions, switch on Developer mode, choose Load unpacked and pick the extension folder. A caught download is saved to the default folder; if Aria2NET cannot take it, the browser carries on with it.</value>
+  </data>
+  <data name="SettingsPage_ExtensionFolderButton.Content" xml:space="preserve">
+    <value>Open extension folder</value>
+  </data>
+  <data name="Settings_BrowserCatchOn" xml:space="preserve">
+    <value>On. Chrome and Edge can now hand downloads to Aria2NET.</value>
+  </data>
+  <data name="Settings_BrowserCatchFailed" xml:space="preserve">
+    <value>Could not set this up: {0}</value>
+  </data>
+  <data name="Settings_ExtensionMissing" xml:space="preserve">
+    <value>The extension folder is missing from this copy of Aria2NET.</value>
   </data>
 </root>

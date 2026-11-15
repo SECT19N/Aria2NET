@@ -44,6 +44,8 @@ public sealed partial class SettingsPage : Page {
 		}
 		RetentionBox.SelectedIndex = ViewModel.RetentionIndex;
 		RetentionBox.IsEnabled = ViewModel.HistoryAvailable;
+		BrowserCatchBox.IsChecked = Browser.IsEnabled;
+		BrowserCatchBox.IsEnabled = Browser.IsAvailable;
 		RefreshAssociation();
 		TrackerStatus.Text = TrackerSummary();
 		foreach (var (label, _) in SettingsViewModel.UserAgentChoices) {
@@ -350,35 +352,126 @@ public sealed partial class SettingsPage : Page {
 		}
 	}
 
-	// ---------------------------------------------------------------- search and jump
+	// ---------------------------------------------------------------- tabs and search
 
-	private sealed record SettingsSection(string Title, StackPanel Panel);
+	private sealed record SettingsSection(string Title, string Tab, StackPanel Panel);
 
 	private readonly List<SettingsSection> _sections = [];
 
-	/// <summary>Groups the page's controls into one panel per section (each starts at a header marked Tag="section") so a section can be hidden or scrolled to.</summary>
-	private void BuildSections() {
-		var children = PageRoot.Children.ToList();
-		var first = children.FindIndex(IsSectionHeader);
-		if (first < 0) {
-			return;
+	// Static: coming back to Settings reopens the tab the user left.
+	private static string _tab = "general";
+	private static IReadOnlyList<SettingsTarget>? _index;
+
+	/// <summary>Every setting's label with the tab and section it lives in, for the title-bar search. Built once from a page that is never shown.</summary>
+	public static IReadOnlyList<SettingsTarget> SearchIndex() {
+		if (_index is null) {
+			_ = new SettingsPage();
 		}
-		StackPanel? current = null;
-		foreach (var child in children.Skip(first)) {
-			PageRoot.Children.Remove(child);
-			if (IsSectionHeader(child)) {
-				current = new StackPanel { Spacing = 12 };
-				_sections.Add(new SettingsSection(((TextBlock) child).Text, current));
-			}
-			current!.Children.Add(child);
-		}
-		foreach (var section in _sections) {
-			PageRoot.Children.Add(section.Panel);
-			JumpBox.Items.Add(section.Title);
+		return _index ?? [];
+	}
+
+	protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e) {
+		base.OnNavigatedTo(e);
+		if (e.Parameter is SettingsTarget target) {
+			SelectTab(target.Tab);
+			Loaded += (_, _) => DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => Reveal(target));
 		}
 	}
 
-	private static bool IsSectionHeader(UIElement element) => element is TextBlock { Tag: "section" };
+	/// <summary>Groups the page's controls into one panel per section (each starts at a header whose Tag names its tab) so a section can be hidden or scrolled to.</summary>
+	private void BuildSections() {
+		StackPanel? current = null;
+		foreach (var child in PageRoot.Children.ToList()) {
+			PageRoot.Children.Remove(child);
+			if (child is TextBlock { Tag: string tab } header) {
+				current = new StackPanel { Spacing = 12 };
+				_sections.Add(new SettingsSection(header.Text, tab, current));
+			}
+			current?.Children.Add(child);
+		}
+		foreach (var section in _sections) {
+			PageRoot.Children.Add(section.Panel);
+		}
+		_index ??= _sections
+			.SelectMany(s => Labelled(s.Panel).Select(c => new SettingsTarget(s.Tab, s.Title, c.Label)).Prepend(new SettingsTarget(s.Tab, s.Title, null)))
+			.ToList();
+		SelectTab(_tab);
+		ShowSections();
+	}
+
+	private void SelectTab(string tab) => TabBar.SelectedItem = TabBar.Items.FirstOrDefault(i => (string) i.Tag == tab) ?? TabBar.Items[0];
+
+	private void Tab_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args) {
+		if (sender.SelectedItem?.Tag is string tab) {
+			_tab = tab;
+			ShowSections();
+			SectionScroller?.ChangeView(null, 0, null, disableAnimation: true);
+		}
+	}
+
+	/// <summary>Shows the selected tab's sections, or, while the search box has text, every matching section whatever its tab.</summary>
+	private void ShowSections() {
+		var words = SearchBox.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+		var searching = words.Length > 0;
+		TabBar.Visibility = searching ? Visibility.Collapsed : Visibility.Visible;
+		var anyVisible = false;
+		foreach (var section in _sections) {
+			var visible = section.Tab == _tab;
+			if (searching) {
+				var text = new System.Text.StringBuilder(section.Title).Append(' ');
+				CollectText(section.Panel, text);
+				var haystack = text.ToString();
+				visible = words.All(w => haystack.Contains(w, StringComparison.CurrentCultureIgnoreCase));
+			}
+			section.Panel.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+			anyVisible |= visible;
+		}
+		SearchEmpty.Visibility = anyVisible ? Visibility.Collapsed : Visibility.Visible;
+	}
+
+	/// <summary>Scrolls to a setting found by the title-bar search and puts the keyboard focus on it.</summary>
+	private void Reveal(SettingsTarget target) {
+		if (_sections.FirstOrDefault(s => s.Tab == target.Tab && s.Title == target.Section) is not { } section) {
+			return;
+		}
+		FrameworkElement element = section.Panel;
+		if (target.Label is not null && Labelled(section.Panel).FirstOrDefault(c => c.Label == target.Label).Control is { Visibility: Visibility.Visible } control) {
+			element = control;
+		}
+		element.StartBringIntoView(new BringIntoViewOptions { VerticalAlignmentRatio = 0.2 });
+		(element as Control)?.Focus(FocusState.Keyboard);
+	}
+
+	/// <summary>The controls a user would look for by name, with the text they are labelled with.</summary>
+	private static IEnumerable<(string Label, FrameworkElement Control)> Labelled(UIElement element) {
+		switch (element) {
+			case Panel panel:
+				foreach (var child in panel.Children) {
+					foreach (var found in Labelled(child)) {
+						yield return found;
+					}
+				}
+				break;
+			case ComboBox { Header: string header } combo:
+				yield return (header, combo);
+				break;
+			case TextBox { Header: string header } box:
+				yield return (header, box);
+				break;
+			case PasswordBox { Header: string header } password:
+				yield return (header, password);
+				break;
+			case NumberBox { Header: string header } number:
+				yield return (header, number);
+				break;
+			case ToggleSwitch { Header: string header } toggle:
+				yield return (header, toggle);
+				break;
+			case ContentControl { Content: string content } control:
+				yield return (content, control);
+				break;
+		}
+	}
 
 	private static void CollectText(UIElement element, System.Text.StringBuilder text) {
 		switch (element) {
@@ -414,32 +507,7 @@ public sealed partial class SettingsPage : Page {
 		}
 	}
 
-	private void Search_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args) {
-		var words = sender.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-		var anyVisible = false;
-		foreach (var section in _sections) {
-			var visible = words.Length == 0;
-			if (!visible) {
-				var text = new System.Text.StringBuilder(section.Title).Append(' ');
-				CollectText(section.Panel, text);
-				var haystack = text.ToString();
-				visible = words.All(w => haystack.Contains(w, StringComparison.CurrentCultureIgnoreCase));
-			}
-			section.Panel.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
-			anyVisible |= visible;
-		}
-		SearchEmpty.Visibility = anyVisible ? Visibility.Collapsed : Visibility.Visible;
-	}
-
-	private void Jump_Changed(object sender, SelectionChangedEventArgs e) {
-		var index = JumpBox.SelectedIndex;
-		if (index < 0 || index >= _sections.Count) {
-			return;
-		}
-		SearchBox.Text = ""; // a hidden section cannot be scrolled to
-		_sections[index].Panel.StartBringIntoView(new BringIntoViewOptions { VerticalAlignmentRatio = 0 });
-		JumpBox.SelectedIndex = -1;
-	}
+	private void Search_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args) => ShowSections();
 
 	// ---------------------------------------------------------------- advanced
 
@@ -653,6 +721,26 @@ public sealed partial class SettingsPage : Page {
 
 	private async void OpenLogs_Click(object sender, RoutedEventArgs e) => await Launcher.LaunchFolderPathAsync(ViewModel.LogsFolder);
 
+	// ---------------------------------------------------------------- browser
+
+	private static BrowserCatch Browser => App.Services.GetRequiredService<BrowserCatch>();
+
+	private void BrowserCatch_Click(object sender, RoutedEventArgs e) {
+		var wanted = BrowserCatchBox.IsChecked == true;
+		var problem = Browser.SetEnabled(wanted);
+		BrowserCatchBox.IsChecked = Browser.IsEnabled;
+		BrowserCatchStatus.Text = problem is not null ? Loc.F("Settings_BrowserCatchFailed", "Could not set this up: {0}", problem)
+			: wanted ? Loc.S("Settings_BrowserCatchOn", "On. Chrome and Edge can now hand downloads to Aria2NET.") : "";
+	}
+
+	private async void ExtensionFolder_Click(object sender, RoutedEventArgs e) {
+		if (Directory.Exists(BrowserCatch.ExtensionFolder)) {
+			await Launcher.LaunchFolderPathAsync(BrowserCatch.ExtensionFolder);
+		} else {
+			BrowserCatchStatus.Text = Loc.S("Settings_ExtensionMissing", "The extension folder is missing from this copy of Aria2NET.");
+		}
+	}
+
 	// ---------------------------------------------------------------- torrents
 
 	private static TorrentAssociation Association => App.Services.GetRequiredService<TorrentAssociation>();
@@ -710,3 +798,6 @@ public sealed partial class SettingsPage : Page {
 		TrackerStatus.Text = list is null ? Loc.S("Settings_TrackerDownloadFailed", "Could not download the list; keeping the old one.") : TrackerSummary();
 	}
 }
+
+/// <summary>A place in Settings: a tab, a section in it and, when <see cref="Label"/> is set, one setting in that section.</summary>
+public sealed record SettingsTarget(string Tab, string Section, string? Label);

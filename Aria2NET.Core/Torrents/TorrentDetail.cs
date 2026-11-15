@@ -135,7 +135,9 @@ public sealed record TorrentDetailSnapshot(
 	IReadOnlyList<TorrentPeer> Peers,
 	IReadOnlyList<TorrentTracker> Trackers,
 	double[] HaveBar,
-	double[] AvailabilityBar) {
+	double[] AvailabilityBar,
+	bool IsTorrent = false,
+	string? Uri = null) {
 
 	public double Ratio => CompletedBytes > 0 ? (double) UploadedBytes / CompletedBytes : 0;
 	public double Progress => TotalBytes > 0 ? Math.Min(100.0, CompletedBytes * 100.0 / TotalBytes) : 0;
@@ -148,7 +150,15 @@ public static class TorrentDetailLoader {
 		using var statusDoc = await rpc.TellStatusFullAsync(gid, ct);
 		var status = statusDoc.RootElement;
 		var files = await rpc.GetFilesAsync(gid, ct);
-		var peers = await rpc.GetPeersAsync(gid, ct);
+		// aria2 only knows the peers of a running torrent; asking about a paused or finished one is an error.
+		IReadOnlyList<PeerInfo> peers = [];
+		if (status.TryGetProperty("bittorrent", out _) && Str(status, "status") == "active") {
+			try {
+				peers = await rpc.GetPeersAsync(gid, ct);
+			} catch (Aria2RpcException) {
+				// It stopped between the two calls.
+			}
+		}
 		return Build(status, files, peers, geo);
 	}
 
@@ -205,7 +215,25 @@ public static class TorrentDetailLoader {
 				pieceCount > 0 ? Bitfield.Count(p.Bitfield, pieceCount) * 100.0 / pieceCount : 0, p.Seeder, p.PeerChoking))],
 			trackers,
 			Bitfield.Downsample([.. have.Select(b => b ? 1.0 : 0.0)], BarBuckets),
-			Bitfield.Downsample(availability, BarBuckets));
+			Bitfield.Downsample(availability, BarBuckets),
+			bt.ValueKind == JsonValueKind.Object,
+			FirstUri(status));
+	}
+
+	/// <summary>The address a plain download is fetched from (its first file's first URI).</summary>
+	private static string? FirstUri(JsonElement status) {
+		if (status.TryGetProperty("files", out var files) && files.ValueKind == JsonValueKind.Array) {
+			foreach (var file in files.EnumerateArray()) {
+				if (file.TryGetProperty("uris", out var uris) && uris.ValueKind == JsonValueKind.Array) {
+					foreach (var uri in uris.EnumerateArray()) {
+						if (Str(uri, "uri") is { Length: > 0 } text) {
+							return text;
+						}
+					}
+				}
+			}
+		}
+		return null;
 	}
 
 	private static string? Str(JsonElement e, string name) =>

@@ -32,6 +32,13 @@ public static class LaunchArguments {
 	/// <summary>Passed by the Run key entry so the app can tell a start at sign-in from a launch by the user.</summary>
 	public const string AutostartArgument = "--autostart";
 
+	/// <summary>Passed when the browser extension starts the app to hand it a download: start quietly, like at sign-in.</summary>
+	public const string BackgroundArgument = "--background";
+
+	/// <summary>True when the app was started to work in the background rather than opened by the user.</summary>
+	public static bool IsBackgroundStart(IEnumerable<string> args) =>
+		args.Any(a => string.Equals(a.Trim(), BackgroundArgument, StringComparison.OrdinalIgnoreCase));
+
 	/// <summary>True when Windows started the app at sign-in.</summary>
 	public static bool IsAutostart(IEnumerable<string> args) =>
 		args.Any(a => string.Equals(a.Trim(), AutostartArgument, StringComparison.OrdinalIgnoreCase));

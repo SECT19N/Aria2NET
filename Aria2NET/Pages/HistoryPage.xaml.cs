@@ -21,7 +21,29 @@ public sealed partial class HistoryPage : Page {
 
 	private async void Page_Loaded(object sender, RoutedEventArgs e) {
 		ViewModel.Rows.CollectionChanged += Rows_Changed;
-		await ViewModel.ReloadAsync();
+		if (_reveal is { } target) {
+			_reveal = null;
+			await RevealEntryAsync(target);
+		} else {
+			await ViewModel.ReloadAsync();
+		}
+	}
+
+	private HistoryTarget? _reveal;
+
+	protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e) {
+		base.OnNavigatedTo(e);
+		_reveal = e.Parameter as HistoryTarget;
+	}
+
+	/// <summary>Lists the entry found by the title-bar search (by searching for its name), then selects it.</summary>
+	public async Task RevealEntryAsync(HistoryTarget target) {
+		await ViewModel.ShowOnlyAsync(target.Name);
+		if (ViewModel.Rows.FirstOrDefault(r => r.Entry.Id == target.Id) is { } row) {
+			HistoryList.SelectedItem = row;
+			HistoryList.ScrollIntoView(row);
+			HistoryList.Focus(FocusState.Programmatic);
+		}
 	}
 
 	private void Page_Unloaded(object sender, RoutedEventArgs e) => ViewModel.Rows.CollectionChanged -= Rows_Changed;

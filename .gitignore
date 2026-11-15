@@ -365,3 +365,5 @@ FodyWeavers.xsd
 tools/aria2/
 # GeoIP database (fetched by tools/get-geoip.ps1)
 tools/geoip/
+# Private key of the browser extension (only the public key in extension/manifest.json is needed to build)
+extension/.private/

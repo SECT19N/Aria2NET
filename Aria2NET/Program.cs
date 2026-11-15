@@ -12,7 +12,13 @@ namespace Aria2NET;
 public static class Program {
 	[STAThread]
 	private static int Main(string[] args) {
-		// First, before anything else: when the installer or updater starts the exe with a hook argument (install, update, uninstall) this
+		// Started by a browser as the extension's messaging host: pass the message to the running app and exit. Not an app launch at all,
+		// so it comes before the update hooks and the single-instance check.
+		if (BrowserBridge.IsHostLaunch(args)) {
+			return BrowserHost.Run(args);
+		}
+
+		// First for a real launch: when the installer or updater starts the exe with a hook argument (install, update, uninstall) this
 		// runs the hook and exits, so it never reaches the single-instance check below and cannot be redirected to a running copy.
 		VelopackApp.Build()
 			.OnBeforeUninstallFastCallback(_ => RemoveUserRegistrations())
@@ -35,9 +41,13 @@ public static class Program {
 
 		// A .torrent file or magnet link that started the app (double-click, browser link).
 		App.StartupItems = LaunchArguments.Extract(args);
-		App.StartedAtSignIn = LaunchArguments.IsAutostart(args);
+		// A start for the browser extension stays out of the way exactly like a start at sign-in.
+		App.StartedAtSignIn = LaunchArguments.IsAutostart(args) || LaunchArguments.IsBackgroundStart(args);
 		instance.Activated += (_, e) => {
-			App.ActivateMainWindow();
+			// Two browser downloads at once can both try to start the app; the second must not pop the window up.
+			if (!IsBackgroundLaunch(e)) {
+				App.ActivateMainWindow();
+			}
 			App.HandleExternalLaunch(ItemsOf(e));
 		};
 
@@ -53,10 +63,15 @@ public static class Program {
 		try {
 			new StartupRegistration(Environment.ProcessPath ?? "").Disable();
 			new ShellRegistration(Environment.ProcessPath ?? "").Unregister();
+			new NativeMessagingRegistration(Environment.ProcessPath ?? "", BrowserCatch.ManifestDir(Aria2NET.Core.AppPaths.CreateDefault())).Unregister();
 		} catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException) {
 			// Uninstalling must not fail over a registry key.
 		}
 	}
+
+	private static bool IsBackgroundLaunch(AppActivationArguments e) =>
+		e.Kind == ExtendedActivationKind.Launch && e.Data is ILaunchActivatedEventArgs launch
+		&& LaunchArguments.IsBackgroundStart(LaunchArguments.Split(launch.Arguments));
 
 	/// <summary>Links and files that a second launch carried to this instance.</summary>
 	private static IReadOnlyList<string> ItemsOf(AppActivationArguments e) => e.Kind switch {

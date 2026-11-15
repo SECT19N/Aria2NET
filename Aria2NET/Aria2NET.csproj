@@ -37,6 +37,11 @@
     <Warning Text="tools/aria2/aria2c.exe is missing. Run: pwsh -ExecutionPolicy Bypass -File tools/get-aria2.ps1" />
   </Target>
 
+  <!-- The browser extension, shipped unpacked next to the app so it can be loaded from Settings (the private key never ships). -->
+  <ItemGroup>
+    <Content Include="../extension/**" Exclude="../extension/.private/**" Link="browser-extension/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <Manifest Include="$(ApplicationManifest)" />
   </ItemGroup>

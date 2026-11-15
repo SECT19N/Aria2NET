@@ -134,6 +134,20 @@ public sealed partial class HistoryViewModel : ObservableObject {
 		_debounce.Start();
 	}
 
+	/// <summary>Drops every filter and searches for <paramref name="name"/>, so an entry found by the title-bar search is certainly listed.</summary>
+	public async Task ShowOnlyAsync(string name) {
+		_loadingFilters = true;
+		SearchText = name;
+		StatusIndex = 0;
+		TypeIndex = 0;
+		SiteIndex = 0;
+		FromDate = null;
+		ToDate = null;
+		_loadingFilters = false;
+		_debounce.Stop();
+		await ReloadAsync();
+	}
+
 	public void ClearFilters() {
 		_loadingFilters = true;
 		SearchText = "";

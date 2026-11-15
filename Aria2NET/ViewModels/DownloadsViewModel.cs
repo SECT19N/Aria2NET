@@ -34,6 +34,9 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 	private List<DownloadItem> _pendingRemoval = [];
 	private bool _baselineTaken;
 
+	/// <summary>Every download in the list, whatever the filter (the title-bar search looks through these).</summary>
+	public IReadOnlyList<DownloadItem> AllItems => _items.Where(i => !_hidden.Contains(i.Gid)).ToList();
+
 	/// <summary>Rows currently shown (after filter and sort).</summary>
 	public ObservableCollection<DownloadRowViewModel> Rows { get; } = [];
 
@@ -52,9 +55,6 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 	public bool IsEngineDown => !IsEngineUp;
 
 	public bool HasRows => !IsEmpty;
-
-	[ObservableProperty]
-	public partial string StatsText { get; private set; } = "";
 
 	// ---- Filter and sort ----
 	[ObservableProperty]
@@ -96,8 +96,24 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 	[ObservableProperty]
 	public partial bool CanChangeSeeding { get; private set; }
 
+	/// <summary>The one selected download, which the details pane shows; null when none or several are selected.</summary>
 	[ObservableProperty]
-	public partial bool CanShowTorrentDetails { get; private set; }
+	public partial DownloadRowViewModel? DetailRow { get; private set; }
+
+	/// <summary>The user wants the details pane (it still only appears while one download is selected).</summary>
+	[ObservableProperty]
+	public partial bool ShowDetails { get; private set; }
+
+	public double DetailsHeight => Math.Clamp(_settings.Load().DetailsPaneHeight, 120, 2000);
+
+	public void SetShowDetails(bool show) {
+		if (ShowDetails != show) {
+			ShowDetails = show;
+			SaveSettings(s => s.ShowDetailsPane = show);
+		}
+	}
+
+	public void SaveDetailsHeight(double height) => SaveSettings(s => s.DetailsPaneHeight = Math.Round(height));
 
 	[ObservableProperty]
 	public partial string NameHeader { get; private set; } = Loc.S("Downloads_ColName", "Name");
@@ -198,6 +214,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		Filter = Enum.TryParse<StatusFilter>(saved.StatusFilter, out var f) ? f : StatusFilter.All;
 		SortColumn = Enum.TryParse<SortColumn>(saved.SortColumn, out var c) ? c : SortColumn.None;
 		SortDescending = saved.SortDescending;
+		ShowDetails = saved.ShowDetailsPane;
 		RefreshHeaders();
 
 		_undoTimer = _dispatcher.CreateTimer();
@@ -241,8 +258,20 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 	/// <summary>Set by the page: asks what to do about a file that already exists (the "Ask" name-clash setting). Without it, both files are kept.</summary>
 	public Func<string, Task<ConflictChoice>>? PromptConflict { get; set; }
 
+	/// <summary>
+	/// Takes a download the browser extension caught: into the folder the Add dialog would offer, without asking anything (the window may
+	/// be hidden in the tray). Waits a little for the engine, since the browser may only just have started the app.
+	/// </summary>
+	public async Task<string?> AddFromBrowserAsync(BrowserDownloadRequest request) {
+		for (var i = 0; i < 100 && !IsEngineUp; i++) {
+			await Task.Delay(200);
+		}
+		return await AddAsync(new[] { request.Url }, InitialFolder(), request.FileName, request.ToAddOptions(), quiet: true);
+	}
+
 	/// <summary>Adds each link or file as its own download. Returns an error message, or null when everything was accepted.</summary>
-	public async Task<string?> AddAsync(IReadOnlyList<string> urls, string folder, string? fileName, AddOptions? extra = null) {
+	/// <param name="quiet">Never ask about a file that already exists; keep both instead.</param>
+	public async Task<string?> AddAsync(IReadOnlyList<string> urls, string folder, string? fileName, AddOptions? extra = null, bool quiet = false) {
 		var rpc = _engine.Rpc;
 		if (rpc is null) {
 			return Loc.S("Downloads_EngineNotRunning", "The download engine is not running.");
@@ -280,7 +309,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 				if (FileConflicts.FindExisting(folder, url, urls.Count == 1 ? fileName : null) is { } existing) {
 					var policy = _settings.Load().Conflict;
 					var choice = FileConflicts.FromPolicy(policy)
-						?? (PromptConflict is { } ask ? await ask(existing) : ConflictChoice.Rename);
+						?? (!quiet && PromptConflict is { } ask ? await ask(existing) : ConflictChoice.Rename);
 					if (choice == ConflictChoice.Skip) {
 						continue;
 					}
@@ -347,7 +376,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		CanShowProperties = single is not null;
 		CanRecheck = items.Count > 0 && items.All(DownloadCapabilities.CanRecheck);
 		CanChangeSeeding = items.Count > 0 && items.All(DownloadCapabilities.CanChangeSeeding);
-		CanShowTorrentDetails = single is { IsTorrent: true, IsMetadata: false };
+		DetailRow = _selection.Count == 1 ? _selection[0] : null;
 
 		var visible = _items.Where(i => !_hidden.Contains(i.Gid)).ToList();
 		CanPauseAll = IsEngineUp && visible.Any(i => i.Status is DownloadStatus.Active or DownloadStatus.Seeding or DownloadStatus.Waiting);
@@ -580,7 +609,6 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 			_hidden.Clear();
 			_baselineTaken = false;
 			Rows.Clear();
-			StatsText = "";
 			IsEmpty = true;
 			IsFilteredEmpty = false;
 			RefreshCapabilities();
@@ -597,8 +625,6 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		_hidden.RemoveWhere(gid => !snapshot.Items.Any(i => i.Gid == gid));
 		CheckDiskSpace(_items);
 
-		var stats = snapshot.Stats;
-		StatsText = Loc.F("Downloads_Stats", "↓ {0}  ·  {1} active  ·  {2} waiting", ByteFormat.Speed(stats.DownloadSpeed), stats.NumActive, stats.NumWaiting);
 		Rebuild();
 		_ = RestoreForcedLimitAsync(snapshot);
 	}

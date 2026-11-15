@@ -17,7 +17,8 @@ public sealed partial record AddOptions(
 	string? FtpPassword = null,
 	string? Checksum = null,
 	int MaxDownloadKiBps = 0,
-	int MaxUploadKiBps = 0) {
+	int MaxUploadKiBps = 0,
+	string? UserAgent = null) {
 
 	public static AddOptions None { get; } = new();
 
@@ -65,6 +66,9 @@ public sealed partial record AddOptions(
 		if (!string.IsNullOrWhiteSpace(Checksum) && !ChecksumText().IsMatch(Checksum.Trim())) {
 			return "The checksum must look like sha-256=<hex digits> (also sha-1, sha-512, md5).";
 		}
+		if (UserAgent is not null && HasControl(UserAgent)) {
+			return "The user agent contains characters that are not allowed.";
+		}
 		if (MaxDownloadKiBps < 0 || MaxUploadKiBps < 0) {
 			return "Speed limits cannot be negative.";
 		}
@@ -95,6 +99,9 @@ public sealed partial record AddOptions(
 		}
 		if (!string.IsNullOrWhiteSpace(Checksum)) {
 			options["checksum"] = Checksum.Trim();
+		}
+		if (!string.IsNullOrWhiteSpace(UserAgent)) {
+			options["user-agent"] = UserAgent.Trim();
 		}
 		if (MaxDownloadKiBps > 0) {
 			options["max-download-limit"] = MaxDownloadKiBps + "K";
