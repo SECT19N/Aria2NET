@@ -88,6 +88,7 @@ public partial class App : Application {
 		services.AddSingleton<BackgroundCoordinator>();
 		services.AddSingleton<ToastService>();
 		services.AddSingleton<PowerService>();
+		services.AddSingleton<DiskRetryService>();
 		services.AddSingleton<WhenFinishedService>();
 		services.AddSingleton(_ => new StartupRegistration(Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "Aria2NET.exe")));
 		services.AddSingleton<DownloadMonitor>(sp => new DownloadMonitor(
@@ -114,6 +115,7 @@ public partial class App : Application {
 		Services.GetRequiredService<PersistenceCoordinator>().Start();
 		Services.GetRequiredService<WhenFinishedService>().Start(_window);
 		Services.GetRequiredService<PowerService>().Start(_window);
+		Services.GetRequiredService<DiskRetryService>().Start();
 		var background = Services.GetRequiredService<BackgroundCoordinator>();
 		background.Start(_window);
 		Services.GetRequiredService<ToastService>().Start(_window);

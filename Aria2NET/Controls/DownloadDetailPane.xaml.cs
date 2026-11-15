@@ -1,8 +1,13 @@
+using System.Collections.Specialized;
 using System.ComponentModel;
+using Aria2NET.Core;
+using Aria2NET.Core.Downloads;
+using Aria2NET.Core.Shell;
 using Aria2NET.Services;
 using Aria2NET.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 
 namespace Aria2NET.Controls;
 
@@ -30,6 +35,7 @@ public sealed partial class DownloadDetailPane : UserControl {
 		if (Detail is not null) {
 			Detail.Stop();
 			Detail.PropertyChanged -= OnDetailChanged;
+			Detail.Files.CollectionChanged -= OnFilesChanged;
 		}
 		if (Row is not null) {
 			Row.PropertyChanged -= OnRowChanged;
@@ -42,6 +48,7 @@ public sealed partial class DownloadDetailPane : UserControl {
 		}
 		if (detail is not null) {
 			detail.PropertyChanged += OnDetailChanged;
+			detail.Files.CollectionChanged += OnFilesChanged;
 			_ = detail.StartAsync();
 		}
 		Refresh();
@@ -59,8 +66,10 @@ public sealed partial class DownloadDetailPane : UserControl {
 		}
 	}
 
+	private void OnFilesChanged(object? sender, NotifyCollectionChangedEventArgs e) => Refresh();
+
 	private void OnRowChanged(object? sender, PropertyChangedEventArgs e) {
-		if (e.PropertyName == nameof(DownloadRowViewModel.StatusTip)) {
+		if (e.PropertyName is nameof(DownloadRowViewModel.StatusTip) or nameof(DownloadRowViewModel.StatusText)) {
 			Refresh();
 		}
 	}
@@ -90,6 +99,10 @@ public sealed partial class DownloadDetailPane : UserControl {
 		SourceLine.Visibility = string.IsNullOrEmpty(Detail?.Source) ? Visibility.Collapsed : Visibility.Visible;
 		ErrorLine.Visibility = Row?.Item.Status == Aria2NET.Core.Downloads.DownloadStatus.Error && !string.IsNullOrEmpty(Row.StatusTip) ? Visibility.Visible : Visibility.Collapsed;
 		ProblemText.Visibility = string.IsNullOrEmpty(Detail?.Problem) ? Visibility.Collapsed : Visibility.Visible;
+		var editable = torrent && Row?.Item.Status is DownloadStatus.Active or DownloadStatus.Waiting or DownloadStatus.Paused;
+		Detail?.SetEditable(editable);
+		SelectAllButton.IsEnabled = editable;
+		FilesTools.Visibility = Detail is { Files.Count: > 1 } ? Visibility.Visible : Visibility.Collapsed;
 
 		// A plain download has no peers, trackers or pieces: show General instead, but remember the user's choice for the next torrent.
 		var tab = torrent || _tab is "General" or "Files" ? _tab : "General";
@@ -104,6 +117,62 @@ public sealed partial class DownloadDetailPane : UserControl {
 		PeersPanel.Visibility = tab == "Peers" ? Visibility.Visible : Visibility.Collapsed;
 		TrackersPanel.Visibility = tab == "Trackers" ? Visibility.Visible : Visibility.Collapsed;
 		PiecesPanel.Visibility = tab == "Pieces" ? Visibility.Visible : Visibility.Collapsed;
+	}
+
+	// ---------------------------------------------------------------- files
+
+	private async void FileCheck_Click(object sender, RoutedEventArgs e) {
+		if (Detail is not null && ((FrameworkElement) sender).DataContext is DetailFileRow row) {
+			await Detail.ChooseAsync(row);
+		}
+	}
+
+	private async void SelectAll_Click(object sender, RoutedEventArgs e) {
+		if (Detail is not null) {
+			await Detail.ChooseAllAsync();
+		}
+	}
+
+	private void FileList_RightTapped(object sender, RightTappedRoutedEventArgs e) {
+		if (Detail is not { } detail || (e.OriginalSource as FrameworkElement)?.DataContext is not DetailFileRow row) {
+			return;
+		}
+		var exists = File.Exists(row.FullPath);
+		var menu = new MenuFlyout();
+		menu.Items.Add(Entry(Loc.S("Detail_OpenFile", "Open file"), exists, () => ShellLauncher.TryOpenFile(row.FullPath, out _)));
+		menu.Items.Add(Entry(Loc.S("Detail_ShowInFolder", "Show in folder"), !string.IsNullOrEmpty(row.FullPath), () => {
+			var folder = Path.GetDirectoryName(row.FullPath);
+			if (!string.IsNullOrEmpty(folder)) {
+				ShellLauncher.TryOpenFolder(folder, exists ? row.FullPath : null, out _);
+			}
+		}));
+		menu.Items.Add(Entry(Loc.S("Detail_CopyPath", "Copy path"), !string.IsNullOrEmpty(row.FullPath), () => {
+			var package = new Windows.ApplicationModel.DataTransfer.DataPackage();
+			package.SetText(row.FullPath);
+			Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
+		}));
+		if (row.ShowChoice) {
+			menu.Items.Add(new MenuFlyoutSeparator());
+			menu.Items.Add(Entry(row.Selected ? Loc.S("Detail_SkipFile", "Skip this file") : Loc.S("Detail_GetFile", "Download this file"), row.CanChoose, async () => {
+				row.Selected = !row.Selected;
+				await detail.ChooseAsync(row);
+			}));
+			menu.Items.Add(Entry(Loc.S("Detail_OnlyThisFile", "Download only this file"), row.CanChoose, () => detail.ChooseOnlyAsync(row)));
+		}
+		menu.ShowAt(FileList, e.GetPosition(FileList));
+		e.Handled = true;
+	}
+
+	private static MenuFlyoutItem Entry(string text, bool enabled, Action click) {
+		var item = new MenuFlyoutItem { Text = text, IsEnabled = enabled };
+		item.Click += (_, _) => click();
+		return item;
+	}
+
+	private static MenuFlyoutItem Entry(string text, bool enabled, Func<Task> click) {
+		var item = new MenuFlyoutItem { Text = text, IsEnabled = enabled };
+		item.Click += async (_, _) => await click();
+		return item;
 	}
 
 	private void Close_Click(object sender, RoutedEventArgs e) => CloseRequested?.Invoke(this, EventArgs.Empty);

@@ -70,11 +70,6 @@
                                 ToolTipService.ToolTip="{x:Bind ViewModel.AltSpeedTip, Mode=OneWay}">
                 <AppBarToggleButton.Icon><FontIcon Glyph="&#xEC4A;" /></AppBarToggleButton.Icon>
             </AppBarToggleButton>
-            <AppBarToggleButton x:Uid="DownloadsPage_DetailsButton" Label="Details" Click="Details_Click"
-                                IsChecked="{x:Bind ViewModel.ShowDetails, Mode=OneWay}"
-                                ToolTipService.ToolTip="Show details of the selected download under the list">
-                <AppBarToggleButton.Icon><FontIcon Glyph="&#xE8A0;" /></AppBarToggleButton.Icon>
-            </AppBarToggleButton>
 
             <CommandBar.SecondaryCommands>
                 <AppBarButton x:Uid="DownloadsPage_AppBarButton6" Label="Pause all" Click="PauseAll_Click" IsEnabled="{x:Bind ViewModel.CanPauseAll, Mode=OneWay}"/>

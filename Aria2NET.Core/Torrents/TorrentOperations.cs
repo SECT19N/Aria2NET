@@ -187,15 +187,52 @@ public sealed class TorrentOperations(IAria2Engine engine, ILogger<TorrentOperat
 	/// </summary>
 	public async Task RecheckAsync(string gid, CancellationToken ct = default) {
 		var rpc = Rpc;
-		await rpc.PauseAsync([gid], ct);
-		var deadline = DateTime.UtcNow.AddSeconds(10);
-		while ((await rpc.TellStatusAsync(gid, ct)).Status != DownloadStatus.Paused && DateTime.UtcNow < deadline) {
-			await Task.Delay(100, ct);
-		}
+		await PauseAndWaitAsync(rpc, gid, ct);
 		await rpc.ChangeOptionAsync(gid, new Dictionary<string, string> { ["check-integrity"] = "true" }, ct);
 		var failures = await rpc.UnpauseAsync([gid], ct);
 		if (failures.Count > 0) {
 			throw new InvalidOperationException(failures[0]);
+		}
+	}
+
+	/// <summary>Pauses a download and waits until aria2 says it is paused. False when it did not get there in time.</summary>
+	private static async Task<bool> PauseAndWaitAsync(Aria2RpcClient rpc, string gid, CancellationToken ct) {
+		await rpc.PauseAsync([gid], ct);
+		var deadline = DateTime.UtcNow.AddSeconds(10);
+		while ((await rpc.TellStatusAsync(gid, ct)).Status != DownloadStatus.Paused) {
+			if (DateTime.UtcNow >= deadline) {
+				return false;
+			}
+			await Task.Delay(100, ct);
+		}
+		return true;
+	}
+
+	/// <summary>
+	/// Chooses which files of a torrent are downloaded. aria2 only reads <c>select-file</c> when a download starts, so a running one is
+	/// paused, changed and started again; what is already on disk is kept. Skipped files are not deleted.
+	/// </summary>
+	/// <param name="indexes">1-based indexes of the files to download; at least one.</param>
+	public async Task SelectFilesAsync(string gid, IReadOnlyCollection<int> indexes, int totalFiles, CancellationToken ct = default) {
+		var spec = SelectFileSpec.Build(indexes, totalFiles);
+		var rpc = Rpc;
+		var status = (await rpc.TellStatusAsync(gid, ct)).Status;
+		if (status is not (DownloadStatus.Active or DownloadStatus.Waiting or DownloadStatus.Paused)) {
+			throw new InvalidOperationException("The files of a finished download cannot be changed.");
+		}
+		var wasPaused = status == DownloadStatus.Paused;
+		if (!wasPaused && !await PauseAndWaitAsync(rpc, gid, ct)) {
+			throw new InvalidOperationException("The download did not pause in time. Try again in a moment.");
+		}
+		try {
+			await rpc.ChangeOptionAsync(gid, new Dictionary<string, string> { ["select-file"] = spec ?? $"1-{totalFiles}" }, ct);
+		} finally {
+			if (!wasPaused) {
+				var failures = await rpc.UnpauseAsync([gid], CancellationToken.None);
+				if (failures.Count > 0) {
+					logger?.LogWarning("Could not resume {Gid} after changing its files: {Failure}", gid, failures[0]);
+				}
+			}
 		}
 	}
 }

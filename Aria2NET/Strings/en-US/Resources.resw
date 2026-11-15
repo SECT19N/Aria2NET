@@ -451,12 +451,6 @@
   <data name="SettingsPage_TextBlock1.Text" xml:space="preserve">
     <value>Settings</value>
   </data>
-  <data name="SettingsPage_SearchBox.PlaceholderText" xml:space="preserve">
-    <value>Search settings</value>
-  </data>
-  <data name="SettingsPage_SearchBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Search settings</value>
-  </data>
   <data name="SettingsPage_TabGeneral.Text" xml:space="preserve">
     <value>General</value>
   </data>
@@ -474,9 +468,6 @@
   </data>
   <data name="SettingsPage_TabAdvanced.Text" xml:space="preserve">
     <value>Advanced</value>
-  </data>
-  <data name="SettingsPage_SearchEmpty.Text" xml:space="preserve">
-    <value>No settings match your search.</value>
   </data>
   <data name="SettingsPage_RestartBar.Title" xml:space="preserve">
     <value>Restart the engine to apply</value>
@@ -1754,12 +1745,6 @@ Keep both files (the new one gets a number), or replace the existing file?</valu
   <data name="Detail_FilesCount" xml:space="preserve">
     <value>Files ({0})</value>
   </data>
-  <data name="DownloadsPage_DetailsButton.Label" xml:space="preserve">
-    <value>Details</value>
-  </data>
-  <data name="DownloadsPage_DetailsButton.ToolTipService.ToolTip" xml:space="preserve">
-    <value>Show details of the selected download under the list</value>
-  </data>
   <data name="DownloadsPage_MenuFlyoutItem12.Text" xml:space="preserve">
     <value>Show details</value>
   </data>
@@ -1801,5 +1786,41 @@ Keep both files (the new one gets a number), or replace the existing file?</valu
   </data>
   <data name="Settings_ExtensionMissing" xml:space="preserve">
     <value>The extension folder is missing from this copy of Aria2NET.</value>
+  </data>
+  <data name="DetailPane_FilesSelectAll.Content" xml:space="preserve">
+    <value>Select all</value>
+  </data>
+  <data name="DetailPane_FilesHint.Text" xml:space="preserve">
+    <value>Untick a file to leave it out. Right-click a file for more.</value>
+  </data>
+  <data name="Detail_OpenFile" xml:space="preserve">
+    <value>Open file</value>
+  </data>
+  <data name="Detail_ShowInFolder" xml:space="preserve">
+    <value>Show in folder</value>
+  </data>
+  <data name="Detail_CopyPath" xml:space="preserve">
+    <value>Copy path</value>
+  </data>
+  <data name="Detail_SkipFile" xml:space="preserve">
+    <value>Skip this file</value>
+  </data>
+  <data name="Detail_GetFile" xml:space="preserve">
+    <value>Download this file</value>
+  </data>
+  <data name="Detail_OnlyThisFile" xml:space="preserve">
+    <value>Download only this file</value>
+  </data>
+  <data name="Detail_FilesTitle" xml:space="preserve">
+    <value>Could not change the files</value>
+  </data>
+  <data name="Detail_KeepOne" xml:space="preserve">
+    <value>At least one file has to stay selected.</value>
+  </data>
+  <data name="SettingsPage_RetryDiskBox.Content" xml:space="preserve">
+    <value>Start a download again if its disk was not ready (a drive that sleeps when idle)</value>
+  </data>
+  <data name="SettingsPage_RetryDiskNote.Text" xml:space="preserve">
+    <value>When a download fails because it cannot open or write its file, Aria2NET wakes the disk and tries again after 5 seconds, then after longer pauses, for about ten minutes in all.</value>
   </data>
 </root>

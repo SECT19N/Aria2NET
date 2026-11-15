@@ -130,28 +130,39 @@
         <Grid x:Name="FilesPanel" Grid.Row="2" RowSpacing="2" Visibility="Collapsed">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
-            <Grid ColumnSpacing="12" Padding="16,0,28,0">
+            <Grid x:Name="FilesTools" ColumnSpacing="8" Visibility="Collapsed">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" /><ColumnDefinition Width="160" /><ColumnDefinition Width="64" /><ColumnDefinition Width="90" />
+                    <ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <TextBlock x:Uid="DetailPane_FileName" Style="{StaticResource DetailLabel}" Text="Name"/>
-                <TextBlock x:Uid="DetailPane_FileProgress" Grid.Column="1" Style="{StaticResource DetailLabel}" Text="Progress"/>
-                <TextBlock x:Uid="DetailPane_FileSize" Grid.Column="3" Style="{StaticResource DetailLabel}" Text="Size" HorizontalAlignment="Right"/>
+                <Button x:Uid="DetailPane_FilesSelectAll" x:Name="SelectAllButton" Content="Select all" Padding="10,3" Click="SelectAll_Click" />
+                <TextBlock x:Uid="DetailPane_FilesHint" Grid.Column="1" VerticalAlignment="Center" Opacity="0.7" TextTrimming="CharacterEllipsis"
+                           Text="Untick a file to leave it out. Right-click a file for more."/>
             </Grid>
-            <ListView x:Name="FileList" Grid.Row="1" ItemsSource="{x:Bind Detail.Files, Mode=OneWay}" SelectionMode="None" ItemContainerStyle="{StaticResource DenseItem}"
-                      ContainerContentChanging="DetailList_ContainerContentChanging">
+            <Grid Grid.Row="1" ColumnSpacing="12" Padding="16,0,28,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="24" /><ColumnDefinition Width="*" /><ColumnDefinition Width="160" /><ColumnDefinition Width="64" /><ColumnDefinition Width="90" />
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Uid="DetailPane_FileName" Grid.Column="1" Style="{StaticResource DetailLabel}" Text="Name"/>
+                <TextBlock x:Uid="DetailPane_FileProgress" Grid.Column="2" Style="{StaticResource DetailLabel}" Text="Progress"/>
+                <TextBlock x:Uid="DetailPane_FileSize" Grid.Column="4" Style="{StaticResource DetailLabel}" Text="Size" HorizontalAlignment="Right"/>
+            </Grid>
+            <ListView x:Name="FileList" Grid.Row="2" ItemsSource="{x:Bind Detail.Files, Mode=OneWay}" SelectionMode="None" ItemContainerStyle="{StaticResource DenseItem}"
+                      ContainerContentChanging="DetailList_ContainerContentChanging" RightTapped="FileList_RightTapped">
                 <ListView.ItemTemplate>
                     <DataTemplate x:DataType="vm:DetailFileRow">
                         <Grid ColumnSpacing="12">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" /><ColumnDefinition Width="160" /><ColumnDefinition Width="64" /><ColumnDefinition Width="90" />
+                                <ColumnDefinition Width="24" /><ColumnDefinition Width="*" /><ColumnDefinition Width="160" /><ColumnDefinition Width="64" /><ColumnDefinition Width="90" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{x:Bind Path}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind Path}" />
-                            <ProgressBar Grid.Column="1" Minimum="0" Maximum="100" Value="{x:Bind Progress, Mode=OneWay}" VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="2" Text="{x:Bind Done, Mode=OneWay}" VerticalAlignment="Center" HorizontalAlignment="Right" />
-                            <TextBlock Grid.Column="3" Text="{x:Bind Size, Mode=OneWay}" VerticalAlignment="Center" HorizontalAlignment="Right" />
+                            <CheckBox MinWidth="0" Padding="0" VerticalAlignment="Center" IsChecked="{x:Bind Selected, Mode=TwoWay}" IsEnabled="{x:Bind CanChoose, Mode=OneWay}"
+                                      Visibility="{x:Bind ShowChoice, Mode=OneWay}" Click="FileCheck_Click" AutomationProperties.Name="{x:Bind Path}" />
+                            <TextBlock Grid.Column="1" Text="{x:Bind Path}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind Path}" />
+                            <ProgressBar Grid.Column="2" Minimum="0" Maximum="100" Value="{x:Bind Progress, Mode=OneWay}" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="3" Text="{x:Bind Done, Mode=OneWay}" VerticalAlignment="Center" HorizontalAlignment="Right" />
+                            <TextBlock Grid.Column="4" Text="{x:Bind Size, Mode=OneWay}" VerticalAlignment="Center" HorizontalAlignment="Right" />
                         </Grid>
                     </DataTemplate>
                 </ListView.ItemTemplate>

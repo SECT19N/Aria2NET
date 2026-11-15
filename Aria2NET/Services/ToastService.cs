@@ -14,6 +14,7 @@ internal sealed class ToastService(
 	IAria2Engine engine,
 	DownloadMonitor monitor,
 	DownloadOperations operations,
+	DiskRetryService diskRetry,
 	SettingsStore<AppSettings> settings,
 	ILoggerFactory loggerFactory) : IDisposable {
 
@@ -75,6 +76,8 @@ internal sealed class ToastService(
 		if (s.NotifyOnlyWhenUnfocused && _window?.IsForeground == true) {
 			return [];
 		}
+		// A download that failed on a sleeping disk is started again by itself; only the last failure is worth a toast.
+		found = found.Where(n => !(n.Kind == NotificationKind.Failed && diskRetry.WillRetry(n.Item))).ToList();
 		return found.Where(n => n.Kind switch {
 			NotificationKind.Completed => s.NotifyOnComplete,
 			NotificationKind.Failed => s.NotifyOnFailed,

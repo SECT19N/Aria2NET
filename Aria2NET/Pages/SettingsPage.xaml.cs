@@ -25,6 +25,7 @@ public sealed partial class SettingsPage : Page {
 		StartMinimizedBox.IsChecked = ViewModel.StartMinimized;
 		StartMinimizedBox.IsEnabled = StartWithWindowsBox.IsChecked == true;
 		StartPausedBox.IsChecked = ViewModel.StartPaused;
+		RetryDiskBox.IsChecked = ViewModel.RetryWhenDiskNotReady;
 		NotifyCompleteBox.IsChecked = ViewModel.NotifyOnComplete;
 		NotifyFailedBox.IsChecked = ViewModel.NotifyOnFailed;
 		NotifyTorrentBox.IsChecked = ViewModel.NotifyOnTorrentFinished;
@@ -409,24 +410,11 @@ public sealed partial class SettingsPage : Page {
 		}
 	}
 
-	/// <summary>Shows the selected tab's sections, or, while the search box has text, every matching section whatever its tab.</summary>
+	/// <summary>Shows the sections of the selected tab. (Finding a setting by name is the title-bar search; it opens the right tab and scrolls to it.)</summary>
 	private void ShowSections() {
-		var words = SearchBox.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-		var searching = words.Length > 0;
-		TabBar.Visibility = searching ? Visibility.Collapsed : Visibility.Visible;
-		var anyVisible = false;
 		foreach (var section in _sections) {
-			var visible = section.Tab == _tab;
-			if (searching) {
-				var text = new System.Text.StringBuilder(section.Title).Append(' ');
-				CollectText(section.Panel, text);
-				var haystack = text.ToString();
-				visible = words.All(w => haystack.Contains(w, StringComparison.CurrentCultureIgnoreCase));
-			}
-			section.Panel.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
-			anyVisible |= visible;
+			section.Panel.Visibility = section.Tab == _tab ? Visibility.Visible : Visibility.Collapsed;
 		}
-		SearchEmpty.Visibility = anyVisible ? Visibility.Collapsed : Visibility.Visible;
 	}
 
 	/// <summary>Scrolls to a setting found by the title-bar search and puts the keyboard focus on it.</summary>
@@ -472,42 +460,6 @@ public sealed partial class SettingsPage : Page {
 				break;
 		}
 	}
-
-	private static void CollectText(UIElement element, System.Text.StringBuilder text) {
-		switch (element) {
-			case Panel panel:
-				foreach (var child in panel.Children) {
-					CollectText(child, text);
-				}
-				break;
-			case TextBlock block:
-				text.Append(block.Text).Append(' ');
-				break;
-			case ComboBox combo:
-				text.Append(combo.Header).Append(' ');
-				foreach (var item in combo.Items) {
-					text.Append(item).Append(' ');
-				}
-				break;
-			case TextBox box:
-				text.Append(box.Header).Append(' ');
-				break;
-			case PasswordBox password:
-				text.Append(password.Header).Append(' ');
-				break;
-			case NumberBox number:
-				text.Append(number.Header).Append(' ');
-				break;
-			case ToggleSwitch toggle:
-				text.Append(toggle.Header).Append(' ');
-				break;
-			case ContentControl { Content: string content }:
-				text.Append(content).Append(' ');
-				break;
-		}
-	}
-
-	private void Search_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args) => ShowSections();
 
 	// ---------------------------------------------------------------- advanced
 
@@ -679,6 +631,8 @@ public sealed partial class SettingsPage : Page {
 	}
 
 	private void StartMinimized_Click(object sender, RoutedEventArgs e) => ViewModel.StartMinimized = StartMinimizedBox.IsChecked == true;
+
+	private void RetryDisk_Click(object sender, RoutedEventArgs e) => ViewModel.RetryWhenDiskNotReady = RetryDiskBox.IsChecked == true;
 
 	private void StartPaused_Click(object sender, RoutedEventArgs e) => ViewModel.StartPaused = StartPausedBox.IsChecked == true;
 

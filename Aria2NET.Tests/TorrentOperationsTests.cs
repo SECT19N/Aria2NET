@@ -276,6 +276,45 @@ public class TorrentOperationsIntegrationTests {
 
 
 	[RequiresAria2Fact]
+	public async Task Files_can_be_chosen_again_while_the_torrent_is_paused_and_it_stays_paused() {
+		using var swarm = new Swarm(TwoFiles);
+		var (ops, engine, temp) = await StartAsync();
+		using var _ = temp;
+		await using var __ = engine;
+		var gid = await ops.AddTorrentAsync(swarm.Torrent.TorrentFile, new TorrentAddRequest(swarm.LeechDir, Seeding: new SeedingOverride(SeedMode.Never)), paused: true);
+
+		await ops.SelectFilesAsync(gid, [2], 2);
+
+		Assert.Equal(DownloadStatus.Paused, (await engine.Rpc!.TellStatusAsync(gid)).Status);
+		var files = await engine.Rpc.GetFilesAsync(gid);
+		Assert.False(files[0].Selected);
+		Assert.True(files[1].Selected);
+
+		await ops.SelectFilesAsync(gid, [1, 2], 2); // everything again
+		files = await engine.Rpc.GetFilesAsync(gid);
+		Assert.All(files, f => Assert.True(f.Selected));
+
+		await ops.SelectFilesAsync(gid, [1], 2);
+		await engine.Rpc.UnpauseAsync([gid]);
+		var item = await DownloadIntegrationTests.WaitForAsync(engine.Rpc, gid, i => i.Status is DownloadStatus.Complete or DownloadStatus.Error);
+		Assert.Equal(DownloadStatus.Complete, item.Status);
+		Assert.Equal(swarm.Torrent.Files[0].Data, await File.ReadAllBytesAsync(Path.Combine(swarm.LeechDir, "swarm", "a.bin")));
+	}
+
+	[RequiresAria2Fact]
+	public async Task A_finished_torrent_refuses_a_new_choice_of_files() {
+		using var swarm = new Swarm(TwoFiles);
+		var (ops, engine, temp) = await StartAsync();
+		using var _ = temp;
+		await using var __ = engine;
+		var gid = await ops.AddTorrentAsync(swarm.Torrent.TorrentFile, new TorrentAddRequest(swarm.LeechDir, Seeding: new SeedingOverride(SeedMode.Never)));
+		await DownloadIntegrationTests.WaitForAsync(engine.Rpc!, gid, i => i.Status is DownloadStatus.Complete or DownloadStatus.Error);
+
+		await Assert.ThrowsAsync<InvalidOperationException>(() => ops.SelectFilesAsync(gid, [1], 2));
+		await Assert.ThrowsAsync<ArgumentException>(() => ops.SelectFilesAsync(gid, [], 2));
+	}
+
+	[RequiresAria2Fact]
 	public async Task Magnet_resolves_to_a_file_list_then_downloads_only_the_chosen_files() {
 		using var swarm = new Swarm(TwoFiles);
 		var (ops, engine, temp) = await StartAsync();

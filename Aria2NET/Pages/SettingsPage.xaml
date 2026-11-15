@@ -11,8 +11,6 @@
     </Grid.RowDefinitions>
     <StackPanel Padding="24,24,24,0" Spacing="12">
         <TextBlock x:Uid="SettingsPage_TextBlock1" Text="Settings" Style="{StaticResource TitleTextBlockStyle}"/>
-        <AutoSuggestBox x:Uid="SettingsPage_SearchBox" x:Name="SearchBox" PlaceholderText="Search settings" QueryIcon="Find" TextChanged="Search_TextChanged"
-                        MaxWidth="640" HorizontalAlignment="Left" MinWidth="320" AutomationProperties.Name="Search settings"/>
         <SelectorBar x:Name="TabBar" SelectionChanged="Tab_SelectionChanged" HorizontalAlignment="Left">
             <SelectorBarItem x:Uid="SettingsPage_TabGeneral" Tag="general" Text="General" />
             <SelectorBarItem x:Uid="SettingsPage_TabDownloads" Tag="downloads" Text="Downloads" />
@@ -21,7 +19,6 @@
             <SelectorBarItem x:Uid="SettingsPage_TabTorrents" Tag="torrents" Text="Torrents" />
             <SelectorBarItem x:Uid="SettingsPage_TabAdvanced" Tag="advanced" Text="Advanced" />
         </SelectorBar>
-        <TextBlock x:Uid="SettingsPage_SearchEmpty" x:Name="SearchEmpty" Text="No settings match your search." Opacity="0.7" Visibility="Collapsed"/>
         <InfoBar x:Uid="SettingsPage_RestartBar" x:Name="RestartBar" IsOpen="False" IsClosable="False" Severity="Informational"
                  Title="Restart the engine to apply" Message="Some changes (default folder, ports and DHT, certificate check, IPv6, hand-typed options) apply when the download engine restarts. Downloads in progress resume.">
             <InfoBar.ActionButton>
@@ -66,6 +63,8 @@
             <NumberBox x:Uid="SettingsPage_ConnectTimeoutBox" x:Name="ConnectTimeoutBox" Header="Connect timeout (s)" Minimum="1" Maximum="600" SpinButtonPlacementMode="Inline" ValueChanged="Number_Changed"/>
             <NumberBox x:Uid="SettingsPage_TimeoutBox" x:Name="TimeoutBox" Header="Timeout (s)" Minimum="1" Maximum="600" SpinButtonPlacementMode="Inline" ValueChanged="Number_Changed"/>
         </StackPanel>
+        <CheckBox x:Uid="SettingsPage_RetryDiskBox" x:Name="RetryDiskBox" Content="Start a download again if its disk was not ready (a drive that sleeps when idle)" Click="RetryDisk_Click"/>
+        <TextBlock x:Uid="SettingsPage_RetryDiskNote" Text="When a download fails because it cannot open or write its file, Aria2NET wakes the disk and tries again after 5 seconds, then after longer pauses, for about ten minutes in all." Opacity="0.7" TextWrapping="Wrap"/>
         <StackPanel Orientation="Horizontal" Spacing="8">
             <ComboBox x:Uid="SettingsPage_UserAgentBox" x:Name="UserAgentBox" Header="User agent" MinWidth="160" SelectionChanged="UserAgent_Changed"/>
             <TextBox x:Uid="SettingsPage_UserAgentText" x:Name="UserAgentText" Header="Custom user agent" MinWidth="320" Visibility="Collapsed" LostFocus="UserAgentText_LostFocus"/>

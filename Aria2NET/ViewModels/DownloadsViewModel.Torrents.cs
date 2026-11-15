@@ -158,7 +158,7 @@ public sealed partial class DownloadsViewModel {
 	});
 
 	/// <summary>Live files, peers, trackers and pieces of one download, for the details pane.</summary>
-	public DownloadDetailViewModel CreateDetailViewModel(DownloadRowViewModel row) => new(_engine, row.Gid, _logger);
+	public DownloadDetailViewModel CreateDetailViewModel(DownloadRowViewModel row) => new(_engine, _torrents, _notices, row.Gid, _logger);
 
 	private string? _pendingExternal;
 

@@ -92,8 +92,6 @@ public sealed partial class DownloadsPage : Page {
 		PaneSizer.Visibility = visibility;
 	}
 
-	private void Details_Click(object sender, RoutedEventArgs e) => ViewModel.SetShowDetails(((AppBarToggleButton) sender).IsChecked == true);
-
 	private void ShowDetails_Click(object sender, RoutedEventArgs e) => ViewModel.SetShowDetails(true);
 
 	private void DetailPane_CloseRequested(object? sender, EventArgs e) => ViewModel.SetShowDetails(false);

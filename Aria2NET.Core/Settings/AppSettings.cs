@@ -61,6 +61,8 @@ public sealed class AppSettings {
 	/// <summary>Attempts per file before it fails; 0 means keep trying.</summary>
 	public int MaxTries { get; set; } = 5;
 	public int RetryWaitSeconds { get; set; }
+	/// <summary>Start a download again by itself when it failed because its disk was not ready (a drive that powers down when idle).</summary>
+	public bool RetryWhenDiskNotReady { get; set; } = true;
 	public int ConnectTimeoutSeconds { get; set; } = 60;
 	public int TimeoutSeconds { get; set; } = 60;
 	/// <summary>Null or empty keeps aria2's own user agent.</summary>

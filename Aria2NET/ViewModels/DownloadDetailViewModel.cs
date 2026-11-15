@@ -3,17 +3,33 @@ using Aria2NET.Core;
 using Aria2NET.Core.Aria2;
 using Aria2NET.Core.Downloads;
 using Aria2NET.Core.Torrents;
+using Aria2NET.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.Logging;
 using Microsoft.UI.Dispatching;
+using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Windows.UI;
 
 namespace Aria2NET.ViewModels;
 
 /// <summary>One file of a download. Updated in place so the list keeps its scroll position while the numbers change.</summary>
-public sealed partial class DetailFileRow(string path) : ObservableObject {
+public sealed partial class DetailFileRow(int index, string path, string fullPath) : ObservableObject {
+	/// <summary>1-based, as aria2's select-file counts.</summary>
+	public int Index { get; } = index;
+
+	/// <summary>Where the file is on disk, for Open and Show in folder.</summary>
+	public string FullPath { get; } = fullPath;
+
 	public string Path { get; } = path;
+
+	/// <summary>More than one file: only then is there anything to choose between.</summary>
+	[ObservableProperty]
+	public partial bool ShowChoice { get; set; }
+
+	/// <summary>The download is in a state where aria2 still takes a different choice of files.</summary>
+	[ObservableProperty]
+	public partial bool CanChoose { get; set; }
 
 	[ObservableProperty]
 	public partial string Size { get; set; } = "";
@@ -102,8 +118,15 @@ public sealed partial class DownloadDetailViewModel : ObservableObject {
 
 	public bool HasGeoIp { get; private set; }
 
-	public DownloadDetailViewModel(IAria2Engine engine, string gid, ILogger logger) {
+	private readonly TorrentOperations _torrents;
+	private readonly NoticeCenter _notices;
+	private bool _editable;
+	private bool _choosing;
+
+	public DownloadDetailViewModel(IAria2Engine engine, TorrentOperations torrents, NoticeCenter notices, string gid, ILogger logger) {
 		_engine = engine;
+		_torrents = torrents;
+		_notices = notices;
 		Gid = gid;
 		_logger = logger;
 		_timer = DispatcherQueue.GetForCurrentThread().CreateTimer();
@@ -183,8 +206,8 @@ public sealed partial class DownloadDetailViewModel : ObservableObject {
 		var names = s.Files.Select(f => RelativeName(f.Path, s.Directory)).ToList();
 		if (!Files.Select(f => f.Path).SequenceEqual(names)) {
 			Files.Clear();
-			foreach (var name in names) {
-				Files.Add(new DetailFileRow(name));
+			for (var i = 0; i < names.Count; i++) {
+				Files.Add(new DetailFileRow(s.Files[i].Index, names[i], s.Files[i].Path));
 			}
 		}
 		for (var i = 0; i < s.Files.Count; i++) {
@@ -192,10 +215,68 @@ public sealed partial class DownloadDetailViewModel : ObservableObject {
 			var percent = file.Length > 0 ? Math.Min(100.0, file.CompletedLength * 100.0 / file.Length) : 0;
 			var row = Files[i];
 			row.Size = file.Length > 0 ? ByteFormat.Size(file.Length) : "";
+			row.ShowChoice = Files.Count > 1;
+			row.CanChoose = _editable && Files.Count > 1;
+			if (_choosing) {
+				continue; // the user's choice is on its way to aria2; the old answer must not flip the boxes back
+			}
 			row.Selected = file.Selected;
 			row.Progress = file.Selected ? percent : 0;
 			row.Done = !file.Selected ? Loc.S("Detail_Skipped", "skipped") : file.Length > 0 ? $"{percent:0.#}%" : "";
 		}
+	}
+
+	/// <summary>Whether the download still takes a different choice of files (it is a running or waiting torrent, not a finished one).</summary>
+	public void SetEditable(bool editable) {
+		if (_editable == editable) {
+			return;
+		}
+		_editable = editable;
+		foreach (var row in Files) {
+			row.CanChoose = _editable && Files.Count > 1;
+		}
+	}
+
+	/// <summary>
+	/// Sends the files that are ticked to aria2. <paramref name="changed"/> is the row the user just touched: it is put back when nothing
+	/// would be left to download.
+	/// </summary>
+	public async Task ChooseAsync(DetailFileRow changed) {
+		if (_choosing || !_editable) {
+			return;
+		}
+		var wanted = Files.Where(f => f.Selected).Select(f => f.Index).ToList();
+		if (wanted.Count == 0) {
+			changed.Selected = true;
+			_notices.Post(new Notice(Loc.S("Detail_FilesTitle", "Could not change the files"), Loc.S("Detail_KeepOne", "At least one file has to stay selected."), InfoBarSeverity.Informational));
+			return;
+		}
+		_choosing = true;
+		try {
+			await _torrents.SelectFilesAsync(Gid, wanted, Files.Count);
+		} catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException or InvalidOperationException or ArgumentException or TaskCanceledException) {
+			_logger.LogWarning(ex, "Changing the files of {Gid} failed", Gid);
+			_notices.Post(new Notice(Loc.S("Detail_FilesTitle", "Could not change the files"), ex.Message, InfoBarSeverity.Warning));
+		} finally {
+			_choosing = false;
+		}
+		await RefreshAsync(); // show what aria2 really has now, also after a failure
+	}
+
+	/// <summary>Downloads only this file.</summary>
+	public Task ChooseOnlyAsync(DetailFileRow only) {
+		foreach (var row in Files) {
+			row.Selected = ReferenceEquals(row, only);
+		}
+		return ChooseAsync(only);
+	}
+
+	/// <summary>Downloads every file.</summary>
+	public Task ChooseAllAsync() {
+		foreach (var row in Files) {
+			row.Selected = true;
+		}
+		return Files.Count > 0 ? ChooseAsync(Files[0]) : Task.CompletedTask;
 	}
 
 	private static string Flags(TorrentPeer p) => string.Join(' ', new[] {

@@ -78,6 +78,7 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 			s.MinSplitSizeMiB = d.MinSplitSizeMiB;
 			s.MaxTries = d.MaxTries;
 			s.RetryWaitSeconds = d.RetryWaitSeconds;
+			s.RetryWhenDiskNotReady = d.RetryWhenDiskNotReady;
 			s.ConnectTimeoutSeconds = d.ConnectTimeoutSeconds;
 			s.TimeoutSeconds = d.TimeoutSeconds;
 			s.UserAgent = d.UserAgent;
@@ -276,6 +277,11 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 	public bool PreventSleep {
 		get => settings.Load().PreventSleep;
 		set => Change(s => s.PreventSleep = value);
+	}
+
+	public bool RetryWhenDiskNotReady {
+		get => settings.Load().RetryWhenDiskNotReady;
+		set => Change(s => s.RetryWhenDiskNotReady = value);
 	}
 
 	public bool PauseOnBattery {
