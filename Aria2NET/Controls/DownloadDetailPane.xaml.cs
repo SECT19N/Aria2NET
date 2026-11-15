@@ -1,6 +1,5 @@
 using System.Collections.Specialized;
 using System.ComponentModel;
-using Aria2NET.Core;
 using Aria2NET.Core.Downloads;
 using Aria2NET.Core.Shell;
 using Aria2NET.Services;
