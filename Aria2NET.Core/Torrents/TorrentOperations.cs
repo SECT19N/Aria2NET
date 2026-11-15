@@ -52,17 +52,17 @@ public sealed record TorrentAddRequest(
 
 	/// <param name="includeDir">False when changing a download that already exists: aria2 ignores a new <c>dir</c> for it (checked against 1.37.0).</param>
 	public IReadOnlyDictionary<string, string> ToOptions(bool includeDir = true) {
-		var options = new Dictionary<string, string>();
+		Dictionary<string, string> options = new Dictionary<string, string>();
 		if (includeDir) {
 			options["dir"] = Dir;
 		}
 		if (SelectedFiles is { Count: > 0 } && SelectFileSpec.Build(SelectedFiles, TotalFiles) is { } spec) {
 			options["select-file"] = spec;
 		}
-		foreach (var (k, v) in (Extra ?? AddOptions.None).ToOptions()) {
+		foreach ((string? k, string? v) in (Extra ?? AddOptions.None).ToOptions()) {
 			options[k] = v;
 		}
-		foreach (var (k, v) in (Seeding ?? SeedingOverride.Default).ToOptions()) {
+		foreach ((string? k, string? v) in (Seeding ?? SeedingOverride.Default).ToOptions()) {
 			options[k] = v;
 		}
 		switch (Allocation) {
@@ -92,7 +92,7 @@ public sealed class TorrentOperations(IAria2Engine engine, ILogger<TorrentOperat
 	/// <summary>Adds a .torrent file. With <paramref name="paused"/> nothing is downloaded until <see cref="StartAsync"/>.</summary>
 	public async Task<string> AddTorrentAsync(byte[] torrent, TorrentAddRequest request, bool paused = false, CancellationToken ct = default) {
 		EnsureFolder(request.Dir);
-		var options = request.ToOptions().ToDictionary(p => p.Key, p => p.Value);
+		Dictionary<string, string> options = request.ToOptions().ToDictionary(p => p.Key, p => p.Value);
 		if (paused) {
 			options["pause"] = "true";
 		}
@@ -128,7 +128,7 @@ public sealed class TorrentOperations(IAria2Engine engine, ILogger<TorrentOperat
 				if (item.FollowedBy is not { } follower) {
 					return null;
 				}
-				var followerItem = await Rpc.TellStatusAsync(follower, ct);
+				DownloadItem followerItem = await Rpc.TellStatusAsync(follower, ct);
 				return new ResolvedMagnet(follower, followerItem.Name, await Rpc.GetFilesAsync(follower, ct));
 			}
 			await Task.Delay(PollInterval, ct);
@@ -138,7 +138,7 @@ public sealed class TorrentOperations(IAria2Engine engine, ILogger<TorrentOperat
 	/// <summary>Applies the user's choices (not the folder, which is fixed when the download is added) to a paused download and starts it.</summary>
 	public async Task StartAsync(string gid, TorrentAddRequest request, CancellationToken ct = default) {
 		await Rpc.ChangeOptionAsync(gid, request.ToOptions(includeDir: false), ct);
-		var failures = await Rpc.UnpauseAsync([gid], ct);
+		IReadOnlyList<string> failures = await Rpc.UnpauseAsync([gid], ct);
 		if (failures.Count > 0) {
 			throw new InvalidOperationException(failures[0]);
 		}
@@ -153,18 +153,18 @@ public sealed class TorrentOperations(IAria2Engine engine, ILogger<TorrentOperat
 	/// <summary>Adds a metalink file. aria2 starts one download per file in it.</summary>
 	public async Task<IReadOnlyList<string>> AddMetalinkAsync(byte[] metalink, string dir, AddOptions? extra = null, CancellationToken ct = default) {
 		EnsureFolder(dir);
-		var options = (extra ?? AddOptions.None).ToOptions().ToDictionary(p => p.Key, p => p.Value);
+		Dictionary<string, string> options = (extra ?? AddOptions.None).ToOptions().ToDictionary(p => p.Key, p => p.Value);
 		options["dir"] = dir;
 		return await Rpc.AddMetalinkAsync(metalink, options, ct);
 	}
 
 	/// <summary>Finds the torrent among the running downloads, or in History if it was added before.</summary>
 	public static DuplicateTorrent? FindDuplicate(string infoHash, IEnumerable<DownloadItem> live, HistoryStore? history) {
-		var running = live.FirstOrDefault(i => !i.IsMetadata && string.Equals(i.InfoHash, infoHash, StringComparison.OrdinalIgnoreCase));
+		DownloadItem? running = live.FirstOrDefault(i => !i.IsMetadata && string.Equals(i.InfoHash, infoHash, StringComparison.OrdinalIgnoreCase));
 		if (running is not null) {
 			return new DuplicateTorrent(running.Gid, null);
 		}
-		var past = history?.FindByInfoHash(infoHash);
+		HistoryEntry? past = history?.FindByInfoHash(infoHash);
 		return past is null ? null : new DuplicateTorrent(null, past);
 	}
 
@@ -186,10 +186,10 @@ public sealed class TorrentOperations(IAria2Engine engine, ILogger<TorrentOperat
 	/// <c>check-integrity</c>, and starts it again (aria2 checks when a download starts).
 	/// </summary>
 	public async Task RecheckAsync(string gid, CancellationToken ct = default) {
-		var rpc = Rpc;
+		Aria2RpcClient rpc = Rpc;
 		await PauseAndWaitAsync(rpc, gid, ct);
 		await rpc.ChangeOptionAsync(gid, new Dictionary<string, string> { ["check-integrity"] = "true" }, ct);
-		var failures = await rpc.UnpauseAsync([gid], ct);
+		IReadOnlyList<string> failures = await rpc.UnpauseAsync([gid], ct);
 		if (failures.Count > 0) {
 			throw new InvalidOperationException(failures[0]);
 		}
@@ -198,7 +198,7 @@ public sealed class TorrentOperations(IAria2Engine engine, ILogger<TorrentOperat
 	/// <summary>Pauses a download and waits until aria2 says it is paused. False when it did not get there in time.</summary>
 	private static async Task<bool> PauseAndWaitAsync(Aria2RpcClient rpc, string gid, CancellationToken ct) {
 		await rpc.PauseAsync([gid], ct);
-		var deadline = DateTime.UtcNow.AddSeconds(10);
+		DateTime deadline = DateTime.UtcNow.AddSeconds(10);
 		while ((await rpc.TellStatusAsync(gid, ct)).Status != DownloadStatus.Paused) {
 			if (DateTime.UtcNow >= deadline) {
 				return false;
@@ -214,13 +214,13 @@ public sealed class TorrentOperations(IAria2Engine engine, ILogger<TorrentOperat
 	/// </summary>
 	/// <param name="indexes">1-based indexes of the files to download; at least one.</param>
 	public async Task SelectFilesAsync(string gid, IReadOnlyCollection<int> indexes, int totalFiles, CancellationToken ct = default) {
-		var spec = SelectFileSpec.Build(indexes, totalFiles);
-		var rpc = Rpc;
-		var status = (await rpc.TellStatusAsync(gid, ct)).Status;
+		string? spec = SelectFileSpec.Build(indexes, totalFiles);
+		Aria2RpcClient rpc = Rpc;
+		DownloadStatus status = (await rpc.TellStatusAsync(gid, ct)).Status;
 		if (status is not (DownloadStatus.Active or DownloadStatus.Waiting or DownloadStatus.Paused)) {
 			throw new InvalidOperationException("The files of a finished download cannot be changed.");
 		}
-		var wasPaused = status == DownloadStatus.Paused;
+		bool wasPaused = status == DownloadStatus.Paused;
 		if (!wasPaused && !await PauseAndWaitAsync(rpc, gid, ct)) {
 			throw new InvalidOperationException("The download did not pause in time. Try again in a moment.");
 		}
@@ -228,7 +228,7 @@ public sealed class TorrentOperations(IAria2Engine engine, ILogger<TorrentOperat
 			await rpc.ChangeOptionAsync(gid, new Dictionary<string, string> { ["select-file"] = spec ?? $"1-{totalFiles}" }, ct);
 		} finally {
 			if (!wasPaused) {
-				var failures = await rpc.UnpauseAsync([gid], CancellationToken.None);
+				IReadOnlyList<string> failures = await rpc.UnpauseAsync([gid], CancellationToken.None);
 				if (failures.Count > 0) {
 					logger?.LogWarning("Could not resume {Gid} after changing its files: {Failure}", gid, failures[0]);
 				}

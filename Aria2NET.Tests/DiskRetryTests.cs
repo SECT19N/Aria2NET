@@ -30,8 +30,8 @@ public class DiskRetryPlannerTests {
 
 	[Fact]
 	public void Waits_for_the_first_delay_and_then_offers_the_download_once() {
-		var planner = new DiskRetryPlanner();
-		var snapshot = Snap(Failed("g1"));
+		DiskRetryPlanner planner = new DiskRetryPlanner();
+		PollSnapshot snapshot = Snap(Failed("g1"));
 
 		Assert.Empty(planner.Due(snapshot, T0));
 		Assert.Empty(planner.Due(snapshot, T0 + DiskRetryPlanner.Delays[0] - TimeSpan.FromSeconds(1)));
@@ -41,43 +41,43 @@ public class DiskRetryPlannerTests {
 
 	[Fact]
 	public void The_tries_made_follow_the_download_to_its_new_gid_and_the_waits_grow() {
-		var planner = new DiskRetryPlanner();
-		var now = T0;
+		DiskRetryPlanner planner = new DiskRetryPlanner();
+		DateTimeOffset now = T0;
 		string gid = "g0";
-		for (var attempt = 0; attempt < DiskRetryPlanner.Delays.Count; attempt++) {
-			var item = Failed(gid);
+		for (int attempt = 0; attempt < DiskRetryPlanner.Delays.Count; attempt++) {
+			DownloadItem item = Failed(gid);
 			Assert.True(planner.WillRetry(item));
 			Assert.Empty(planner.Due(Snap(item), now));
 			now += DiskRetryPlanner.Delays[attempt];
 			Assert.Single(planner.Due(Snap(item), now));
-			var next = "g" + (attempt + 1);
+			string next = "g" + (attempt + 1);
 			planner.Started(gid, next, now);
 			gid = next;
 		}
 
-		var last = Failed(gid);
+		DownloadItem last = Failed(gid);
 		Assert.False(planner.WillRetry(last)); // that was the final try
 		Assert.Empty(planner.Due(Snap(last), now + TimeSpan.FromHours(1)));
 	}
 
 	[Fact]
 	public void An_attempt_that_could_not_be_made_still_uses_up_a_try() {
-		var planner = new DiskRetryPlanner();
-		var item = Failed("g");
+		DiskRetryPlanner planner = new DiskRetryPlanner();
+		DownloadItem item = Failed("g");
 		planner.Due(Snap(item), T0);
 		Assert.Single(planner.Due(Snap(item), T0 + DiskRetryPlanner.Delays[0]));
 
 		planner.Failed("g");
 
-		var now = T0 + DiskRetryPlanner.Delays[0];
+		DateTimeOffset now = T0 + DiskRetryPlanner.Delays[0];
 		Assert.Empty(planner.Due(Snap(item), now));
 		Assert.Single(planner.Due(Snap(item), now + DiskRetryPlanner.Delays[1]));
 	}
 
 	[Fact]
 	public void A_released_attempt_does_not_cost_a_try() {
-		var planner = new DiskRetryPlanner();
-		var item = Failed("g");
+		DiskRetryPlanner planner = new DiskRetryPlanner();
+		DownloadItem item = Failed("g");
 		planner.Due(Snap(item), T0);
 		Assert.Single(planner.Due(Snap(item), T0 + DiskRetryPlanner.Delays[0]));
 
@@ -88,7 +88,7 @@ public class DiskRetryPlannerTests {
 
 	[Fact]
 	public void Other_failures_are_never_offered() {
-		var planner = new DiskRetryPlanner();
+		DiskRetryPlanner planner = new DiskRetryPlanner();
 
 		Assert.Empty(planner.Due(Snap(Failed("g", 3)), T0 + TimeSpan.FromHours(1)));
 		Assert.False(planner.WillRetry(Failed("g", 3)));
@@ -98,9 +98,9 @@ public class DiskRetryPlannerTests {
 public class DiskWakeTests {
 	[Fact]
 	public async Task Keeps_touching_until_the_disk_answers() {
-		var calls = 0;
+		int calls = 0;
 
-		var ready = await DiskWake.WaitAsync(@"E:\x", TimeSpan.FromSeconds(30), CancellationToken.None, _ => ++calls >= 3, TimeSpan.FromMilliseconds(1));
+		bool ready = await DiskWake.WaitAsync(@"E:\x", TimeSpan.FromSeconds(30), CancellationToken.None, _ => ++calls >= 3, TimeSpan.FromMilliseconds(1));
 
 		Assert.True(ready);
 		Assert.Equal(3, calls);
@@ -108,7 +108,7 @@ public class DiskWakeTests {
 
 	[Fact]
 	public async Task Gives_up_when_the_disk_never_answers() {
-		var ready = await DiskWake.WaitAsync(@"E:\x", TimeSpan.FromMilliseconds(50), CancellationToken.None, _ => false, TimeSpan.FromMilliseconds(10));
+		bool ready = await DiskWake.WaitAsync(@"E:\x", TimeSpan.FromMilliseconds(50), CancellationToken.None, _ => false, TimeSpan.FromMilliseconds(10));
 
 		Assert.False(ready);
 	}
@@ -120,8 +120,8 @@ public class DiskWakeTests {
 
 	[Fact]
 	public void Touching_a_real_folder_creates_it_and_leaves_nothing_behind() {
-		using var dir = new TempDir();
-		var target = Path.Combine(dir.Path, "new", "folder");
+		using TempDir dir = new TempDir();
+		string target = Path.Combine(dir.Path, "new", "folder");
 
 		Assert.True(DiskWake.TryTouch(target));
 

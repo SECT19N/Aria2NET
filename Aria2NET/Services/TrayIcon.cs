@@ -30,9 +30,9 @@ internal sealed class TrayIcon : IDisposable {
 		_hwnd = hwnd;
 		_logger = logger;
 		_proc = OnMessage;
-		var size = GetSystemMetrics(49 /* SM_CXSMICON */);
-		foreach (var state in Enum.GetValues<TrayState>()) {
-			var icon = LoadBadged(iconPath, size, state);
+		int size = GetSystemMetrics(49 /* SM_CXSMICON */);
+		foreach (TrayState state in Enum.GetValues<TrayState>()) {
+			nint icon = LoadBadged(iconPath, size, state);
 			if (icon != IntPtr.Zero) {
 				_icons[state] = icon;
 			}
@@ -82,7 +82,7 @@ internal sealed class TrayIcon : IDisposable {
 	}
 
 	private bool Notify(uint message) {
-		var data = new NotifyIconData {
+		NotifyIconData data = new NotifyIconData {
 			cbSize = Marshal.SizeOf<NotifyIconData>(),
 			hWnd = _hwnd,
 			uID = IconId,
@@ -125,7 +125,7 @@ internal sealed class TrayIcon : IDisposable {
 	}
 
 	private void ShowMenu() {
-		var menu = CreatePopupMenu();
+		nint menu = CreatePopupMenu();
 		try {
 			AppendMenu(menu, 0, MenuOpen, Loc.S("Tray_Open", "Open Aria2NET"));
 			AppendMenu(menu, 0x800 /* MF_SEPARATOR */, 0, null);
@@ -133,9 +133,9 @@ internal sealed class TrayIcon : IDisposable {
 			AppendMenu(menu, 0, MenuResumeAll, Loc.S("Tray_ResumeAll", "Resume all"));
 			AppendMenu(menu, 0, MenuOpenFolder, Loc.S("Tray_OpenFolder", "Open download folder"));
 			AppendMenu(menu, 0x800, 0, null);
-			var finish = CreatePopupMenu(); // destroyed together with its parent
-			var current = CurrentFinishAction?.Invoke() ?? FinishAction.None;
-			foreach (var action in Enum.GetValues<FinishAction>()) {
+			nint finish = CreatePopupMenu(); // destroyed together with its parent
+			FinishAction current = CurrentFinishAction?.Invoke() ?? FinishAction.None;
+			foreach (FinishAction action in Enum.GetValues<FinishAction>()) {
 				AppendMenu(finish, action == current ? 0x8u /* MF_CHECKED */ : 0u, (nuint) (MenuFinishBase + (int) action), WhenFinishedMachine.Label(action));
 			}
 			AppendMenu(menu, 0x10 /* MF_POPUP */, (nuint) finish, Loc.S("Tray_WhenFinished", "When downloads finish"));
@@ -143,9 +143,9 @@ internal sealed class TrayIcon : IDisposable {
 			AppendMenu(menu, 0, MenuExit, Loc.S("Tray_Exit", "Exit"));
 			SetMenuDefaultItem(menu, MenuOpen, 0);
 
-			GetCursorPos(out var point);
+			GetCursorPos(out Point point);
 			SetForegroundWindow(_hwnd); // without this the menu does not close when the user clicks elsewhere
-			var command = TrackPopupMenu(menu, 0x100 | 0x2 /* TPM_RETURNCMD | TPM_RIGHTBUTTON */, point.X, point.Y, 0, _hwnd, IntPtr.Zero);
+			int command = TrackPopupMenu(menu, 0x100 | 0x2 /* TPM_RETURNCMD | TPM_RIGHTBUTTON */, point.X, point.Y, 0, _hwnd, IntPtr.Zero);
 			PostMessage(_hwnd, 0 /* WM_NULL */, IntPtr.Zero, IntPtr.Zero);
 			switch (command) {
 				case MenuOpen: OpenRequested?.Invoke(); break;
@@ -166,7 +166,7 @@ internal sealed class TrayIcon : IDisposable {
 			_added = false;
 		}
 		RemoveWindowSubclass(_hwnd, _proc, UIntPtr.Zero);
-		foreach (var icon in _icons.Values) {
+		foreach (nint icon in _icons.Values) {
 			DestroyIcon(icon);
 		}
 		_icons.Clear();
@@ -176,29 +176,29 @@ internal sealed class TrayIcon : IDisposable {
 
 	/// <summary>The app icon at <paramref name="size"/> pixels with the state's dot painted on; the plain icon for Idle. Zero when the file cannot be loaded.</summary>
 	private static IntPtr LoadBadged(string path, int size, TrayState state) {
-		var icon = LoadImage(IntPtr.Zero, path, 1 /* IMAGE_ICON */, size, size, 0x10 /* LR_LOADFROMFILE */);
+		nint icon = LoadImage(IntPtr.Zero, path, 1 /* IMAGE_ICON */, size, size, 0x10 /* LR_LOADFROMFILE */);
 		if (icon == IntPtr.Zero || TrayBadge.ColorOf(state) is not { } color) {
 			return icon;
 		}
-		if (!GetIconInfo(icon, out var info)) {
+		if (!GetIconInfo(icon, out IconInfo info)) {
 			return icon;
 		}
 		try {
-			if (info.hbmColor == IntPtr.Zero || GetObject(info.hbmColor, Marshal.SizeOf<Bitmap>(), out var bitmap) == 0 || bitmap.bmWidth != size || bitmap.bmHeight != size) {
+			if (info.hbmColor == IntPtr.Zero || GetObject(info.hbmColor, Marshal.SizeOf<Bitmap>(), out Bitmap bitmap) == 0 || bitmap.bmWidth != size || bitmap.bmHeight != size) {
 				return icon; // not a 32-bit icon of the expected size
 			}
-			var pixels = new byte[size * size * 4];
-			var header = new BitmapInfoHeader { biSize = Marshal.SizeOf<BitmapInfoHeader>(), biWidth = size, biHeight = -size, biPlanes = 1, biBitCount = 32 };
-			var screen = GetDC(IntPtr.Zero);
-			var read = GetDIBits(screen, info.hbmColor, 0, (uint) size, pixels, ref header, 0);
+			byte[] pixels = new byte[size * size * 4];
+			BitmapInfoHeader header = new BitmapInfoHeader { biSize = Marshal.SizeOf<BitmapInfoHeader>(), biWidth = size, biHeight = -size, biPlanes = 1, biBitCount = 32 };
+			nint screen = GetDC(IntPtr.Zero);
+			int read = GetDIBits(screen, info.hbmColor, 0, (uint) size, pixels, ref header, 0);
 			ReleaseDC(IntPtr.Zero, screen);
 			if (read == 0) {
 				return icon;
 			}
 			TrayBadge.Paint(pixels, size, color);
 
-			var painted = CreateBitmap(size, size, 1, 32, pixels);
-			var composed = CreateIconIndirect(new IconInfo { fIcon = true, hbmMask = info.hbmMask, hbmColor = painted });
+			nint painted = CreateBitmap(size, size, 1, 32, pixels);
+			nint composed = CreateIconIndirect(new IconInfo { fIcon = true, hbmMask = info.hbmMask, hbmColor = painted });
 			DeleteObject(painted);
 			if (composed == IntPtr.Zero) {
 				return icon;

@@ -50,17 +50,17 @@ public static class SessionFile {
 	/// one with the newest healthy backup, and makes sure a file exists so aria2 does not warn about a missing --input-file.
 	/// </summary>
 	public static SessionPrepareResult PrepareForStart(AppPaths paths, ILogger? logger = null) {
-		var file = paths.Aria2SessionFile;
-		var health = Check(file);
+		string file = paths.Aria2SessionFile;
+		SessionHealth health = Check(file);
 		switch (health) {
 			case SessionHealth.Ok:
 				BackUp(file, paths.BackupsDir);
 				return new SessionPrepareResult(false, null, null);
 
 			case SessionHealth.Corrupt:
-				var moved = $"{file}.corrupt-{DateTime.UtcNow:yyyyMMddHHmmss}";
+				string moved = $"{file}.corrupt-{DateTime.UtcNow:yyyyMMddHHmmss}";
 				File.Move(file, moved, overwrite: true);
-				var restored = BackupRotation.Newest(paths.BackupsDir, BackupPrefix).FirstOrDefault(b => Check(b) == SessionHealth.Ok);
+				string? restored = BackupRotation.Newest(paths.BackupsDir, BackupPrefix).FirstOrDefault(b => Check(b) == SessionHealth.Ok);
 				if (restored is not null) {
 					File.Copy(restored, file, overwrite: true);
 					logger?.LogWarning("aria2 session file was damaged; kept it as {Moved} and restored {Backup}", moved, restored);
@@ -77,7 +77,7 @@ public static class SessionFile {
 	}
 
 	private static void BackUp(string file, string backupsDir) {
-		var newest = BackupRotation.Newest(backupsDir, BackupPrefix).FirstOrDefault();
+		string? newest = BackupRotation.Newest(backupsDir, BackupPrefix).FirstOrDefault();
 		if (newest is not null && File.ReadAllBytes(newest).AsSpan().SequenceEqual(File.ReadAllBytes(file))) {
 			return;
 		}

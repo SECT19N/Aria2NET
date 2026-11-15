@@ -9,7 +9,7 @@ public class LaunchArgumentsTests {
 
 	[Fact]
 	public void Picks_magnets_and_torrent_files_and_ignores_the_rest() {
-		var result = LaunchArguments.Extract([@"C:\x\a.torrent", "magnet:?xt=urn:btih:abc", "--minimized", @"C:\x\notes.txt", "https://example.com/a.zip", @"C:\x\b.META4"]);
+		IReadOnlyList<string> result = LaunchArguments.Extract([@"C:\x\a.torrent", "magnet:?xt=urn:btih:abc", "--minimized", @"C:\x\notes.txt", "https://example.com/a.zip", @"C:\x\b.META4"]);
 
 		Assert.Equal([@"C:\x\a.torrent", "magnet:?xt=urn:btih:abc", @"C:\x\b.META4"], result);
 	}
@@ -26,7 +26,7 @@ public class LaunchArgumentsTests {
 
 	[Fact]
 	public void A_magnet_is_kept_exactly_as_given() {
-		var magnet = "magnet:?xt=urn:btih:abc&dn=My%20File&tr=udp%3A%2F%2Ft%3A1";
+		string magnet = "magnet:?xt=urn:btih:abc&dn=My%20File&tr=udp%3A%2F%2Ft%3A1";
 
 		Assert.Equal([magnet], LaunchArguments.Extract([magnet], Dir));
 	}
@@ -73,38 +73,38 @@ public sealed class ShellRegistrationTests : IDisposable {
 		Create().Register();
 
 		Assert.True(Create().GetState().Registered);
-		using var command = _software.OpenSubKey($@"Classes\{ShellRegistration.TorrentProgId}\shell\open\command")!;
+		using RegistryKey command = _software.OpenSubKey($@"Classes\{ShellRegistration.TorrentProgId}\shell\open\command")!;
 		Assert.Equal($"\"{Exe}\" \"%1\"", command.GetValue(""));
-		using var magnet = _software.OpenSubKey($@"Classes\{ShellRegistration.MagnetProgId}")!;
+		using RegistryKey magnet = _software.OpenSubKey($@"Classes\{ShellRegistration.MagnetProgId}")!;
 		Assert.NotNull(magnet.GetValue("URL Protocol"));
-		foreach (var extension in new[] { ".torrent", ".metalink", ".meta4" }) {
-			using var with = _software.OpenSubKey($@"Classes\{extension}\OpenWithProgids")!;
+		foreach (string? extension in new[] { ".torrent", ".metalink", ".meta4" }) {
+			using RegistryKey with = _software.OpenSubKey($@"Classes\{extension}\OpenWithProgids")!;
 			Assert.Contains(with.GetValueNames(), n => n.StartsWith("Aria2NET.", StringComparison.Ordinal));
 		}
-		using var caps = _software.OpenSubKey(@"Aria2NET\Capabilities\URLAssociations")!;
+		using RegistryKey caps = _software.OpenSubKey(@"Aria2NET\Capabilities\URLAssociations")!;
 		Assert.Equal(ShellRegistration.MagnetProgId, caps.GetValue("magnet"));
-		using var registered = _software.OpenSubKey("RegisteredApplications")!;
+		using RegistryKey registered = _software.OpenSubKey("RegisteredApplications")!;
 		Assert.Equal(@"Software\Aria2NET\Capabilities", registered.GetValue("Aria2NET"));
 	}
 
 	[Fact]
 	public void Register_never_takes_over_an_existing_default() {
-		using (var ext = _software.CreateSubKey(@"Classes\.torrent", writable: true)) {
+		using (RegistryKey ext = _software.CreateSubKey(@"Classes\.torrent", writable: true)) {
 			ext.SetValue("", "OtherClient.Torrent");
 		}
 
 		Create().Register();
 
-		using var after = _software.OpenSubKey(@"Classes\.torrent")!;
+		using RegistryKey after = _software.OpenSubKey(@"Classes\.torrent")!;
 		Assert.Equal("OtherClient.Torrent", after.GetValue(""));
 	}
 
 	[Fact]
 	public void Unregister_removes_what_Register_added_and_leaves_other_clients_alone() {
-		using (var with = _software.CreateSubKey(@"Classes\.torrent\OpenWithProgids", writable: true)) {
+		using (RegistryKey with = _software.CreateSubKey(@"Classes\.torrent\OpenWithProgids", writable: true)) {
 			with.SetValue("OtherClient.Torrent", Array.Empty<byte>(), RegistryValueKind.None);
 		}
-		var registration = Create();
+		ShellRegistration registration = Create();
 		registration.Register();
 
 		registration.Unregister();
@@ -112,9 +112,9 @@ public sealed class ShellRegistrationTests : IDisposable {
 		Assert.Equal(new ShellRegistrationState(false, false, false), registration.GetState());
 		Assert.Null(_software.OpenSubKey($@"Classes\{ShellRegistration.TorrentProgId}"));
 		Assert.Null(_software.OpenSubKey("Aria2NET"));
-		using var registered = _software.OpenSubKey("RegisteredApplications");
+		using RegistryKey? registered = _software.OpenSubKey("RegisteredApplications");
 		Assert.Null(registered?.GetValue("Aria2NET"));
-		using var remaining = _software.OpenSubKey(@"Classes\.torrent\OpenWithProgids")!;
+		using RegistryKey remaining = _software.OpenSubKey(@"Classes\.torrent\OpenWithProgids")!;
 		Assert.Equal(["OtherClient.Torrent"], remaining.GetValueNames());
 		registration.Unregister(); // nothing left: must not throw
 	}
@@ -129,15 +129,15 @@ public sealed class ShellRegistrationTests : IDisposable {
 	[Fact]
 	public void Reports_when_the_user_picked_the_app_as_default() {
 		Create().Register();
-		using (var choice = _software.CreateSubKey(@"Microsoft\Windows\CurrentVersion\Explorer\FileExts\.torrent\UserChoice", writable: true)) {
+		using (RegistryKey choice = _software.CreateSubKey(@"Microsoft\Windows\CurrentVersion\Explorer\FileExts\.torrent\UserChoice", writable: true)) {
 			choice.SetValue("ProgId", ShellRegistration.TorrentProgId);
 		}
 
-		var state = Create().GetState();
+		ShellRegistrationState state = Create().GetState();
 
 		Assert.True(state.DefaultForTorrent);
 		Assert.False(state.DefaultForMagnet);
-		using (var choice = _software.CreateSubKey(@"Microsoft\Windows\Shell\Associations\UrlAssociations\magnet\UserChoice", writable: true)) {
+		using (RegistryKey choice = _software.CreateSubKey(@"Microsoft\Windows\Shell\Associations\UrlAssociations\magnet\UserChoice", writable: true)) {
 			choice.SetValue("ProgId", "SomeoneElse.Magnet");
 		}
 		Assert.False(Create().GetState().DefaultForMagnet);
@@ -145,7 +145,7 @@ public sealed class ShellRegistrationTests : IDisposable {
 
 	[Fact]
 	public void Register_twice_is_harmless() {
-		var registration = Create();
+		ShellRegistration registration = Create();
 		registration.Register();
 		registration.Register();
 

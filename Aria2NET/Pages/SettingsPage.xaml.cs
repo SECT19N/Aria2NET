@@ -2,12 +2,14 @@ using Aria2NET.Core;
 using Aria2NET.Core.Aria2;
 using Aria2NET.Core.Background;
 using Aria2NET.Core.Settings;
+using Aria2NET.Core.Shell;
 using Aria2NET.Core.Torrents;
 using Aria2NET.Services;
 using Aria2NET.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Windows.Storage.Pickers;
 using Windows.System;
 
 namespace Aria2NET.Pages;
@@ -36,11 +38,11 @@ public sealed partial class SettingsPage : Page {
 		PauseMeteredBox.IsChecked = ViewModel.PauseOnMetered;
 		HotkeysBox.IsChecked = ViewModel.HotkeysEnabled;
 		RestartBox.IsChecked = ViewModel.RestartAfterCrash;
-		foreach (var action in Enum.GetValues<FinishAction>()) {
+		foreach (FinishAction action in Enum.GetValues<FinishAction>()) {
 			FinishBox.Items.Add(WhenFinishedMachine.Label(action));
 		}
 		FinishBox.SelectedIndex = (int) FinishService.Action;
-		foreach (var choice in SettingsViewModel.RetentionChoices) {
+		foreach ((string Label, int Days) choice in SettingsViewModel.RetentionChoices) {
 			RetentionBox.Items.Add(choice.Label);
 		}
 		RetentionBox.SelectedIndex = ViewModel.RetentionIndex;
@@ -49,42 +51,42 @@ public sealed partial class SettingsPage : Page {
 		BrowserCatchBox.IsEnabled = Browser.IsAvailable;
 		RefreshAssociation();
 		TrackerStatus.Text = TrackerSummary();
-		foreach (var (label, _) in SettingsViewModel.UserAgentChoices) {
+		foreach ((string label, string? _) in SettingsViewModel.UserAgentChoices) {
 			UserAgentBox.Items.Add(label);
 		}
-		foreach (var mode in Enum.GetValues<FileAllocationMode>()) {
+		foreach (FileAllocationMode mode in Enum.GetValues<FileAllocationMode>()) {
 			AllocationBox.Items.Add(mode.ToString());
 		}
-		foreach (var mode in new[] { Loc.S("Settings_ProxyNone", "No proxy"), Loc.S("Settings_ProxySystem", "Use the Windows proxy"), Loc.S("Settings_ProxyManual", "Manual") }) {
+		foreach (string mode in new[] { Loc.S("Settings_ProxyNone", "No proxy"), Loc.S("Settings_ProxySystem", "Use the Windows proxy"), Loc.S("Settings_ProxyManual", "Manual") }) {
 			ProxyModeBox.Items.Add(mode);
 		}
-		foreach (var theme in new[] { Loc.S("Settings_ThemeSystem", "Use the Windows setting"), Loc.S("Settings_ThemeLight", "Light"), Loc.S("Settings_ThemeDark", "Dark") }) {
+		foreach (string theme in new[] { Loc.S("Settings_ThemeSystem", "Use the Windows setting"), Loc.S("Settings_ThemeLight", "Light"), Loc.S("Settings_ThemeDark", "Dark") }) {
 			ThemeBox.Items.Add(theme);
 		}
-		foreach (var policy in new[] { Loc.S("Settings_ConflictRename", "Keep both (rename the new one)"), Loc.S("Settings_ConflictOverwrite", "Replace the existing file"), Loc.S("Settings_ConflictAsk", "Ask me") }) {
+		foreach (string policy in new[] { Loc.S("Settings_ConflictRename", "Keep both (rename the new one)"), Loc.S("Settings_ConflictOverwrite", "Replace the existing file"), Loc.S("Settings_ConflictAsk", "Ask me") }) {
 			ConflictBox.Items.Add(policy);
 		}
 		LanguageBox.Items.Add("English");
 		LanguageBox.SelectedIndex = 0;
-		foreach (var source in new[] { Loc.S("Settings_TrackersDefault", "Public list (built in)"), Loc.S("Settings_TrackersCustom", "Custom list address"), Loc.S("Settings_TrackersOff", "Off (only the torrent's own trackers)") }) {
+		foreach (string source in new[] { Loc.S("Settings_TrackersDefault", "Public list (built in)"), Loc.S("Settings_TrackersCustom", "Custom list address"), Loc.S("Settings_TrackersOff", "Off (only the torrent's own trackers)") }) {
 			TrackerSourceBox.Items.Add(source);
 		}
-		foreach (var encryption in new[] { Loc.S("Settings_EncAllow", "Allow (encrypted or plain)"), Loc.S("Settings_EncPrefer", "Prefer encrypted"), Loc.S("Settings_EncRequire", "Require encrypted (fewer peers)") }) {
+		foreach (string encryption in new[] { Loc.S("Settings_EncAllow", "Allow (encrypted or plain)"), Loc.S("Settings_EncPrefer", "Prefer encrypted"), Loc.S("Settings_EncRequire", "Require encrypted (fewer peers)") }) {
 			EncryptionBox.Items.Add(encryption);
 		}
-		foreach (var level in new[] { Loc.S("Settings_LogWarnings", "Warnings only"), Loc.S("Settings_LogNormal", "Normal"), Loc.S("Settings_LogDebug", "Debug (very detailed)") }) {
+		foreach (string level in new[] { Loc.S("Settings_LogWarnings", "Warnings only"), Loc.S("Settings_LogNormal", "Normal"), Loc.S("Settings_LogDebug", "Debug (very detailed)") }) {
 			LogLevelBox.Items.Add(level);
 		}
 		LoadEngineSettings();
 		BuildSections();
-		var applier = App.Services.GetRequiredService<SettingsApplier>();
+		SettingsApplier applier = App.Services.GetRequiredService<SettingsApplier>();
 		EventHandler onSpeed = (_, _) => DispatcherQueue.TryEnqueue(LoadEngineSettings);
 		Loaded += (_, _) => applier.SpeedChanged += onSpeed;
 		Unloaded += (_, _) => applier.SpeedChanged -= onSpeed;
 
 		AutoUpdateBox.IsChecked = ViewModel.AutoCheckUpdates;
 		PreReleaseBox.IsChecked = ViewModel.IncludePreReleases;
-		var updates = App.Services.GetRequiredService<UpdateService>();
+		UpdateService updates = App.Services.GetRequiredService<UpdateService>();
 		EventHandler onUpdate = (_, _) => DispatcherQueue.TryEnqueue(RefreshUpdateStatus);
 		Loaded += (_, _) => {
 			updates.Changed += onUpdate;
@@ -106,8 +108,8 @@ public sealed partial class SettingsPage : Page {
 	private async void RestartUpdate_Click(object sender, RoutedEventArgs e) => await Updates.RestartAsync();
 
 	private void RefreshUpdateStatus() {
-		var updates = Updates;
-		var installed = updates.State != UpdateState.NotInstalled && updates.IsInstalled;
+		UpdateService updates = Updates;
+		bool installed = updates.State != UpdateState.NotInstalled && updates.IsInstalled;
 		CheckUpdatesButton.IsEnabled = installed && updates.State is not (UpdateState.Checking or UpdateState.Downloading);
 		RestartUpdateButton.Visibility = updates.State == UpdateState.Ready ? Visibility.Visible : Visibility.Collapsed;
 		UpdateStatus.Text = !installed
@@ -129,7 +131,7 @@ public sealed partial class SettingsPage : Page {
 	private void LoadEngineSettings() {
 		_loading = true;
 		try {
-			var s = ViewModel.Current;
+			AppSettings s = ViewModel.Current;
 			FolderBox.Text = s.DefaultDownloadFolder ?? "";
 			ConcurrentBox.Value = s.MaxConcurrentDownloads;
 			ConnectionsBox.Value = s.MaxConnectionsPerServer;
@@ -139,8 +141,8 @@ public sealed partial class SettingsPage : Page {
 			RetryWaitBox.Value = s.RetryWaitSeconds;
 			ConnectTimeoutBox.Value = s.ConnectTimeoutSeconds;
 			TimeoutBox.Value = s.TimeoutSeconds;
-			var presets = SettingsViewModel.UserAgentChoices;
-			var index = string.IsNullOrWhiteSpace(s.UserAgent) ? 0 : presets.ToList().FindIndex(c => c.Value == s.UserAgent);
+			IReadOnlyList<(string Label, string? Value)> presets = SettingsViewModel.UserAgentChoices;
+			int index = string.IsNullOrWhiteSpace(s.UserAgent) ? 0 : presets.ToList().FindIndex(c => c.Value == s.UserAgent);
 			if (index < 0) {
 				index = presets.Count - 1; // custom
 			}
@@ -215,8 +217,8 @@ public sealed partial class SettingsPage : Page {
 		if (_loading || UserAgentBox.SelectedIndex < 0) {
 			return;
 		}
-		var choice = SettingsViewModel.UserAgentChoices[UserAgentBox.SelectedIndex];
-		var custom = UserAgentBox.SelectedIndex == SettingsViewModel.UserAgentChoices.Count - 1;
+		(string Label, string? Value) choice = SettingsViewModel.UserAgentChoices[UserAgentBox.SelectedIndex];
+		bool custom = UserAgentBox.SelectedIndex == SettingsViewModel.UserAgentChoices.Count - 1;
 		UserAgentText.Visibility = custom ? Visibility.Visible : Visibility.Collapsed;
 		if (!custom) {
 			ViewModel.Update(s => s.UserAgent = choice.Value);
@@ -253,7 +255,7 @@ public sealed partial class SettingsPage : Page {
 		if (_loading || ProxyModeBox.SelectedIndex < 0) {
 			return;
 		}
-		var mode = (ProxyMode) ProxyModeBox.SelectedIndex;
+		ProxyMode mode = (ProxyMode) ProxyModeBox.SelectedIndex;
 		ProxyFields.Visibility = mode == ProxyMode.Manual ? Visibility.Visible : Visibility.Collapsed;
 		ViewModel.Update(s => s.Proxy = mode);
 		ProxyStatus.Text = ProxyStatusText(ViewModel.Current);
@@ -291,7 +293,7 @@ public sealed partial class SettingsPage : Page {
 		if (_loading) {
 			return;
 		}
-		var candidate = ViewModel.Current;
+		AppSettings candidate = ViewModel.Current;
 		apply(candidate);
 		if (EngineOptions.ValidateTorrent(candidate) is { } problem) {
 			TorrentStatus.Text = problem;
@@ -335,7 +337,7 @@ public sealed partial class SettingsPage : Page {
 		if (_loading || TrackerSourceBox.SelectedIndex < 0) {
 			return;
 		}
-		var source = (TrackerSource) TrackerSourceBox.SelectedIndex;
+		TrackerSource source = (TrackerSource) TrackerSourceBox.SelectedIndex;
 		TrackerUrlBox.Visibility = source == TrackerSource.Custom ? Visibility.Visible : Visibility.Collapsed;
 		TorrentChange(s => s.Trackers = source);
 		if (source != TrackerSource.Custom || EngineOptions.ValidateTorrent(ViewModel.Current) is null) {
@@ -382,7 +384,7 @@ public sealed partial class SettingsPage : Page {
 	/// <summary>Groups the page's controls into one panel per section (each starts at a header whose Tag names its tab) so a section can be hidden or scrolled to.</summary>
 	private void BuildSections() {
 		StackPanel? current = null;
-		foreach (var child in PageRoot.Children.ToList()) {
+		foreach (UIElement child in PageRoot.Children.ToList()) {
 			PageRoot.Children.Remove(child);
 			if (child is TextBlock { Tag: string tab } header) {
 				current = new StackPanel { Spacing = 12 };
@@ -390,7 +392,7 @@ public sealed partial class SettingsPage : Page {
 			}
 			current?.Children.Add(child);
 		}
-		foreach (var section in _sections) {
+		foreach (SettingsSection section in _sections) {
 			PageRoot.Children.Add(section.Panel);
 		}
 		_index ??= _sections
@@ -412,7 +414,7 @@ public sealed partial class SettingsPage : Page {
 
 	/// <summary>Shows the sections of the selected tab. (Finding a setting by name is the title-bar search; it opens the right tab and scrolls to it.)</summary>
 	private void ShowSections() {
-		foreach (var section in _sections) {
+		foreach (SettingsSection section in _sections) {
 			section.Panel.Visibility = section.Tab == _tab ? Visibility.Visible : Visibility.Collapsed;
 		}
 	}
@@ -434,8 +436,8 @@ public sealed partial class SettingsPage : Page {
 	private static IEnumerable<(string Label, FrameworkElement Control)> Labelled(UIElement element) {
 		switch (element) {
 			case Panel panel:
-				foreach (var child in panel.Children) {
-					foreach (var found in Labelled(child)) {
+				foreach (UIElement child in panel.Children) {
+					foreach ((string Label, FrameworkElement Control) found in Labelled(child)) {
 						yield return found;
 					}
 				}
@@ -465,7 +467,7 @@ public sealed partial class SettingsPage : Page {
 
 	private void LogLevel_Changed(object sender, SelectionChangedEventArgs e) {
 		if (!_loading && LogLevelBox.SelectedIndex >= 0) {
-			var level = (AppLogLevel) LogLevelBox.SelectedIndex;
+			AppLogLevel level = (AppLogLevel) LogLevelBox.SelectedIndex;
 			ViewModel.Update(s => s.LogLevel = level);
 		}
 	}
@@ -474,7 +476,7 @@ public sealed partial class SettingsPage : Page {
 		if (_loading || RawOptionsBox.Text == ViewModel.RawOptionsText) {
 			return;
 		}
-		var error = ViewModel.SetRawOptions(RawOptionsBox.Text);
+		string? error = ViewModel.SetRawOptions(RawOptionsBox.Text);
 		RawOptionsStatus.Text = error ?? "";
 		if (error is null) {
 			RestartBar.IsOpen = ViewModel.RestartRequired;
@@ -483,7 +485,7 @@ public sealed partial class SettingsPage : Page {
 
 	private async void ExportSettings_Click(object sender, RoutedEventArgs e) {
 		try {
-			var picker = new Windows.Storage.Pickers.FileSavePicker { SuggestedFileName = "aria2net-settings", SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary };
+			FileSavePicker picker = new Windows.Storage.Pickers.FileSavePicker { SuggestedFileName = "aria2net-settings", SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary };
 			picker.FileTypeChoices.Add("Aria2NET settings", [".json"]);
 			WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(App.Window));
 			if (await picker.PickSaveFileAsync() is not { } file) {
@@ -498,7 +500,7 @@ public sealed partial class SettingsPage : Page {
 
 	private async void ImportSettings_Click(object sender, RoutedEventArgs e) {
 		try {
-			var picker = new Windows.Storage.Pickers.FileOpenPicker();
+			FileOpenPicker picker = new Windows.Storage.Pickers.FileOpenPicker();
 			picker.FileTypeFilter.Add(".json");
 			WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(App.Window));
 			if (await picker.PickSingleFileAsync() is not { } file) {
@@ -508,7 +510,7 @@ public sealed partial class SettingsPage : Page {
 				TransferStatus.Text = Loc.S("Settings_TooLarge", "This file is too large to be a settings file.");
 				return;
 			}
-			var error = ViewModel.ImportJson(await Windows.Storage.FileIO.ReadTextAsync(file));
+			string? error = ViewModel.ImportJson(await Windows.Storage.FileIO.ReadTextAsync(file));
 			if (error is not null) {
 				TransferStatus.Text = Loc.F("Settings_NotImported", "Nothing was imported. {0}", error);
 				return;
@@ -534,14 +536,14 @@ public sealed partial class SettingsPage : Page {
 		if (_loading || ThemeBox.SelectedIndex < 0) {
 			return;
 		}
-		var theme = (AppTheme) ThemeBox.SelectedIndex;
+		AppTheme theme = (AppTheme) ThemeBox.SelectedIndex;
 		ViewModel.Update(s => s.Theme = theme);
 		App.ApplyTheme(theme);
 	}
 
 	private void Conflict_Changed(object sender, SelectionChangedEventArgs e) {
 		if (!_loading && ConflictBox.SelectedIndex >= 0) {
-			var policy = (ConflictPolicy) ConflictBox.SelectedIndex;
+			ConflictPolicy policy = (ConflictPolicy) ConflictBox.SelectedIndex;
 			ViewModel.Update(s => s.Conflict = policy);
 		}
 	}
@@ -568,7 +570,7 @@ public sealed partial class SettingsPage : Page {
 	}
 
 	private async void BrowseFolder_Click(object sender, RoutedEventArgs e) {
-		var picker = new Windows.Storage.Pickers.FolderPicker();
+		FolderPicker picker = new Windows.Storage.Pickers.FolderPicker();
 		picker.FileTypeFilter.Add("*");
 		WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(App.Window));
 		if (await picker.PickSingleFolderAsync() is { } folder) {
@@ -580,7 +582,7 @@ public sealed partial class SettingsPage : Page {
 	private async void Folder_LostFocus(object sender, RoutedEventArgs e) => await CommitFolderAsync();
 
 	private async Task CommitFolderAsync() {
-		var path = FolderBox.Text.Trim();
+		string path = FolderBox.Text.Trim();
 		if (_loading || path == (ViewModel.Current.DefaultDownloadFolder ?? "")) {
 			return;
 		}
@@ -594,7 +596,7 @@ public sealed partial class SettingsPage : Page {
 	}
 
 	private async Task RefreshFolderStatusAsync() {
-		var folder = DefaultFolderResolver.ForEngine(ViewModel.Current);
+		string folder = DefaultFolderResolver.ForEngine(ViewModel.Current);
 		FolderStatus.Text = await Task.Run(() => SettingsViewModel.FreeSpaceText(folder));
 	}
 
@@ -662,7 +664,7 @@ public sealed partial class SettingsPage : Page {
 
 	private void Hotkeys_Click(object sender, RoutedEventArgs e) {
 		ViewModel.HotkeysEnabled = HotkeysBox.IsChecked == true;
-		var free = App.Services.GetRequiredService<BackgroundCoordinator>().ApplyHotkeys();
+		bool free = App.Services.GetRequiredService<BackgroundCoordinator>().ApplyHotkeys();
 		HotkeysStatus.Text = free ? "" : Loc.S("Settings_HotkeysTaken", "Another program already uses one of these shortcuts, so it is not active.");
 	}
 
@@ -680,8 +682,8 @@ public sealed partial class SettingsPage : Page {
 	private static BrowserCatch Browser => App.Services.GetRequiredService<BrowserCatch>();
 
 	private void BrowserCatch_Click(object sender, RoutedEventArgs e) {
-		var wanted = BrowserCatchBox.IsChecked == true;
-		var problem = Browser.SetEnabled(wanted);
+		bool wanted = BrowserCatchBox.IsChecked == true;
+		string? problem = Browser.SetEnabled(wanted);
 		BrowserCatchBox.IsChecked = Browser.IsEnabled;
 		BrowserCatchStatus.Text = problem is not null ? Loc.F("Settings_BrowserCatchFailed", "Could not set this up: {0}", problem)
 			: wanted ? Loc.S("Settings_BrowserCatchOn", "On. Chrome and Edge can now hand downloads to Aria2NET.") : "";
@@ -700,9 +702,9 @@ public sealed partial class SettingsPage : Page {
 	private static TorrentAssociation Association => App.Services.GetRequiredService<TorrentAssociation>();
 
 	private void RefreshAssociation() {
-		var association = Association;
+		TorrentAssociation association = Association;
 		AssociationBox.IsEnabled = association.IsAvailable;
-		var state = association.State;
+		ShellRegistrationState state = association.State;
 		AssociationBox.IsChecked = state.Registered;
 		DefaultAppsLink.Visibility = state.Registered && !(state.DefaultForTorrent && state.DefaultForMagnet) ? Visibility.Visible : Visibility.Collapsed;
 		AssociationStatus.Text = !state.Registered
@@ -727,21 +729,21 @@ public sealed partial class SettingsPage : Page {
 	private async void DefaultApps_Click(object sender, RoutedEventArgs e) => await TorrentAssociation.OpenDefaultAppsAsync();
 
 	private static string TrackerSummary() {
-		var paths = App.Services.GetRequiredService<AppPaths>();
-		var count = TrackerListService.ReadCache(paths).Count;
+		AppPaths paths = App.Services.GetRequiredService<AppPaths>();
+		int count = TrackerListService.ReadCache(paths).Count;
 		return count == 0 ? Loc.S("Settings_NoTrackerList", "No list downloaded yet.") : Loc.F("Settings_TrackersCached", "{0} trackers cached; refreshed automatically every week.", count);
 	}
 
 	private async void UpdateTrackers_Click(object sender, RoutedEventArgs e) => await RefreshTrackersAsync();
 
 	private async Task RefreshTrackersAsync() {
-		var url = TrackerListService.SourceUrl(ViewModel.Current);
+		string? url = TrackerListService.SourceUrl(ViewModel.Current);
 		if (url is null) {
 			TrackerStatus.Text = ViewModel.Current.Trackers == TrackerSource.Off ? Loc.S("Settings_TrackersSwitchedOff", "Extra trackers are switched off.") : Loc.S("Settings_TrackersNeedUrl", "Enter a valid https:// address first.");
 			return;
 		}
 		TrackerStatus.Text = Loc.S("Settings_Downloading", "Downloading…");
-		var list = await App.Services.GetRequiredService<TrackerListService>().RefreshAsync(url);
+		IReadOnlyList<string>? list = await App.Services.GetRequiredService<TrackerListService>().RefreshAsync(url);
 		if (list is not null && App.Services.GetRequiredService<IAria2Engine>().Rpc is { } rpc) {
 			try {
 				await rpc.ChangeGlobalOptionAsync(new Dictionary<string, string> { ["bt-tracker"] = Aria2Config.TrackerOptionValue(list) });

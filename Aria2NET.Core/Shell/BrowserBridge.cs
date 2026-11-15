@@ -70,7 +70,7 @@ public static class BrowserBridge {
 			return (null, "The message is not valid JSON.");
 		}
 		using (document) {
-			var root = document.RootElement;
+			JsonElement root = document.RootElement;
 			if (root.ValueKind != JsonValueKind.Object) {
 				return (null, "The message is not an object.");
 			}
@@ -83,9 +83,9 @@ public static class BrowserBridge {
 					return (null, "Unknown message type.");
 			}
 
-			var url = Text(root, "url")?.Trim();
+			string? url = Text(root, "url")?.Trim();
 			if (string.IsNullOrEmpty(url) || url.Length > MaxUrlLength || url.Any(char.IsControl)
-				|| !Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https" or "ftp" or "sftp")) {
+				|| !Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) || uri.Scheme is not ("http" or "https" or "ftp" or "sftp")) {
 				return (null, "Only http, https, ftp and sftp links can be downloaded.");
 			}
 			return (new BrowserMessage(new BrowserDownloadRequest(
@@ -99,8 +99,8 @@ public static class BrowserBridge {
 
 	/// <summary>The answer sent back to the extension.</summary>
 	public static string Reply(bool ok, string? error = null) {
-		using var stream = new MemoryStream();
-		using (var writer = new Utf8JsonWriter(stream)) {
+		using MemoryStream stream = new MemoryStream();
+		using (Utf8JsonWriter writer = new Utf8JsonWriter(stream)) {
 			writer.WriteStartObject();
 			writer.WriteBoolean("ok", ok);
 			if (!string.IsNullOrEmpty(error)) {
@@ -112,21 +112,21 @@ public static class BrowserBridge {
 	}
 
 	private static string? Text(JsonElement e, string name) =>
-		e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
+		e.TryGetProperty(name, out JsonElement v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
 
 	/// <summary>A bare file name or nothing: the browser's suggestion must not be able to choose a folder.</summary>
 	internal static string? SafeFileName(string? name) {
 		if (string.IsNullOrWhiteSpace(name)) {
 			return null;
 		}
-		var bare = name.Replace('\\', '/');
+		string bare = name.Replace('\\', '/');
 		bare = bare[(bare.LastIndexOf('/') + 1)..].Trim().TrimEnd('.');
 		return bare.Length is 0 or > MaxFileNameLength || bare is "." or ".." || bare.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || bare.Any(char.IsControl) ? null : bare;
 	}
 
 	private static string? SafeReferrer(string? referrer) =>
 		!string.IsNullOrWhiteSpace(referrer) && !referrer.Any(char.IsControl) && referrer.Length <= MaxUrlLength
-			&& Uri.TryCreate(referrer.Trim(), UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https" ? referrer.Trim() : null;
+			&& Uri.TryCreate(referrer.Trim(), UriKind.Absolute, out Uri? uri) && uri.Scheme is "http" or "https" ? referrer.Trim() : null;
 
 	/// <summary>A newline here could start another header, so a value with control characters is dropped whole.</summary>
 	private static string? SafeHeaderValue(string? value, int maxLength) =>
@@ -137,19 +137,19 @@ public static class BrowserBridge {
 	/// <summary>Reads one frame. Null when the other side closed before sending one.</summary>
 	/// <exception cref="InvalidDataException">The frame is larger than <see cref="MaxMessageBytes"/>, cut short, or not UTF-8.</exception>
 	public static async Task<string?> ReadFrameAsync(Stream stream, CancellationToken ct = default) {
-		var header = new byte[4];
-		var read = await stream.ReadAtLeastAsync(header, 4, throwOnEndOfStream: false, ct);
+		byte[] header = new byte[4];
+		int read = await stream.ReadAtLeastAsync(header, 4, throwOnEndOfStream: false, ct);
 		if (read == 0) {
 			return null;
 		}
 		if (read < 4) {
 			throw new InvalidDataException("The frame header is incomplete.");
 		}
-		var length = BinaryPrimitives.ReadUInt32LittleEndian(header);
+		uint length = BinaryPrimitives.ReadUInt32LittleEndian(header);
 		if (length > MaxMessageBytes) {
 			throw new InvalidDataException("The frame is too large.");
 		}
-		var body = new byte[length];
+		byte[] body = new byte[length];
 		if (await stream.ReadAtLeastAsync(body, body.Length, throwOnEndOfStream: false, ct) < body.Length) {
 			throw new InvalidDataException("The frame is incomplete.");
 		}
@@ -161,8 +161,8 @@ public static class BrowserBridge {
 	}
 
 	public static async Task WriteFrameAsync(Stream stream, string json, CancellationToken ct = default) {
-		var body = Encoding.UTF8.GetBytes(json);
-		var frame = new byte[4 + body.Length];
+		byte[] body = Encoding.UTF8.GetBytes(json);
+		byte[] frame = new byte[4 + body.Length];
 		BinaryPrimitives.WriteUInt32LittleEndian(frame, (uint) body.Length);
 		body.CopyTo(frame, 4);
 		await stream.WriteAsync(frame, ct);
@@ -173,7 +173,7 @@ public static class BrowserBridge {
 
 	/// <summary>Sends one frame to the running app and returns its answer. Null when the app is not listening (not running, or catching is off).</summary>
 	public static async Task<string?> SendToAppAsync(string json, TimeSpan connectTimeout, string? pipeName = null, CancellationToken ct = default) {
-		await using var pipe = new NamedPipeClientStream(".", pipeName ?? PipeName, PipeDirection.InOut, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
+		await using NamedPipeClientStream pipe = new NamedPipeClientStream(".", pipeName ?? PipeName, PipeDirection.InOut, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
 		try {
 			await pipe.ConnectAsync(connectTimeout, ct);
 		} catch (Exception ex) when (ex is TimeoutException or IOException or UnauthorizedAccessException) {
@@ -223,11 +223,11 @@ public sealed class BrowserBridgeServer(Func<BrowserMessage, Task<string?>> hand
 	private async Task RunAsync(CancellationToken ct) {
 		while (!ct.IsCancellationRequested) {
 			try {
-				await using var pipe = new NamedPipeServerStream(_pipeName, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances,
+				await using NamedPipeServerStream pipe = new NamedPipeServerStream(_pipeName, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances,
 					PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
 				await pipe.WaitForConnectionAsync(ct);
 				// A client that connects and then says nothing must not block the next one for ever.
-				using var exchange = CancellationTokenSource.CreateLinkedTokenSource(ct);
+				using CancellationTokenSource exchange = CancellationTokenSource.CreateLinkedTokenSource(ct);
 				exchange.CancelAfter(ExchangeTimeout);
 				await AnswerAsync(pipe, exchange.Token);
 			} catch (OperationCanceledException) when (ct.IsCancellationRequested) {
@@ -244,7 +244,7 @@ public sealed class BrowserBridgeServer(Func<BrowserMessage, Task<string?>> hand
 		if (await BrowserBridge.ReadFrameAsync(pipe, ct) is not { } json) {
 			return;
 		}
-		var (message, error) = BrowserBridge.Parse(json);
+		(BrowserMessage? message, string? error) = BrowserBridge.Parse(json);
 		if (message is not null) {
 			try {
 				error = await handle(message);

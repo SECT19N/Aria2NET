@@ -1,3 +1,5 @@
+using System.Net;
+
 namespace Aria2NET.Core.Settings;
 
 /// <summary>Maps <see cref="AppSettings"/> to aria2 option names. Used for the conf file at start and for <c>changeGlobalOption</c> afterwards.</summary>
@@ -12,7 +14,7 @@ public static class EngineOptions {
 
 	/// <summary>Only the two overall speed limits; what the alt-speed toggle changes.</summary>
 	public static IReadOnlyDictionary<string, string> SpeedOptions(AppSettings s) {
-		var (down, up) = EffectiveLimits(s);
+		(int down, int up) = EffectiveLimits(s);
 		return new Dictionary<string, string> {
 			[DownloadLimit] = LimitValue(down),
 			[UploadLimit] = LimitValue(up),
@@ -32,7 +34,7 @@ public static class EngineOptions {
 
 	/// <summary>Every option the settings pages control, for the conf file at launch. Use <see cref="LiveOptions"/> for a running engine.</summary>
 	public static IReadOnlyDictionary<string, string> ToGlobalOptions(AppSettings s) {
-		var options = new Dictionary<string, string> {
+		Dictionary<string, string> options = new Dictionary<string, string> {
 			[MaxConcurrent] = Math.Max(1, s.MaxConcurrentDownloads).ToString(),
 			["max-connection-per-server"] = Math.Clamp(s.MaxConnectionsPerServer, 1, 16).ToString(),
 			["split"] = Math.Max(1, s.Split).ToString(),
@@ -45,13 +47,13 @@ public static class EngineOptions {
 		};
 		// An empty value cannot reset the option on a running engine, so send aria2's own agent explicitly.
 		options["user-agent"] = string.IsNullOrWhiteSpace(s.UserAgent) || s.UserAgent.Any(char.IsControl) ? DefaultUserAgent : s.UserAgent.Trim();
-		foreach (var (key, value) in SpeedOptions(s)) {
+		foreach ((string? key, string? value) in SpeedOptions(s)) {
 			options[key] = value;
 		}
-		foreach (var (key, value) in NetworkOptions(s)) {
+		foreach ((string? key, string? value) in NetworkOptions(s)) {
 			options[key] = value;
 		}
-		foreach (var (key, value) in TorrentOptions(s)) {
+		foreach ((string? key, string? value) in TorrentOptions(s)) {
 			options[key] = value;
 		}
 		// New downloads only. "Ask" renames at the engine level; the question itself is asked before the download is added.
@@ -59,7 +61,7 @@ public static class EngineOptions {
 		options["auto-file-renaming"] = s.Conflict == ConflictPolicy.Overwrite ? "false" : "true";
 		options["log-level"] = Aria2LogLevel(s.LogLevel);
 		// Hand-typed options last, so they win. An option that fails the rules (say, from a hand-edited file) is dropped, never written to the conf.
-		foreach (var (key, value) in s.RawOptions ?? []) {
+		foreach ((string? key, string? value) in s.RawOptions ?? []) {
 			if (RawOptionRules.Validate(key, value) is null) {
 				options[key] = value;
 			}
@@ -83,8 +85,8 @@ public static class EngineOptions {
 
 	/// <summary>Ports, DHT, peer discovery, encryption and the default seeding rule. An empty <c>seed-time</c> clears the time limit.</summary>
 	public static IReadOnlyDictionary<string, string> TorrentOptions(AppSettings s) {
-		var (portStart, portEnd) = ListenPorts(s);
-		var arc4 = s.Encryption != TorrentEncryption.Allow;
+		(int portStart, int portEnd) = ListenPorts(s);
+		bool arc4 = s.Encryption != TorrentEncryption.Allow;
 		return new Dictionary<string, string> {
 			["listen-port"] = portStart == portEnd ? portStart.ToString() : $"{portStart}-{portEnd}",
 			["dht-listen-port"] = Math.Clamp(s.DhtPort, 1024, 65535).ToString(),
@@ -101,8 +103,8 @@ public static class EngineOptions {
 
 	/// <summary>The listen port range, clamped to 1024-65535 and put in order.</summary>
 	public static (int Start, int End) ListenPorts(AppSettings s) {
-		var start = Math.Clamp(s.ListenPortStart, 1024, 65535);
-		var end = Math.Clamp(s.ListenPortEnd, 1024, 65535);
+		int start = Math.Clamp(s.ListenPortStart, 1024, 65535);
+		int end = Math.Clamp(s.ListenPortEnd, 1024, 65535);
 		return (Math.Min(start, end), Math.Max(start, end));
 	}
 
@@ -115,7 +117,7 @@ public static class EngineOptions {
 			return "The first listen port must not be higher than the last one.";
 		}
 		if (s.Trackers == TrackerSource.Custom) {
-			if (!Uri.TryCreate(s.TrackerUrl?.Trim(), UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps || string.IsNullOrEmpty(uri.Host)) {
+			if (!Uri.TryCreate(s.TrackerUrl?.Trim(), UriKind.Absolute, out Uri? uri) || uri.Scheme != Uri.UriSchemeHttps || string.IsNullOrEmpty(uri.Host)) {
 				return "The tracker list address must be a full https:// address.";
 			}
 		}
@@ -124,9 +126,9 @@ public static class EngineOptions {
 
 	/// <summary>Proxy, certificate and IPv6 options. Empty proxy values clear a proxy set earlier.</summary>
 	public static IReadOnlyDictionary<string, string> NetworkOptions(AppSettings s, Func<Uri?>? systemProxy = null) {
-		var proxy = "";
-		var user = "";
-		var password = "";
+		string proxy = "";
+		string user = "";
+		string password = "";
 		switch (s.Proxy) {
 			case ProxyMode.Manual when ValidateProxy(s) is null: // an address that is not valid yet is ignored, not sent
 				proxy = (s.ProxyAddress ?? "").Trim();
@@ -149,8 +151,8 @@ public static class EngineOptions {
 	/// <summary>The proxy Windows would use for an ordinary web address, or null for a direct connection.</summary>
 	private static Uri? SystemProxyUri() {
 		try {
-			var target = new Uri("https://example.com/");
-			var proxy = HttpClient.DefaultProxy;
+			Uri target = new Uri("https://example.com/");
+			IWebProxy proxy = HttpClient.DefaultProxy;
 			return proxy.IsBypassed(target) ? null : proxy.GetProxy(target);
 		} catch (Exception ex) when (ex is InvalidOperationException or UriFormatException or PlatformNotSupportedException) {
 			return null;
@@ -162,12 +164,12 @@ public static class EngineOptions {
 		if (s.Proxy != ProxyMode.Manual) {
 			return null;
 		}
-		var address = s.ProxyAddress?.Trim();
+		string? address = s.ProxyAddress?.Trim();
 		if (string.IsNullOrEmpty(address)) {
 			return "Enter the proxy address, for example proxy.example.com:8080.";
 		}
-		var withScheme = address.Contains("://", StringComparison.Ordinal) ? address : "http://" + address;
-		if (!Uri.TryCreate(withScheme, UriKind.Absolute, out var uri) || string.IsNullOrEmpty(uri.Host) || uri.Port is < 1 or > 65535) {
+		string withScheme = address.Contains("://", StringComparison.Ordinal) ? address : "http://" + address;
+		if (!Uri.TryCreate(withScheme, UriKind.Absolute, out Uri? uri) || string.IsNullOrEmpty(uri.Host) || uri.Port is < 1 or > 65535) {
 			return "The proxy address is not valid. Use host:port, for example proxy.example.com:8080.";
 		}
 		return null;

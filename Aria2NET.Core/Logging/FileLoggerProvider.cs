@@ -20,8 +20,8 @@ public sealed class FileLoggerProvider : ILoggerProvider {
 		_minLevel = (int) minLevel;
 		try {
 			Directory.CreateDirectory(_dir);
-			var cutoff = DateTime.UtcNow.AddDays(-retainDays);
-			foreach (var file in Directory.EnumerateFiles(_dir, "aria2net-*.log")) {
+			DateTime cutoff = DateTime.UtcNow.AddDays(-retainDays);
+			foreach (string file in Directory.EnumerateFiles(_dir, "aria2net-*.log")) {
 				if (File.GetLastWriteTimeUtc(file) < cutoff) {
 					File.Delete(file);
 				}
@@ -36,7 +36,7 @@ public sealed class FileLoggerProvider : ILoggerProvider {
 	public void Dispose() { }
 
 	private void Write(string category, LogLevel level, string message, Exception? exception) {
-		var sb = new StringBuilder();
+		StringBuilder sb = new StringBuilder();
 		sb.Append(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"))
 			.Append(" [").Append(level.ToString()[..3].ToUpperInvariant()).Append("] ")
 			.Append(category).Append(": ").Append(message);
@@ -45,7 +45,7 @@ public sealed class FileLoggerProvider : ILoggerProvider {
 		}
 		sb.AppendLine();
 
-		var path = Path.Combine(_dir, $"aria2net-{DateTime.Now:yyyyMMdd}.log");
+		string path = Path.Combine(_dir, $"aria2net-{DateTime.Now:yyyyMMdd}.log");
 		lock (_lock) {
 			try {
 				File.AppendAllText(path, sb.ToString());

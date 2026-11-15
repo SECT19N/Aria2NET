@@ -20,7 +20,7 @@ internal static class RowStripes {
 
 	/// <summary>Re-shades every realized row. Inserting or removing a row shifts the index of the rows after it without raising ContainerContentChanging for them.</summary>
 	public static void Refresh(ListViewBase list) {
-		for (var i = 0; i < list.Items.Count; i++) {
+		for (int i = 0; i < list.Items.Count; i++) {
 			if (list.ContainerFromIndex(i) is ListViewItem item) {
 				item.Background = i % 2 == 1 ? Stripe : Plain;
 			}

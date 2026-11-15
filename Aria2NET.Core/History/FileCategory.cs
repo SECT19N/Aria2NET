@@ -16,14 +16,14 @@ public static class FileCategory {
 	private static readonly Dictionary<string, string> ByExtension = Build();
 
 	public static string FromName(string? name) {
-		var ext = Path.GetExtension(name ?? "");
-		return ext.Length > 1 && ByExtension.TryGetValue(ext[1..], out var category) ? category : Other;
+		string ext = Path.GetExtension(name ?? "");
+		return ext.Length > 1 && ByExtension.TryGetValue(ext[1..], out string? category) ? category : Other;
 	}
 
 	private static Dictionary<string, string> Build() {
-		var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+		Dictionary<string, string> map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 		void Add(string category, string extensions) {
-			foreach (var ext in extensions.Split(' ')) {
+			foreach (string ext in extensions.Split(' ')) {
 				map[ext] = category;
 			}
 		}

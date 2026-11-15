@@ -22,21 +22,21 @@ public sealed class GlobalSearch(DownloadsViewModel downloads, HistoryService hi
 	public const int PerGroup = 5;
 
 	public async Task<IReadOnlyList<SearchResult>> FindAsync(string query) {
-		var words = SearchMatcher.Words(query);
+		string[] words = SearchMatcher.Words(query);
 		if (words.Length == 0) {
 			return [];
 		}
-		var results = new List<SearchResult>();
+		List<SearchResult> results = new List<SearchResult>();
 
-		var live = downloads.AllItems;
+		IReadOnlyList<DownloadItem> live = downloads.AllItems;
 		results.AddRange(SearchMatcher.Best(live, words, i => i.Name, i => [i.FirstUri, i.Path], PerGroup).Select(i => new SearchResult(
 			"", i.Name, Loc.F("Search_Download", "Download · {0}", StatusName(i.Status)), new DownloadTarget(i.Gid))));
 
 		if (history.Store is { } store) {
 			try {
-				var liveGids = live.Select(i => i.Gid).ToHashSet(StringComparer.Ordinal);
+				HashSet<string> liveGids = live.Select(i => i.Gid).ToHashSet(StringComparer.Ordinal);
 				// The database matches one phrase, so it narrows by the first word and the rest is checked here.
-				var entries = await Task.Run(() => store.Query(new HistoryQuery(Search: words[0], Limit: 500)));
+				IReadOnlyList<HistoryEntry> entries = await Task.Run(() => store.Query(new HistoryQuery(Search: words[0], Limit: 500)));
 				// Everything still in the Downloads list is in the history too; it is already listed above.
 				results.AddRange(entries.Where(e => !liveGids.Contains(e.Gid) && SearchMatcher.Matches(words, e.Name, e.Uri, e.Path)).Take(PerGroup).Select(e => new SearchResult(
 					"", e.Name, Loc.F("Search_History", "History · {0}", (e.FinishedUtc ?? e.AddedUtc).ToLocalTime().ToString("d")), new HistoryTarget(e.Id, e.Name))));

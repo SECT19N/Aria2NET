@@ -9,19 +9,19 @@ public static class RowText {
 		if (string.IsNullOrWhiteSpace(path)) {
 			return "";
 		}
-		var trimmed = path.TrimEnd('\\', '/');
+		string trimmed = path.TrimEnd('\\', '/');
 		if (trimmed.Length <= max) {
 			return trimmed;
 		}
-		var parts = trimmed.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries);
+		string[] parts = trimmed.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries);
 		if (parts.Length <= 2) {
 			return Ellipsis(trimmed, max);
 		}
-		var separator = trimmed.Contains('\\') ? '\\' : '/';
-		var first = parts[0];
-		foreach (var keep in new[] { 2, 1 }) {
-			var tail = string.Join(separator, parts.Skip(parts.Length - keep));
-			var candidate = $"{first}{separator}…{separator}{tail}";
+		char separator = trimmed.Contains('\\') ? '\\' : '/';
+		string first = parts[0];
+		foreach (int keep in new[] { 2, 1 }) {
+			string tail = string.Join(separator, parts.Skip(parts.Length - keep));
+			string candidate = $"{first}{separator}…{separator}{tail}";
 			if (candidate.Length <= max) {
 				return candidate;
 			}
@@ -33,8 +33,8 @@ public static class RowText {
 
 	/// <summary>"14 Nov, 21:10", with the year when it is not this year's.</summary>
 	public static string When(DateTimeOffset moment, DateTimeOffset now, CultureInfo? culture = null) {
-		var local = moment.ToLocalTime();
-		var format = local.Year == now.ToLocalTime().Year ? "d MMM, HH:mm" : "d MMM yyyy, HH:mm";
+		DateTimeOffset local = moment.ToLocalTime();
+		string format = local.Year == now.ToLocalTime().Year ? "d MMM, HH:mm" : "d MMM yyyy, HH:mm";
 		return local.ToString(format, culture ?? CultureInfo.CurrentCulture);
 	}
 }

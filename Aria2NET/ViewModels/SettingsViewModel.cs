@@ -22,7 +22,7 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 	/// <summary>Saves a change and pushes it to the running engine right away.</summary>
 	public void Update(Action<AppSettings> apply) {
 		Change(apply);
-		var saved = settings.Load();
+		AppSettings saved = settings.Load();
 		fileLog.MinLevel = EngineOptions.AppLogLevelFor(saved.LogLevel);
 		_ = applier.ApplyAsync(saved);
 	}
@@ -32,7 +32,7 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 
 	/// <summary>Replaces the settings with an exported file's. Returns an error text, or null when imported and applied.</summary>
 	public string? ImportJson(string json) {
-		var (imported, error) = SettingsTransfer.Import(json, settings.Load());
+		(AppSettings? imported, string? error) = SettingsTransfer.Import(json, settings.Load());
 		if (imported is null) {
 			return error;
 		}
@@ -60,7 +60,7 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 
 	/// <summary>Saves hand-typed options. Returns the problem (nothing is saved) or null.</summary>
 	public string? SetRawOptions(string text) {
-		var (options, error) = RawOptionRules.Parse(text);
+		(Dictionary<string, string>? options, string? error) = RawOptionRules.Parse(text);
 		if (error is not null) {
 			return error;
 		}
@@ -69,7 +69,7 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 	}
 
 	public void ResetDownloads() {
-		var d = new AppSettings();
+		AppSettings d = new AppSettings();
 		Update(s => {
 			s.DefaultDownloadFolder = d.DefaultDownloadFolder;
 			s.MaxConcurrentDownloads = d.MaxConcurrentDownloads;
@@ -95,7 +95,7 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 	}
 
 	public void ResetTorrents() {
-		var d = new AppSettings();
+		AppSettings d = new AppSettings();
 		Update(s => {
 			s.ListenPortStart = d.ListenPortStart;
 			s.ListenPortEnd = d.ListenPortEnd;
@@ -112,7 +112,7 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 	}
 
 	public void ResetNetwork() {
-		var d = new AppSettings();
+		AppSettings d = new AppSettings();
 		Update(s => {
 			s.Proxy = d.Proxy;
 			s.ProxyAddress = d.ProxyAddress;
@@ -137,7 +137,7 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 	public static string? CheckFolder(string path) {
 		try {
 			Directory.CreateDirectory(path);
-			var probe = Path.Combine(path, $".aria2net-{Guid.NewGuid():N}.tmp");
+			string probe = Path.Combine(path, $".aria2net-{Guid.NewGuid():N}.tmp");
 			File.WriteAllText(probe, "");
 			File.Delete(probe);
 			return null;
@@ -149,7 +149,7 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 	/// <summary>Free space on the drive holding <paramref name="path"/>, as text, or empty if unknown.</summary>
 	public static string FreeSpaceText(string path) {
 		try {
-			var root = Path.GetPathRoot(Path.GetFullPath(path));
+			string? root = Path.GetPathRoot(Path.GetFullPath(path));
 			return root is null ? "" : Loc.F("Settings_FreeSpace", "{0} free", FormatBytes(new DriveInfo(root).AvailableFreeSpace));
 		} catch (Exception ex) when (ex is IOException or ArgumentException or UnauthorizedAccessException or NotSupportedException) {
 			return "";
@@ -159,7 +159,7 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 	private static string FormatBytes(long bytes) {
 		string[] units = ["B", "KiB", "MiB", "GiB", "TiB"];
 		double v = bytes;
-		var i = 0;
+		int i = 0;
 		while (v >= 1024 && i < units.Length - 1) {
 			v /= 1024;
 			i++;
@@ -178,7 +178,7 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 		get => settings.Load().ConfirmDeleteFiles;
 		set {
 			try {
-				var s = settings.Load();
+				AppSettings s = settings.Load();
 				s.ConfirmDeleteFiles = value;
 				settings.Save(s);
 			} catch (IOException ex) {
@@ -306,7 +306,7 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 
 	private void Change(Action<AppSettings> apply) {
 		try {
-			var s = settings.Load();
+			AppSettings s = settings.Load();
 			apply(s);
 			settings.Save(s);
 		} catch (IOException ex) {
@@ -319,13 +319,13 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 	/// <summary>Index into <see cref="RetentionChoices"/>; setting it saves and trims History straight away.</summary>
 	public int RetentionIndex {
 		get {
-			var days = settings.Load().HistoryRetentionDays;
-			var index = RetentionChoices.ToList().FindIndex(c => c.Days == days);
+			int days = settings.Load().HistoryRetentionDays;
+			int index = RetentionChoices.ToList().FindIndex(c => c.Days == days);
 			return index < 0 ? 0 : index;
 		}
 		set {
 			try {
-				var s = settings.Load();
+				AppSettings s = settings.Load();
 				s.HistoryRetentionDays = RetentionChoices[Math.Clamp(value, 0, RetentionChoices.Count - 1)].Days;
 				settings.Save(s);
 				history.ApplyRetention(s.HistoryRetentionDays);

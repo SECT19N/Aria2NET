@@ -55,7 +55,7 @@ public sealed class PersistenceCoordinator(
 
 	private void ApplyRetention() {
 		try {
-			var removed = history.ApplyRetention(settings.Load().HistoryRetentionDays);
+			int removed = history.ApplyRetention(settings.Load().HistoryRetentionDays);
 			if (removed > 0) {
 				logger.LogInformation("History retention removed {Count} old entries", removed);
 			}
@@ -75,15 +75,15 @@ public sealed class PersistenceCoordinator(
 
 	private void ScanLeftovers(PollSnapshot snapshot) {
 		try {
-			var saved = settings.Load();
-			var folders = new List<string>();
+			AppSettings saved = settings.Load();
+			List<string> folders = new List<string>();
 			if (history.Store is { } store) {
 				folders.AddRange(store.Folders());
 			}
 			folders.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads"));
 			folders.AddRange(new[] { saved.DefaultDownloadFolder, saved.LastUsedFolder }.Where(f => !string.IsNullOrWhiteSpace(f))!);
 
-			var candidates = OrphanFiles.Find(folders, snapshot.Items)
+			List<(OrphanFile Orphan, HistoryEntry? Entry)> candidates = OrphanFiles.Find(folders, snapshot.Items)
 				.Select(o => (Orphan: o, Entry: history.Store?.FindByPath(o.DataFile)))
 				// A download the user removed or that failed is not "lost": don't nag about it.
 				.Where(x => x.Entry is null || x.Entry.Status is HistoryStatus.Interrupted or HistoryStatus.Active or HistoryStatus.Waiting or HistoryStatus.Paused)
@@ -92,8 +92,8 @@ public sealed class PersistenceCoordinator(
 				return;
 			}
 
-			var resumable = candidates.Where(x => !string.IsNullOrEmpty(x.Entry?.Uri)).ToList();
-			var message = (candidates.Count == 1 ? Loc.S("Persist_LeftoverOne", "1 partly downloaded file was left behind by an earlier session.") : Loc.F("Persist_LeftoverMany", "{0} partly downloaded files were left behind by an earlier session.", candidates.Count))
+			List<(OrphanFile Orphan, HistoryEntry? Entry)> resumable = candidates.Where(x => !string.IsNullOrEmpty(x.Entry?.Uri)).ToList();
+			string message = (candidates.Count == 1 ? Loc.S("Persist_LeftoverOne", "1 partly downloaded file was left behind by an earlier session.") : Loc.F("Persist_LeftoverMany", "{0} partly downloaded files were left behind by an earlier session.", candidates.Count))
 				+ (resumable.Count > 0 ? Loc.F("Persist_CanResume", " {0} can be resumed.", resumable.Count) : Loc.S("Persist_CannotResume", " They cannot be resumed because their links are not known."));
 
 			notices.Post(new Notice(Loc.S("Persist_FoundTitle", "Unfinished downloads found"), message, InfoBarSeverity.Informational,
@@ -105,7 +105,7 @@ public sealed class PersistenceCoordinator(
 	}
 
 	private async Task ResumeAsync(List<(OrphanFile Orphan, HistoryEntry? Entry)> resumable) {
-		foreach (var (orphan, entry) in resumable) {
+		foreach ((OrphanFile orphan, HistoryEntry? entry) in resumable) {
 			try {
 				await operations.ResumeLeftoverAsync(entry!.Uri!, Path.GetDirectoryName(orphan.DataFile)!, Path.GetFileName(orphan.DataFile));
 			} catch (Exception ex) when (ex is Aria2RpcException or HttpRequestException or InvalidOperationException) {
@@ -119,7 +119,7 @@ public sealed class PersistenceCoordinator(
 				(orphans.Count == 1 ? Loc.S("Persist_DeleteOne", "This permanently deletes 1 partly downloaded file and its .aria2 control file. Finished downloads are not touched.") : Loc.F("Persist_DeleteMany", "This permanently deletes {0} partly downloaded files and their .aria2 control files. Finished downloads are not touched.", orphans.Count)), Loc.S("Common_Delete", "Delete"))) {
 			return;
 		}
-		var cleaned = await Task.Run(() => OrphanFiles.Clean(orphans, deleteData: true));
+		int cleaned = await Task.Run(() => OrphanFiles.Clean(orphans, deleteData: true));
 		logger.LogInformation("Deleted {Count} leftover downloads", cleaned);
 	}
 }

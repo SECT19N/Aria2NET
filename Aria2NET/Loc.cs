@@ -25,7 +25,7 @@ public static class Loc {
 	/// <summary>The resource <paramref name="key"/>, or <paramref name="english"/> when there is none.</summary>
 	public static string S(string key, string english) {
 		try {
-			var text = Loader.Value?.GetString(key);
+			string? text = Loader.Value?.GetString(key);
 			return string.IsNullOrEmpty(text) ? english : text;
 		} catch (Exception ex) when (ex is InvalidOperationException or System.Runtime.InteropServices.COMException) {
 			return english;

@@ -47,16 +47,16 @@ public sealed class FileTreeNode : INotifyPropertyChanged {
 	public event PropertyChangedEventHandler? PropertyChanged;
 
 	private void SetDown(bool value) {
-		foreach (var child in Children) {
+		foreach (FileTreeNode child in Children) {
 			child.SetDown(value);
 		}
 		Store(value);
 	}
 
 	private void Refresh() {
-		var all = true;
-		var none = true;
-		foreach (var child in Children) {
+		bool all = true;
+		bool none = true;
+		foreach (FileTreeNode child in Children) {
 			all &= child._isChecked == true;
 			none &= child._isChecked == false;
 		}
@@ -88,15 +88,15 @@ public sealed class TorrentFileTree {
 
 	/// <summary>Everything starts chosen. Paths use <c>/</c> as in the .torrent; folders come before files, each ordered by name.</summary>
 	public static TorrentFileTree Build(IEnumerable<TorrentFileEntry> files) {
-		var top = new Folder("");
-		foreach (var file in files) {
-			var parts = file.Path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+		Folder top = new Folder("");
+		foreach (TorrentFileEntry file in files) {
+			string[] parts = file.Path.Split('/', StringSplitOptions.RemoveEmptyEntries);
 			if (parts.Length == 0) {
 				continue;
 			}
-			var folder = top;
-			foreach (var part in parts[..^1]) {
-				if (!folder.Folders.TryGetValue(part, out var next)) {
+			Folder folder = top;
+			foreach (string part in parts[..^1]) {
+				if (!folder.Folders.TryGetValue(part, out Folder? next)) {
 					folder.Folders[part] = next = new Folder(part);
 				}
 				folder = next;
@@ -104,9 +104,9 @@ public sealed class TorrentFileTree {
 			folder.Files.Add((parts[^1], file));
 		}
 
-		var leaves = new List<FileTreeNode>();
-		var roots = Convert(top, null, leaves);
-		var tree = new TorrentFileTree(roots);
+		List<FileTreeNode> leaves = new List<FileTreeNode>();
+		List<FileTreeNode> roots = Convert(top, null, leaves);
+		TorrentFileTree tree = new TorrentFileTree(roots);
 		tree._leaves.AddRange(leaves.OrderBy(l => l.Index));
 		return tree;
 	}
@@ -118,28 +118,28 @@ public sealed class TorrentFileTree {
 	public long SelectedBytes => _leaves.Where(l => l.IsChecked == true).Sum(l => l.Length);
 
 	public void SetAll(bool value) {
-		foreach (var root in Roots) {
+		foreach (FileTreeNode root in Roots) {
 			root.IsChecked = value;
 		}
 	}
 
 	private static List<FileTreeNode> Convert(Folder folder, FileTreeNode? parent, List<FileTreeNode> leaves) {
-		var nodes = new List<FileTreeNode>();
-		foreach (var child in folder.Folders.Values.OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase)) {
-			var shown = child;
-			var name = child.Name;
+		List<FileTreeNode> nodes = new List<FileTreeNode>();
+		foreach (Folder? child in folder.Folders.Values.OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase)) {
+			Folder shown = child;
+			string name = child.Name;
 			while (shown.Files.Count == 0 && shown.Folders.Count == 1) {
 				shown = shown.Folders.Values.Single();
 				name += "/" + shown.Name;
 			}
-			var node = new FileTreeNode(name, isFolder: true, index: 0, length: 0, fileCount: 0) { Parent = parent };
+			FileTreeNode node = new FileTreeNode(name, isFolder: true, index: 0, length: 0, fileCount: 0) { Parent = parent };
 			node.Children = Convert(shown, node, leaves);
 			node.Length = node.Children.Sum(c => c.Length);
 			node.FileCount = node.Children.Sum(c => c.FileCount);
 			nodes.Add(node);
 		}
-		foreach (var (name, entry) in folder.Files.OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase)) {
-			var leaf = new FileTreeNode(name, isFolder: false, entry.Index, entry.Length, fileCount: 1) { Parent = parent };
+		foreach ((string? name, TorrentFileEntry? entry) in folder.Files.OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase)) {
+			FileTreeNode leaf = new FileTreeNode(name, isFolder: false, entry.Index, entry.Length, fileCount: 1) { Parent = parent };
 			leaves.Add(leaf);
 			nodes.Add(leaf);
 		}

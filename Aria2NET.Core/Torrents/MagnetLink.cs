@@ -9,21 +9,21 @@ public static class MagnetLink {
 		if (!magnet.StartsWith("magnet:?", StringComparison.OrdinalIgnoreCase)) {
 			return false;
 		}
-		foreach (var part in magnet[8..].Split('&')) {
-			var eq = part.IndexOf('=');
+		foreach (string part in magnet[8..].Split('&')) {
+			int eq = part.IndexOf('=');
 			if (eq <= 0 || !part[..eq].Equals("xt", StringComparison.OrdinalIgnoreCase)) {
 				continue;
 			}
-			var value = Uri.UnescapeDataString(part[(eq + 1)..]);
+			string value = Uri.UnescapeDataString(part[(eq + 1)..]);
 			if (!value.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase)) {
 				continue;
 			}
-			var hash = value[Prefix.Length..];
+			string hash = value[Prefix.Length..];
 			if (hash.Length == 40 && hash.All(Uri.IsHexDigit)) {
 				infoHash = hash.ToLowerInvariant();
 				return true;
 			}
-			if (hash.Length == 32 && TryDecodeBase32(hash, out var bytes)) {
+			if (hash.Length == 32 && TryDecodeBase32(hash, out byte[]? bytes)) {
 				infoHash = Convert.ToHexString(bytes).ToLowerInvariant();
 				return true;
 			}
@@ -33,19 +33,19 @@ public static class MagnetLink {
 
 	/// <summary>The display name (<c>dn</c>) of a magnet link, if it has one.</summary>
 	public static string? DisplayName(string magnet) {
-		var query = magnet.Split('?', 2).ElementAtOrDefault(1);
-		var dn = query?.Split('&').FirstOrDefault(p => p.StartsWith("dn=", StringComparison.OrdinalIgnoreCase));
+		string? query = magnet.Split('?', 2).ElementAtOrDefault(1);
+		string? dn = query?.Split('&').FirstOrDefault(p => p.StartsWith("dn=", StringComparison.OrdinalIgnoreCase));
 		return dn is null ? null : Uri.UnescapeDataString(dn[3..].Replace('+', ' '));
 	}
 
 	private static bool TryDecodeBase32(string text, out byte[] bytes) {
 		const string Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 		bytes = new byte[text.Length * 5 / 8];
-		var buffer = 0;
-		var bits = 0;
-		var index = 0;
-		foreach (var c in text.ToUpperInvariant()) {
-			var v = Alphabet.IndexOf(c);
+		int buffer = 0;
+		int bits = 0;
+		int index = 0;
+		foreach (char c in text.ToUpperInvariant()) {
+			int v = Alphabet.IndexOf(c);
 			if (v < 0) {
 				return false;
 			}
@@ -65,17 +65,17 @@ public static class MagnetLink {
 public static class SelectFileSpec {
 	/// <summary>Null when nothing needs to be said: every file is chosen, so aria2's default (all) applies. Throws when nothing is chosen.</summary>
 	public static string? Build(IEnumerable<int> selected, int totalFiles) {
-		var sorted = selected.Distinct().Where(i => i >= 1 && i <= totalFiles).Order().ToList();
+		List<int> sorted = selected.Distinct().Where(i => i >= 1 && i <= totalFiles).Order().ToList();
 		if (sorted.Count == 0) {
 			throw new ArgumentException("Choose at least one file.", nameof(selected));
 		}
 		if (sorted.Count == totalFiles) {
 			return null;
 		}
-		var parts = new List<string>();
-		for (var i = 0; i < sorted.Count;) {
-			var start = sorted[i];
-			var end = start;
+		List<string> parts = new List<string>();
+		for (int i = 0; i < sorted.Count;) {
+			int start = sorted[i];
+			int end = start;
 			while (++i < sorted.Count && sorted[i] == end + 1) {
 				end = sorted[i];
 			}

@@ -78,7 +78,7 @@ public sealed class UpdateService(SettingsStore<AppSettings> settings, NoticeCen
 			Set(UpdateState.Checking);
 			// The setting can change between checks, so the source is rebuilt each time.
 			_manager = new UpdateManager(new GithubSource(Repository, null, settings.Load().IncludePreReleases));
-			var update = await _manager.CheckForUpdatesAsync();
+			UpdateInfo? update = await _manager.CheckForUpdatesAsync();
 			if (update is null) {
 				Set(UpdateState.UpToDate);
 				return;

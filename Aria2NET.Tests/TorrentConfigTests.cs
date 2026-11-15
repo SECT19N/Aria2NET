@@ -13,7 +13,7 @@ public class TorrentConfigTests {
 
 	[Fact]
 	public void Render_enables_bittorrent_features_and_keeps_dht_state_in_the_engine_folder() {
-		var text = new Aria2Config(6800, "abc", 42, @"C:\dl").Render(Paths);
+		string text = new Aria2Config(6800, "abc", 42, @"C:\dl").Render(Paths);
 
 		Assert.Contains("bt-save-metadata=true", text);
 		Assert.Contains("bt-load-saved-metadata=true", text);
@@ -28,14 +28,14 @@ public class TorrentConfigTests {
 
 	[Fact]
 	public void Render_adds_the_tracker_list_as_one_comma_separated_option() {
-		var config = new Aria2Config(6800, "abc", 42, @"C:\dl", ["udp://a:1/announce", "https://b/announce"]);
+		Aria2Config config = new Aria2Config(6800, "abc", 42, @"C:\dl", ["udp://a:1/announce", "https://b/announce"]);
 
 		Assert.Contains("bt-tracker=udp://a:1/announce,https://b/announce", config.Render(Paths));
 	}
 
 	[Fact]
 	public void Parse_keeps_http_https_and_udp_trackers_only() {
-		var list = TrackerListService.Parse("# best trackers\r\nudp://tracker.example:6969/announce\r\n\r\nhttps://t.example/announce\r\nftp://nope/x\r\nhttp://t.example:80/announce\r\nnot a url\r\nwss://t/x\r\n");
+		IReadOnlyList<string> list = TrackerListService.Parse("# best trackers\r\nudp://tracker.example:6969/announce\r\n\r\nhttps://t.example/announce\r\nftp://nope/x\r\nhttp://t.example:80/announce\r\nnot a url\r\nwss://t/x\r\n");
 
 		Assert.Equal(["udp://tracker.example:6969/announce", "https://t.example/announce", "http://t.example:80/announce"], list);
 	}
@@ -56,7 +56,7 @@ public class TorrentConfigTests {
 
 	[Fact]
 	public void Parse_caps_the_list() {
-		var text = string.Join("\n", Enumerable.Range(1, 200).Select(i => $"udp://t{i}.example:1/announce"));
+		string text = string.Join("\n", Enumerable.Range(1, 200).Select(i => $"udp://t{i}.example:1/announce"));
 
 		Assert.Equal(TrackerListService.MaxTrackers, TrackerListService.Parse(text).Count);
 	}
@@ -75,8 +75,8 @@ public class TorrentConfigTests {
 
 	[Fact]
 	public void Missing_or_damaged_cache_reads_as_empty() {
-		using var temp = new TempDir();
-		var paths = new AppPaths(temp.Path, @"C:\tools");
+		using TempDir temp = new TempDir();
+		AppPaths paths = new AppPaths(temp.Path, @"C:\tools");
 
 		Assert.Empty(TrackerListService.ReadCache(paths));
 		File.WriteAllText(paths.TrackerListFile, "garbage\n\u0000\n");
@@ -85,12 +85,12 @@ public class TorrentConfigTests {
 
 	[Fact]
 	public async Task Refresh_writes_the_cache_and_it_is_not_stale_afterwards() {
-		using var temp = new TempDir();
-		var paths = new AppPaths(temp.Path, @"C:\tools");
-		var service = Service(new FakeHandler((_, _) => Text("udp://a:1/announce\nhttps://b/announce\n")), paths);
+		using TempDir temp = new TempDir();
+		AppPaths paths = new AppPaths(temp.Path, @"C:\tools");
+		TrackerListService service = Service(new FakeHandler((_, _) => Text("udp://a:1/announce\nhttps://b/announce\n")), paths);
 		Assert.True(service.IsStale(DateTime.UtcNow));
 
-		var list = await service.RefreshAsync("http://example/list.txt");
+		IReadOnlyList<string>? list = await service.RefreshAsync("http://example/list.txt");
 
 		Assert.Equal(["udp://a:1/announce", "https://b/announce"], list);
 		Assert.Equal(list, TrackerListService.ReadCache(paths));
@@ -100,10 +100,10 @@ public class TorrentConfigTests {
 
 	[Fact]
 	public async Task Cache_older_than_a_week_is_stale() {
-		using var temp = new TempDir();
-		var paths = new AppPaths(temp.Path, @"C:\tools");
+		using TempDir temp = new TempDir();
+		AppPaths paths = new AppPaths(temp.Path, @"C:\tools");
 		File.WriteAllText(paths.TrackerListFile, "udp://a:1/announce\n");
-		var service = Service(new FakeHandler((_, _) => Text("")), paths);
+		TrackerListService service = Service(new FakeHandler((_, _) => Text("")), paths);
 
 		File.SetLastWriteTimeUtc(paths.TrackerListFile, DateTime.UtcNow.AddDays(-6));
 		Assert.False(service.IsStale(DateTime.UtcNow));
@@ -117,10 +117,10 @@ public class TorrentConfigTests {
 	[InlineData(200, "nothing usable here\n")]
 	[InlineData(200, "")]
 	public async Task Failed_or_useless_refresh_keeps_the_old_cache(int status, string body) {
-		using var temp = new TempDir();
-		var paths = new AppPaths(temp.Path, @"C:\tools");
+		using TempDir temp = new TempDir();
+		AppPaths paths = new AppPaths(temp.Path, @"C:\tools");
 		File.WriteAllText(paths.TrackerListFile, "udp://old:1/announce\n");
-		var service = Service(new FakeHandler((_, _) => Text(body, (HttpStatusCode) status)), paths);
+		TrackerListService service = Service(new FakeHandler((_, _) => Text(body, (HttpStatusCode) status)), paths);
 
 		Assert.Null(await service.RefreshAsync("http://example/list.txt"));
 
@@ -129,18 +129,18 @@ public class TorrentConfigTests {
 
 	[Fact]
 	public async Task Network_error_is_reported_as_null_not_thrown() {
-		using var temp = new TempDir();
-		var service = Service(new FakeHandler((_, _) => throw new HttpRequestException("no network")), new AppPaths(temp.Path, @"C:\tools"));
+		using TempDir temp = new TempDir();
+		TrackerListService service = Service(new FakeHandler((_, _) => throw new HttpRequestException("no network")), new AppPaths(temp.Path, @"C:\tools"));
 
 		Assert.Null(await service.RefreshAsync("http://example/list.txt"));
 	}
 
 	[Fact]
 	public async Task Oversized_answer_is_ignored() {
-		using var temp = new TempDir();
-		var paths = new AppPaths(temp.Path, @"C:\tools");
-		var huge = string.Join("\n", Enumerable.Range(1, 40_000).Select(i => $"udp://tracker{i}.example.com:6969/announce"));
-		var service = Service(new FakeHandler((_, _) => Text(huge)), paths);
+		using TempDir temp = new TempDir();
+		AppPaths paths = new AppPaths(temp.Path, @"C:\tools");
+		string huge = string.Join("\n", Enumerable.Range(1, 40_000).Select(i => $"udp://tracker{i}.example.com:6969/announce"));
+		TrackerListService service = Service(new FakeHandler((_, _) => Text(huge)), paths);
 
 		Assert.Null(await service.RefreshAsync("http://example/list.txt"));
 		Assert.False(File.Exists(paths.TrackerListFile));
@@ -150,14 +150,14 @@ public class TorrentConfigTests {
 public class DiskSpaceTests {
 	[Fact]
 	public void Existing_folder_reports_free_space() {
-		using var temp = new TempDir();
+		using TempDir temp = new TempDir();
 
 		Assert.True(DiskSpace.FreeBytes(temp.Path) > 0);
 	}
 
 	[Fact]
 	public void Folder_that_does_not_exist_yet_is_measured_through_its_parent() {
-		using var temp = new TempDir();
+		using TempDir temp = new TempDir();
 
 		Assert.Equal(DiskSpace.FreeBytes(temp.Path) / 1_000_000, DiskSpace.FreeBytes(Path.Combine(temp.Path, "a", "b", "c")) / 1_000_000);
 	}
@@ -173,8 +173,8 @@ public class DiskSpaceTests {
 
 	[Fact]
 	public void Fits_blocks_only_when_the_space_is_known_to_be_too_small() {
-		using var temp = new TempDir();
-		var free = DiskSpace.FreeBytes(temp.Path)!.Value;
+		using TempDir temp = new TempDir();
+		long free = DiskSpace.FreeBytes(temp.Path)!.Value;
 
 		Assert.True(DiskSpace.Fits(0, temp.Path));
 		Assert.True(DiskSpace.Fits(1024, temp.Path));
@@ -187,16 +187,16 @@ public class DiskSpaceTests {
 public class TorrentConfigIntegrationTests {
 	[RequiresAria2Fact]
 	public async Task Started_engine_runs_with_the_bittorrent_options_and_the_cached_trackers() {
-		using var temp = new TempDir();
-		var paths = new AppPaths(Path.Combine(temp.Path, "data"), RequiresAria2Fact.FindAria2Dir()!);
+		using TempDir temp = new TempDir();
+		AppPaths paths = new AppPaths(Path.Combine(temp.Path, "data"), RequiresAria2Fact.FindAria2Dir()!);
 		paths.EnsureDirectories();
 		File.WriteAllLines(paths.TrackerListFile, ["udp://a.example:1/announce", "https://b.example/announce"]);
-		await using var engine = new Aria2Engine(paths, Path.Combine(temp.Path, "dl"), NullLogger<Aria2Engine>.Instance);
+		await using Aria2Engine engine = new Aria2Engine(paths, Path.Combine(temp.Path, "dl"), NullLogger<Aria2Engine>.Instance);
 
 		await engine.StartAsync();
 
 		Assert.Equal(EngineState.Running, engine.State);
-		var options = await engine.Rpc!.GetGlobalOptionAsync();
+		IReadOnlyDictionary<string, string> options = await engine.Rpc!.GetGlobalOptionAsync();
 		Assert.Equal("true", options["bt-save-metadata"]);
 		Assert.Equal("true", options["bt-load-saved-metadata"]);
 		Assert.Equal("true", options["bt-enable-lpd"]);

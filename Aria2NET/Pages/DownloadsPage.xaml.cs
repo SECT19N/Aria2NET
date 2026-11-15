@@ -9,6 +9,8 @@ using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Windows.ApplicationModel.DataTransfer;
+using Windows.Foundation;
+using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.System;
 using Windows.UI.Core;
@@ -83,11 +85,11 @@ public sealed partial class DownloadsPage : Page {
 
 	/// <summary>Shows the pane for the one selected download; hides it when none or several are selected, or when the user closed it.</summary>
 	private void UpdateDetailPane() {
-		var row = ViewModel.ShowDetails ? ViewModel.DetailRow : null;
+		DownloadRowViewModel? row = ViewModel.ShowDetails ? ViewModel.DetailRow : null;
 		if (!ReferenceEquals(row, DetailPane.Row)) {
 			DetailPane.Show(row, row is null ? null : ViewModel.CreateDetailViewModel(row));
 		}
-		var visibility = row is null ? Visibility.Collapsed : Visibility.Visible;
+		Visibility visibility = row is null ? Visibility.Collapsed : Visibility.Visible;
 		DetailPane.Visibility = visibility;
 		PaneSizer.Visibility = visibility;
 	}
@@ -150,7 +152,7 @@ public sealed partial class DownloadsPage : Page {
 
 	/// <summary>The row's buttons show under the pointer, on the selected rows and on the row with the keyboard focus; elsewhere they would only be noise.</summary>
 	private static void ShowActions(ListViewItem item) {
-		var visible = item.IsSelected || item.Tag is Hover { Over: true } || item.FocusState != FocusState.Unfocused;
+		bool visible = item.IsSelected || item.Tag is Hover { Over: true } || item.FocusState != FocusState.Unfocused;
 		if (item.ContentTemplateRoot is FrameworkElement root && root.FindName("RowActions") is UIElement actions) {
 			actions.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
 		}
@@ -203,15 +205,15 @@ public sealed partial class DownloadsPage : Page {
 	private bool _narrow;
 
 	private void UpdateNarrow() {
-		var width = ListArea.ActualWidth;
+		double width = ListArea.ActualWidth;
 		Toolbar.DefaultLabelPosition = width >= 900 ? CommandBarDefaultLabelPosition.Right : CommandBarDefaultLabelPosition.Collapsed;
-		var narrow = width > 0 && width < 860;
+		bool narrow = width > 0 && width < 860;
 		if (narrow == _narrow) {
 			return;
 		}
 		_narrow = narrow;
 		ApplyColumns(ColumnHeader);
-		for (var i = 0; i < DownloadList.Items.Count; i++) {
+		for (int i = 0; i < DownloadList.Items.Count; i++) {
 			if (DownloadList.ContainerFromIndex(i) is ListViewItem { ContentTemplateRoot: Grid row }) {
 				ApplyColumns(row);
 			}
@@ -224,7 +226,7 @@ public sealed partial class DownloadsPage : Page {
 		}
 		grid.ColumnDefinitions[3].Width = new GridLength(_narrow ? 0 : 100);
 		grid.ColumnDefinitions[4].Width = new GridLength(_narrow ? 0 : 80);
-		foreach (var child in grid.Children.OfType<FrameworkElement>()) {
+		foreach (FrameworkElement child in grid.Children.OfType<FrameworkElement>()) {
 			if (Grid.GetColumn(child) is 3 or 4) {
 				child.Visibility = _narrow ? Visibility.Collapsed : Visibility.Visible;
 			}
@@ -237,7 +239,7 @@ public sealed partial class DownloadsPage : Page {
 	// Moving a row (e.g. a paused download dropping below the active ones) makes ListView forget its selection; put it back.
 	private void OnSelectionRestoreNeeded(object? sender, IReadOnlyList<DownloadRowViewModel> rows) =>
 		DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => {
-			foreach (var row in rows) {
+			foreach (DownloadRowViewModel row in rows) {
 				if (ViewModel.Rows.Contains(row) && !DownloadList.SelectedItems.Contains(row)) {
 					DownloadList.SelectedItems.Add(row);
 				}
@@ -259,7 +261,7 @@ public sealed partial class DownloadsPage : Page {
 		if (ViewModel.TakePendingExternalText() is not { } text) {
 			return;
 		}
-		for (var i = 0; i < 75 && !ViewModel.IsEngineUp; i++) {
+		for (int i = 0; i < 75 && !ViewModel.IsEngineUp; i++) {
 			await Task.Delay(200);
 		}
 		// Another dialog (the first-run offer, a file picker) may be open; wait instead of losing the link.
@@ -271,12 +273,12 @@ public sealed partial class DownloadsPage : Page {
 
 	/// <summary>Once, after an upgrade or first start: offer to open torrent files and magnet links with the app.</summary>
 	private async Task OfferAssociationAsync() {
-		var association = App.Services.GetRequiredService<TorrentAssociation>();
+		TorrentAssociation association = App.Services.GetRequiredService<TorrentAssociation>();
 		if (!association.ShouldOffer) {
 			return;
 		}
 		association.MarkOffered();
-		var dialog = new ContentDialog {
+		ContentDialog dialog = new ContentDialog {
 			Title = Loc.S("Downloads_AssocTitle", "Open torrents with Aria2NET?"),
 			Content = Loc.S("Downloads_AssocBody", "Aria2NET can open .torrent files and magnet links when you click them. Windows will ask you to confirm Aria2NET as the default app. You can change this later in Settings."),
 			PrimaryButtonText = Loc.S("Downloads_AssocSetUp", "Set up"),
@@ -312,7 +314,7 @@ public sealed partial class DownloadsPage : Page {
 	}
 
 	private void Page_DragOver(object sender, DragEventArgs e) {
-		var view = e.DataView;
+		DataPackageView view = e.DataView;
 		if (ViewModel.IsEngineUp && (view.Contains(StandardDataFormats.StorageItems) || view.Contains(StandardDataFormats.Text))) {
 			e.AcceptedOperation = DataPackageOperation.Copy;
 			e.DragUIOverride.Caption = Loc.S("Downloads_DragCaption", "Add to Aria2NET");
@@ -321,7 +323,7 @@ public sealed partial class DownloadsPage : Page {
 
 	private async void Page_Drop(object sender, DragEventArgs e) {
 		string text;
-		var deferral = e.GetDeferral();
+		DragOperationDeferral deferral = e.GetDeferral();
 		try {
 			text = await LinksFromAsync(e.DataView);
 		} catch (Exception ex) when (ex is InvalidOperationException or System.Runtime.InteropServices.COMException) {
@@ -336,9 +338,9 @@ public sealed partial class DownloadsPage : Page {
 
 	/// <summary>Links in the text of a clipboard or drop, plus the paths of any .torrent/.metalink files in it, one per line.</summary>
 	private static async Task<string> LinksFromAsync(DataPackageView view) {
-		var lines = new List<string>();
+		List<string> lines = new List<string>();
 		if (view.Contains(StandardDataFormats.StorageItems)) {
-			foreach (var item in await view.GetStorageItemsAsync()) {
+			foreach (IStorageItem item in await view.GetStorageItemsAsync()) {
 				if (item is Windows.Storage.IStorageFile file && UrlParser.Classify(file.Path) is LinkKind.TorrentFile or LinkKind.MetalinkFile) {
 					lines.Add("\"" + file.Path + "\"");
 				}
@@ -351,8 +353,8 @@ public sealed partial class DownloadsPage : Page {
 	}
 
 	private static async Task<TorrentChoice> PromptTorrentAsync(TorrentPrompt prompt) {
-		var dialog = new TorrentFilesDialog(prompt);
-		var result = await ShowDialogWhenFreeAsync(dialog);
+		TorrentFilesDialog dialog = new TorrentFilesDialog(prompt);
+		ContentDialogResult result = await ShowDialogWhenFreeAsync(dialog);
 		return result == ContentDialogResult.Primary ? dialog.Choice : dialog.Choice with { Files = [] };
 	}
 
@@ -371,12 +373,12 @@ public sealed partial class DownloadsPage : Page {
 	}
 
 	private async Task ShowAddDialogAsync(string? prefill) {
-		var dialog = new AddDownloadDialog(ViewModel.InitialFolder(), prefill);
+		AddDownloadDialog dialog = new AddDownloadDialog(ViewModel.InitialFolder(), prefill);
 		if (await ShowDialogAsync(dialog) != ContentDialogResult.Primary) {
 			return;
 		}
-		var extra = dialog.Extra;
-		var error = await ViewModel.AddAsync(dialog.Urls, dialog.Folder, dialog.FileName, extra.ToOptions().Count == 0 ? null : extra);
+		AddOptions extra = dialog.Extra;
+		string? error = await ViewModel.AddAsync(dialog.Urls, dialog.Folder, dialog.FileName, extra.ToOptions().Count == 0 ? null : extra);
 		if (error is not null) {
 			await ShowDialogAsync(new ContentDialog { Title = Loc.S("Downloads_AddFailedTitle", "Some downloads could not be added"), Content = error, CloseButtonText = Loc.S("Common_OK", "OK") });
 		}
@@ -384,7 +386,7 @@ public sealed partial class DownloadsPage : Page {
 
 	/// <summary>"A file with this name already exists": keep both, replace it, or skip this download.</summary>
 	private async Task<ConflictChoice> PromptConflictAsync(string existingPath) {
-		var dialog = new ContentDialog {
+		ContentDialog dialog = new ContentDialog {
 			Title = Loc.S("Downloads_ConflictTitle", "File already exists"),
 			Content = Loc.F("Downloads_ConflictBody", "{0}\n\nKeep both files (the new one gets a number), or replace the existing file?", existingPath),
 			PrimaryButtonText = Loc.S("Downloads_KeepBoth", "Keep both"),
@@ -393,7 +395,7 @@ public sealed partial class DownloadsPage : Page {
 			DefaultButton = ContentDialogButton.Primary,
 		};
 		// Closing with Esc counts as Skip, so nothing is overwritten by accident.
-		var result = await ShowDialogAsync(dialog);
+		ContentDialogResult result = await ShowDialogAsync(dialog);
 		return result switch {
 			ContentDialogResult.Primary => ConflictChoice.Rename,
 			ContentDialogResult.Secondary => ConflictChoice.Overwrite,
@@ -419,7 +421,7 @@ public sealed partial class DownloadsPage : Page {
 
 	private void List_SelectionChanged(object sender, SelectionChangedEventArgs e) {
 		ViewModel.SetSelection(DownloadList.SelectedItems.OfType<DownloadRowViewModel>());
-		foreach (var changed in e.AddedItems.Concat(e.RemovedItems)) {
+		foreach (object changed in e.AddedItems.Concat(e.RemovedItems)) {
 			if (DownloadList.ContainerFromItem(changed) is ListViewItem container) {
 				ShowActions(container);
 			}
@@ -428,11 +430,11 @@ public sealed partial class DownloadsPage : Page {
 
 	private void List_ContextRequested(UIElement sender, ContextRequestedEventArgs args) {
 		args.Handled = true;
-		var menu = FlyoutBase.GetAttachedFlyout(DownloadList);
-		if (args.TryGetPosition(DownloadList, out var point)) {
+		FlyoutBase menu = FlyoutBase.GetAttachedFlyout(DownloadList);
+		if (args.TryGetPosition(DownloadList, out Point point)) {
 			// Right-clicking a row outside the selection selects just that row first.
-			var host = DownloadList.TransformToVisual(null).TransformPoint(point);
-			var hit = VisualTreeHelper.FindElementsInHostCoordinates(host, DownloadList)
+			Windows.Foundation.Point host = DownloadList.TransformToVisual(null).TransformPoint(point);
+			DownloadRowViewModel? hit = VisualTreeHelper.FindElementsInHostCoordinates(host, DownloadList)
 				.OfType<FrameworkElement>()
 				.Select(el => el.DataContext)
 				.OfType<DownloadRowViewModel>()
@@ -474,13 +476,13 @@ public sealed partial class DownloadsPage : Page {
 	}
 
 	private void Filter_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args) {
-		if (sender.SelectedItem?.Tag is string tag && Enum.TryParse<StatusFilter>(tag, out var filter)) {
+		if (sender.SelectedItem?.Tag is string tag && Enum.TryParse<StatusFilter>(tag, out StatusFilter filter)) {
 			ViewModel.SetFilter(filter);
 		}
 	}
 
 	private void Header_Click(object sender, RoutedEventArgs e) {
-		if (sender is Button { Tag: string tag } && Enum.TryParse<SortColumn>(tag, out var column)) {
+		if (sender is Button { Tag: string tag } && Enum.TryParse<SortColumn>(tag, out SortColumn column)) {
 			ViewModel.ToggleSort(column);
 		}
 	}
@@ -534,16 +536,16 @@ public sealed partial class DownloadsPage : Page {
 			return;
 		}
 		if (deleteFiles && ViewModel.ConfirmDeleteFiles) {
-			var count = ViewModel.SelectedCount;
-			var again = new CheckBox { Content = Loc.S("Downloads_DontAsk", "Don't ask me again") };
-			var body = new StackPanel { Spacing = 12 };
+			int count = ViewModel.SelectedCount;
+			CheckBox again = new CheckBox { Content = Loc.S("Downloads_DontAsk", "Don't ask me again") };
+			StackPanel body = new StackPanel { Spacing = 12 };
 			body.Children.Add(new TextBlock {
 				Text = (count == 1 ? Loc.S("Downloads_DeleteOne", "Remove this download and delete its file?") : Loc.F("Downloads_DeleteMany", "Remove these {0} downloads and delete their files?", count))
 					+ "\nFinished files go to the Recycle Bin. Partly downloaded files are deleted permanently.",
 				TextWrapping = TextWrapping.Wrap,
 			});
 			body.Children.Add(again);
-			var dialog = new ContentDialog {
+			ContentDialog dialog = new ContentDialog {
 				Title = Loc.S("Downloads_DeleteTitle", "Delete files?"),
 				Content = body,
 				PrimaryButtonText = Loc.S("Common_Delete", "Delete"),
@@ -566,7 +568,7 @@ public sealed partial class DownloadsPage : Page {
 		if (ViewModel.SingleSelected() is not { } item) {
 			return;
 		}
-		var dialog = new RenameDialog(item.Name);
+		RenameDialog dialog = new RenameDialog(item.Name);
 		if (await ShowDialogAsync(dialog) == ContentDialogResult.Primary) {
 			await ViewModel.RenameSelectedAsync(dialog.NewName);
 		}
@@ -575,7 +577,7 @@ public sealed partial class DownloadsPage : Page {
 	private async void Recheck_Click(object sender, RoutedEventArgs e) => await ViewModel.RecheckSelectedAsync();
 
 	private async void Seeding_Click(object sender, RoutedEventArgs e) {
-		var dialog = new SeedingDialog();
+		SeedingDialog dialog = new SeedingDialog();
 		if (await ShowDialogAsync(dialog) == ContentDialogResult.Primary) {
 			await ViewModel.SetSeedingSelectedAsync(dialog.Choice);
 		}
@@ -583,18 +585,18 @@ public sealed partial class DownloadsPage : Page {
 
 	private async void SpeedLimit_Click(object sender, RoutedEventArgs e) {
 		// Start from the limit already set on a single download.
-		var current = ViewModel.SelectedCount == 1 && await ViewModel.GetDetailsAsync() is { } details ? details.SpeedLimitBytesPerSec : 0;
-		var dialog = new SpeedLimitDialog(current);
+		long current = ViewModel.SelectedCount == 1 && await ViewModel.GetDetailsAsync() is { } details ? details.SpeedLimitBytesPerSec : 0;
+		SpeedLimitDialog dialog = new SpeedLimitDialog(current);
 		if (await ShowDialogAsync(dialog) == ContentDialogResult.Primary) {
 			await ViewModel.SetSpeedLimitSelectedAsync(dialog.BytesPerSecond);
 		}
 	}
 
 	private async void ChangeFolder_Click(object sender, RoutedEventArgs e) {
-		var picker = new FolderPicker();
+		FolderPicker picker = new FolderPicker();
 		picker.FileTypeFilter.Add("*");
 		InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(App.Window));
-		var folder = await picker.PickSingleFolderAsync();
+		StorageFolder folder = await picker.PickSingleFolderAsync();
 		if (folder is not null) {
 			await ViewModel.SetFolderSelectedAsync(folder.Path);
 		}
@@ -604,7 +606,7 @@ public sealed partial class DownloadsPage : Page {
 		if (await ViewModel.GetDetailsAsync() is not { } details) {
 			return;
 		}
-		var (added, finished) = ViewModel.Times(details.Item.Gid);
+		(DateTimeOffset? added, DateTimeOffset? finished) = ViewModel.Times(details.Item.Gid);
 		await ShowDialogAsync(new PropertiesDialog(details, added, finished));
 	}
 }

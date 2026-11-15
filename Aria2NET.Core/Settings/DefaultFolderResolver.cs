@@ -13,7 +13,7 @@ public static class DefaultFolderResolver {
 
 	/// <summary>The folder the Add dialog starts in: last used, then the default, then Downloads.</summary>
 	public static string ForAddDialog(AppSettings s) {
-		foreach (var candidate in new[] { s.LastUsedFolder, s.DefaultDownloadFolder }) {
+		foreach (string? candidate in new[] { s.LastUsedFolder, s.DefaultDownloadFolder }) {
 			if (!string.IsNullOrWhiteSpace(candidate)) {
 				return candidate;
 			}

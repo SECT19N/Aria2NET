@@ -37,7 +37,7 @@ public static class Aria2Errors {
 
 	/// <summary>Friendly text for <paramref name="code"/>; falls back to aria2's own message, then a generic text.</summary>
 	public static string Describe(int? code, string? rawMessage) {
-		if (code is { } c && Messages.TryGetValue(c, out var friendly)) {
+		if (code is { } c && Messages.TryGetValue(c, out string? friendly)) {
 			return friendly;
 		}
 		return string.IsNullOrWhiteSpace(rawMessage) ? "The download failed" : rawMessage;

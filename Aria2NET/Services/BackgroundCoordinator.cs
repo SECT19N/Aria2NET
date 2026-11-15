@@ -4,6 +4,7 @@ using Aria2NET.Core.Settings;
 using Aria2NET.Core.Shell;
 using Aria2NET.Core.Tray;
 using Microsoft.Extensions.Logging;
+using Microsoft.UI.Dispatching;
 using WinRT.Interop;
 
 namespace Aria2NET.Services;
@@ -32,7 +33,7 @@ internal sealed class BackgroundCoordinator(
 
 	/// <summary>Must be called on the UI thread once the main window exists.</summary>
 	public void Start(MainWindow window) {
-		var dispatcher = window.DispatcherQueue;
+		DispatcherQueue dispatcher = window.DispatcherQueue;
 		try {
 			_tray = new TrayIcon(WindowNative.GetWindowHandle(window), Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico"), _logger);
 			_tray.OpenRequested += window.BringToFront;
@@ -71,8 +72,8 @@ internal sealed class BackgroundCoordinator(
 		if (!settings.Load().HotkeysEnabled) {
 			return true;
 		}
-		var toggle = _tray.RegisterHotkey(HotkeyToggleWindow, ModControl | ModAlt, 0x41 /* A */);
-		var add = _tray.RegisterHotkey(HotkeyAddDownload, ModControl | ModAlt, 0x4E /* N */);
+		bool toggle = _tray.RegisterHotkey(HotkeyToggleWindow, ModControl | ModAlt, 0x41 /* A */);
+		bool add = _tray.RegisterHotkey(HotkeyAddDownload, ModControl | ModAlt, 0x4E /* N */);
 		if (!toggle || !add) {
 			_logger.LogWarning("A global hotkey is already taken by another program (show/hide: {Toggle}, add: {Add})", toggle, add);
 		}
@@ -105,7 +106,7 @@ internal sealed class BackgroundCoordinator(
 	}
 
 	private void Refresh() {
-		var status = TrayStatus.From(_latest, engine.State);
+		TrayStatus status = TrayStatus.From(_latest, engine.State);
 		_tray?.Update(status.State, status.Tooltip);
 	}
 
@@ -118,10 +119,10 @@ internal sealed class BackgroundCoordinator(
 	}
 
 	private void OpenDownloadFolder() {
-		var s = settings.Load();
-		var folder = new[] { s.LastUsedFolder, s.DefaultDownloadFolder }.FirstOrDefault(f => !string.IsNullOrWhiteSpace(f))
+		AppSettings s = settings.Load();
+		string folder = new[] { s.LastUsedFolder, s.DefaultDownloadFolder }.FirstOrDefault(f => !string.IsNullOrWhiteSpace(f))
 			?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-		if (!ShellLauncher.TryOpenFolder(folder, null, out var error)) {
+		if (!ShellLauncher.TryOpenFolder(folder, null, out string error)) {
 			_logger.LogWarning("Could not open {Folder}: {Error}", folder, error);
 		}
 	}

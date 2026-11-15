@@ -39,16 +39,16 @@ public sealed class DiskRetryPlanner {
 			return false;
 		}
 		lock (_gate) {
-			return !_tries.TryGetValue(item.Gid, out var t) || t.Made < Delays.Count;
+			return !_tries.TryGetValue(item.Gid, out Tries? t) || t.Made < Delays.Count;
 		}
 	}
 
 	/// <summary>Looks at a poll and returns the failed downloads whose waiting time is over. Each is returned once until <see cref="Started"/> or <see cref="Failed"/>.</summary>
 	public IReadOnlyList<DownloadItem> Due(PollSnapshot snapshot, DateTimeOffset now) {
-		var due = new List<DownloadItem>();
+		List<DownloadItem> due = new List<DownloadItem>();
 		lock (_gate) {
-			foreach (var item in snapshot.Items.Where(IsDiskError)) {
-				if (!_tries.TryGetValue(item.Gid, out var t)) {
+			foreach (DownloadItem? item in snapshot.Items.Where(IsDiskError)) {
+				if (!_tries.TryGetValue(item.Gid, out Tries? t)) {
 					t = _tries[item.Gid] = new Tries(0, now);
 				}
 				if (t.Running || t.Made >= Delays.Count) {
@@ -60,8 +60,8 @@ public sealed class DiskRetryPlanner {
 					due.Add(item);
 				}
 			}
-			var present = snapshot.Items.Select(i => i.Gid).ToHashSet(StringComparer.Ordinal);
-			foreach (var gone in _tries.Where(p => now - p.Value.Since > Forget && !p.Value.Running && !present.Contains(p.Key)).Select(p => p.Key).ToList()) {
+			HashSet<string> present = snapshot.Items.Select(i => i.Gid).ToHashSet(StringComparer.Ordinal);
+			foreach (string? gone in _tries.Where(p => now - p.Value.Since > Forget && !p.Value.Running && !present.Contains(p.Key)).Select(p => p.Key).ToList()) {
 				_tries.Remove(gone); // finished or removed long ago
 			}
 		}
@@ -71,7 +71,7 @@ public sealed class DiskRetryPlanner {
 	/// <summary>The attempt for <paramref name="oldGid"/> started a new download; remember how many tries it took.</summary>
 	public void Started(string oldGid, string newGid, DateTimeOffset now) {
 		lock (_gate) {
-			var made = _tries.TryGetValue(oldGid, out var t) ? t.Made + 1 : 1;
+			int made = _tries.TryGetValue(oldGid, out Tries? t) ? t.Made + 1 : 1;
 			_tries.Remove(oldGid);
 			_tries[newGid] = new Tries(made, now);
 		}
@@ -80,7 +80,7 @@ public sealed class DiskRetryPlanner {
 	/// <summary>The attempt could not even be made (disk still asleep, engine busy): count it and wait for the next delay.</summary>
 	public void Failed(string gid) {
 		lock (_gate) {
-			if (_tries.TryGetValue(gid, out var t)) {
+			if (_tries.TryGetValue(gid, out Tries? t)) {
 				t.Made++;
 				t.Due = null;
 				t.Running = false;
@@ -91,7 +91,7 @@ public sealed class DiskRetryPlanner {
 	/// <summary>The attempt was dropped without counting (the setting was switched off, or the download is gone).</summary>
 	public void Release(string gid) {
 		lock (_gate) {
-			if (_tries.TryGetValue(gid, out var t)) {
+			if (_tries.TryGetValue(gid, out Tries? t)) {
 				t.Running = false;
 			}
 		}
@@ -104,7 +104,7 @@ public static class DiskWake {
 	public static bool TryTouch(string dir) {
 		try {
 			Directory.CreateDirectory(dir);
-			var probe = Path.Combine(dir, ".aria2net-" + Guid.NewGuid().ToString("N"));
+			string probe = Path.Combine(dir, ".aria2net-" + Guid.NewGuid().ToString("N"));
 			using (new FileStream(probe, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1, FileOptions.DeleteOnClose)) {
 			}
 			return true;
@@ -119,8 +119,8 @@ public static class DiskWake {
 			return true;
 		}
 		touch ??= TryTouch;
-		var wait = pause ?? TimeSpan.FromSeconds(3);
-		var deadline = DateTime.UtcNow + timeout;
+		TimeSpan wait = pause ?? TimeSpan.FromSeconds(3);
+		DateTime deadline = DateTime.UtcNow + timeout;
 		while (true) {
 			if (await Task.Run(() => touch(dir), ct)) {
 				return true;
@@ -156,7 +156,7 @@ public sealed class DiskRetryService(DownloadMonitor monitor, DownloadOperations
 		if (!settings.Load().RetryWhenDiskNotReady) {
 			return;
 		}
-		foreach (var item in _planner.Due(snapshot, _clock.GetUtcNow())) {
+		foreach (DownloadItem item in _planner.Due(snapshot, _clock.GetUtcNow())) {
 			_ = RetryAsync(item);
 		}
 	}
@@ -168,7 +168,7 @@ public sealed class DiskRetryService(DownloadMonitor monitor, DownloadOperations
 				_planner.Failed(item.Gid);
 				return;
 			}
-			var gid = await operations.RetryAsync(item);
+			string gid = await operations.RetryAsync(item);
 			_planner.Started(item.Gid, gid, _clock.GetUtcNow());
 			logger.LogInformation("{Name} failed because its disk was not ready; started it again", item.Name);
 		} catch (Exception ex) when (ex is InvalidOperationException or HttpRequestException or Aria2.Aria2RpcException or IOException) {

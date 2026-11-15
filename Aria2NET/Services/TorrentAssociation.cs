@@ -17,7 +17,7 @@ public sealed class TorrentAssociation(SettingsStore<AppSettings> settings, ILog
 
 	public void MarkOffered() {
 		try {
-			var s = settings.Load();
+			AppSettings s = settings.Load();
 			s.TorrentAssociationPrompted = true;
 			settings.Save(s);
 		} catch (IOException ex) {
@@ -28,7 +28,7 @@ public sealed class TorrentAssociation(SettingsStore<AppSettings> settings, ILog
 	/// <summary>Registers the app. Windows still asks the user to pick it as the default, so this returns whether that has happened already.</summary>
 	public bool Enable() {
 		_registration?.Register();
-		var state = State;
+		ShellRegistrationState state = State;
 		logger.LogInformation("Registered for torrent files and magnet links (default for .torrent: {Torrent}, magnet: {Magnet})", state.DefaultForTorrent, state.DefaultForMagnet);
 		return state.DefaultForTorrent && state.DefaultForMagnet;
 	}

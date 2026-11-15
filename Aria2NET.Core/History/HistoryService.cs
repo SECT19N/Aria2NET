@@ -17,7 +17,7 @@ public sealed class HistoryService {
 
 	public HistoryService(AppPaths paths, ILogger logger) {
 		try {
-			var database = new Database(paths.DatabaseFile, paths.BackupsDir, logger);
+			Database database = new Database(paths.DatabaseFile, paths.BackupsDir, logger);
 			OpenResult = database.EnsureReady();
 			if (OpenResult.Status == DatabaseStatus.TooNew) {
 				Problem = "The history file was written by a newer version of Aria2NET, so history is switched off. It was left untouched.";

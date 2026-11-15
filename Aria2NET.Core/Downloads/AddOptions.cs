@@ -35,7 +35,7 @@ public sealed partial record AddOptions(
 
 	/// <summary>The header lines to send: the ones typed, then the cookie as a <c>Cookie</c> header.</summary>
 	public IReadOnlyList<string> HeaderLines() {
-		var lines = (Headers ?? []).Select(h => h.Trim()).Where(h => h.Length > 0).ToList();
+		List<string> lines = (Headers ?? []).Select(h => h.Trim()).Where(h => h.Length > 0).ToList();
 		if (!string.IsNullOrWhiteSpace(Cookie)) {
 			lines.Add("Cookie: " + Cookie.Trim());
 		}
@@ -44,21 +44,21 @@ public sealed partial record AddOptions(
 
 	/// <summary>Null when everything is usable; otherwise a short reason. Control characters are refused everywhere: these values end up in a protocol, and a newline could start another header.</summary>
 	public string? Validate() {
-		foreach (var line in (Headers ?? []).Select(h => h.Trim()).Where(h => h.Length > 0)) {
+		foreach (string? line in (Headers ?? []).Select(h => h.Trim()).Where(h => h.Length > 0)) {
 			if (HasControl(line) || !HeaderLine().IsMatch(line)) {
 				return $"A header must look like \"Name: value\" ({Shorten(line)}).";
 			}
 		}
 		if (!string.IsNullOrWhiteSpace(Referer)) {
-			var referer = Referer.Trim();
-			if (referer != "*" && (HasControl(referer) || !Uri.TryCreate(referer, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https"))) {
+			string referer = Referer.Trim();
+			if (referer != "*" && (HasControl(referer) || !Uri.TryCreate(referer, UriKind.Absolute, out Uri? uri) || uri.Scheme is not ("http" or "https"))) {
 				return "The referer must be a full http:// or https:// address.";
 			}
 		}
 		if (!string.IsNullOrWhiteSpace(Cookie) && HasControl(Cookie)) {
 			return "The cookie contains characters that are not allowed.";
 		}
-		foreach (var text in new[] { HttpUser, HttpPassword, FtpUser, FtpPassword }) {
+		foreach (string? text in new[] { HttpUser, HttpPassword, FtpUser, FtpPassword }) {
 			if (text is not null && HasControl(text)) {
 				return "A user name or password contains characters that are not allowed.";
 			}
@@ -77,8 +77,8 @@ public sealed partial record AddOptions(
 
 	/// <summary>aria2 per-download options. The <c>header</c> value holds one header per line; the RPC client turns it into the array aria2 expects.</summary>
 	public IReadOnlyDictionary<string, string> ToOptions() {
-		var options = new Dictionary<string, string>();
-		var headers = HeaderLines();
+		Dictionary<string, string> options = new Dictionary<string, string>();
+		IReadOnlyList<string> headers = HeaderLines();
 		if (headers.Count > 0) {
 			options["header"] = string.Join('\n', headers);
 		}

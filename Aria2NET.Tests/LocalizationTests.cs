@@ -14,7 +14,7 @@ public partial class LocalizationTests {
 	private static readonly string AppDir = FindAppDir();
 
 	private static string FindAppDir() {
-		var dir = new DirectoryInfo(AppContext.BaseDirectory);
+		DirectoryInfo? dir = new DirectoryInfo(AppContext.BaseDirectory);
 		while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "Aria2NET.slnx"))) {
 			dir = dir.Parent;
 		}
@@ -23,8 +23,8 @@ public partial class LocalizationTests {
 	}
 
 	private static Dictionary<string, string> Resw() {
-		var doc = XDocument.Load(Path.Combine(AppDir, "Strings", "en-US", "Resources.resw"));
-		var names = doc.Root!.Elements("data").Select(d => (string) d.Attribute("name")!).ToList();
+		XDocument doc = XDocument.Load(Path.Combine(AppDir, "Strings", "en-US", "Resources.resw"));
+		List<string> names = doc.Root!.Elements("data").Select(d => (string) d.Attribute("name")!).ToList();
 		Assert.Equal(names.Count, names.Distinct(StringComparer.Ordinal).Count()); // no key twice
 		return doc.Root.Elements("data").ToDictionary(d => (string) d.Attribute("name")!, d => d.Element("value")!.Value);
 	}
@@ -43,8 +43,8 @@ public partial class LocalizationTests {
 	private static partial Regex LocCall();
 
 	private static string Unescape(string text) {
-		var sb = new StringBuilder();
-		for (var i = 0; i < text.Length; i++) {
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < text.Length; i++) {
 			if (text[i] != '\\' || i + 1 >= text.Length) {
 				sb.Append(text[i]);
 				continue;
@@ -57,11 +57,11 @@ public partial class LocalizationTests {
 
 	/// <summary>Every x:Uid in the XAML with its literal attributes (the English defaults).</summary>
 	private static List<(string File, string Uid, Dictionary<string, string> Attributes)> XamlUids() {
-		var found = new List<(string, string, Dictionary<string, string>)>();
-		foreach (var file in Files("*.xaml")) {
+		List<(string, string, Dictionary<string, string>)> found = new List<(string, string, Dictionary<string, string>)>();
+		foreach (string file in Files("*.xaml")) {
 			foreach (Match tag in XamlTag().Matches(File.ReadAllText(file))) {
-				var attrs = Attr().Matches(tag.Groups["attrs"].Value).ToDictionary(m => m.Groups["key"].Value, m => WebUtility.HtmlDecode(m.Groups["val"].Value));
-				if (attrs.TryGetValue("x:Uid", out var uid)) {
+				Dictionary<string, string> attrs = Attr().Matches(tag.Groups["attrs"].Value).ToDictionary(m => m.Groups["key"].Value, m => WebUtility.HtmlDecode(m.Groups["val"].Value));
+				if (attrs.TryGetValue("x:Uid", out string? uid)) {
 					found.Add((Path.GetFileName(file), uid, attrs));
 				}
 			}
@@ -71,17 +71,17 @@ public partial class LocalizationTests {
 
 	[Fact]
 	public void Every_xaml_uid_has_resource_entries_and_every_entry_belongs_to_a_uid() {
-		var resw = Resw();
-		var uids = XamlUids();
+		Dictionary<string, string> resw = Resw();
+		List<(string File, string Uid, Dictionary<string, string> Attributes)> uids = XamlUids();
 		Assert.NotEmpty(uids);
 
 		Assert.Equal(uids.Count, uids.Select(u => u.Uid).Distinct().Count()); // an x:Uid used twice would share one set of strings
-		foreach (var (file, uid, _) in uids) {
+		foreach ((string? file, string? uid, Dictionary<string, string> _) in uids) {
 			Assert.True(resw.Keys.Any(k => k.StartsWith(uid + ".", StringComparison.Ordinal)), $"{file}: x:Uid \"{uid}\" has no entry in Resources.resw");
 		}
 
-		var known = uids.Select(u => u.Uid).ToHashSet(StringComparer.Ordinal);
-		foreach (var key in resw.Keys.Where(k => k.Contains('.'))) {
+		HashSet<string> known = uids.Select(u => u.Uid).ToHashSet(StringComparer.Ordinal);
+		foreach (string? key in resw.Keys.Where(k => k.Contains('.'))) {
 			Assert.True(known.Contains(key[..key.IndexOf('.')]), $"Resources.resw entry \"{key}\" matches no x:Uid in any XAML file");
 		}
 	}
@@ -89,19 +89,19 @@ public partial class LocalizationTests {
 	[Fact]
 	public void No_xaml_uid_sits_on_a_window_because_it_is_not_a_dependency_object() {
 		// A Window cannot take resource properties: loading the XAML fails with "Failed to assign to property 'Window.Title'".
-		foreach (var file in Files("*.xaml")) {
+		foreach (string file in Files("*.xaml")) {
 			Assert.DoesNotMatch(@"<Window\b[^>]*x:Uid", File.ReadAllText(file));
 		}
 	}
 
 	[Fact]
 	public void Xaml_defaults_equal_the_resource_text() {
-		var resw = Resw();
-		foreach (var (file, uid, attrs) in XamlUids()) {
-			foreach (var (key, text) in resw.Where(r => r.Key.StartsWith(uid + ".", StringComparison.Ordinal))) {
-				var property = key[(uid.Length + 1)..];
-				var attribute = property.StartsWith("[using:", StringComparison.Ordinal) ? property[(property.IndexOf(']') + 1)..] : property;
-				Assert.True(attrs.TryGetValue(attribute, out var literal), $"{file}: {key} has no {attribute} attribute to fall back on");
+		Dictionary<string, string> resw = Resw();
+		foreach ((string? file, string? uid, Dictionary<string, string>? attrs) in XamlUids()) {
+			foreach ((string? key, string? text) in resw.Where(r => r.Key.StartsWith(uid + ".", StringComparison.Ordinal))) {
+				string property = key[(uid.Length + 1)..];
+				string attribute = property.StartsWith("[using:", StringComparison.Ordinal) ? property[(property.IndexOf(']') + 1)..] : property;
+				Assert.True(attrs.TryGetValue(attribute, out string? literal), $"{file}: {key} has no {attribute} attribute to fall back on");
 				Assert.True(literal == text, $"{file}: {key} differs from the XAML text (\"{literal}\" vs \"{text}\")");
 			}
 		}
@@ -109,14 +109,14 @@ public partial class LocalizationTests {
 
 	[Fact]
 	public void Every_loc_call_has_a_matching_resource_entry() {
-		var resw = Resw();
-		var calls = 0;
-		foreach (var file in Files("*.cs").Where(f => Path.GetFileName(f) != "Loc.cs")) {
+		Dictionary<string, string> resw = Resw();
+		int calls = 0;
+		foreach (string? file in Files("*.cs").Where(f => Path.GetFileName(f) != "Loc.cs")) {
 			foreach (Match call in LocCall().Matches(File.ReadAllText(file))) {
 				calls++;
-				var key = call.Groups["key"].Value;
-				var english = Unescape(call.Groups["text"].Value);
-				Assert.True(resw.TryGetValue(key, out var stored), $"{Path.GetFileName(file)}: Loc key \"{key}\" is not in Resources.resw (run the sync script)");
+				string key = call.Groups["key"].Value;
+				string english = Unescape(call.Groups["text"].Value);
+				Assert.True(resw.TryGetValue(key, out string? stored), $"{Path.GetFileName(file)}: Loc key \"{key}\" is not in Resources.resw (run the sync script)");
 				Assert.True(stored == english, $"{Path.GetFileName(file)}: Loc key \"{key}\" has different English in code (\"{english}\") and in Resources.resw (\"{stored}\")");
 			}
 		}
@@ -125,15 +125,15 @@ public partial class LocalizationTests {
 
 	[Fact]
 	public void Format_strings_only_use_placeholders_the_call_supplies() {
-		foreach (var file in Files("*.cs").Where(f => Path.GetFileName(f) != "Loc.cs")) {
-			var text = File.ReadAllText(file);
+		foreach (string? file in Files("*.cs").Where(f => Path.GetFileName(f) != "Loc.cs")) {
+			string text = File.ReadAllText(file);
 			foreach (Match call in Regex.Matches(text, @"Loc\.F\(\s*""[A-Za-z0-9_]+""\s*,\s*""(?<text>(?:[^""\\]|\\.)*)""(?<rest>[^;]*)")) {
-				var highest = Regex.Matches(call.Groups["text"].Value, @"\{(\d+)[:}]").Select(m => int.Parse(m.Groups[1].Value)).DefaultIfEmpty(-1).Max();
+				int highest = Regex.Matches(call.Groups["text"].Value, @"\{(\d+)[:}]").Select(m => int.Parse(m.Groups[1].Value)).DefaultIfEmpty(-1).Max();
 				// Count the arguments after the English text at the call's own nesting depth.
-				var args = 0;
-				var depth = 0;
-				var inString = false;
-				foreach (var c in call.Groups["rest"].Value) {
+				int args = 0;
+				int depth = 0;
+				bool inString = false;
+				foreach (char c in call.Groups["rest"].Value) {
 					if (c == '"') { inString = !inString; } else if (inString) { continue; } else if (c is '(' or '[' or '{') { depth++; } else if (c is ')' or ']' or '}') {
 						if (depth == 0) { break; }
 						depth--;
@@ -147,7 +147,7 @@ public partial class LocalizationTests {
 	[Fact]
 	public void The_resource_file_sits_where_the_winui_build_looks_for_it_and_nothing_removes_it() {
 		Assert.True(File.Exists(Path.Combine(AppDir, "Strings", "en-US", "Resources.resw")));
-		var csproj = File.ReadAllText(Path.Combine(AppDir, "Aria2NET.csproj"));
+		string csproj = File.ReadAllText(Path.Combine(AppDir, "Aria2NET.csproj"));
 		Assert.DoesNotContain("resw", csproj, StringComparison.OrdinalIgnoreCase); // the default item globs pick it up; no custom item should exclude it
 	}
 }

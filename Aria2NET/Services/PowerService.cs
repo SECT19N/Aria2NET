@@ -3,6 +3,7 @@ using Aria2NET.Core.Background;
 using Aria2NET.Core.Downloads;
 using Aria2NET.Core.Settings;
 using Microsoft.Extensions.Logging;
+using Microsoft.UI.Dispatching;
 using Windows.Networking.Connectivity;
 using Windows.System.Power;
 using WinRT.Interop;
@@ -29,7 +30,7 @@ internal sealed class PowerService(
 
 	/// <summary>Call on the UI thread once the main window exists. SetThreadExecutionState belongs to the calling thread, so all work stays on it.</summary>
 	public void Start(MainWindow window) {
-		var dispatcher = window.DispatcherQueue;
+		DispatcherQueue dispatcher = window.DispatcherQueue;
 		_taskbar = new TaskbarProgressBar(WindowNative.GetWindowHandle(window));
 		WatchPower();
 		monitor.SnapshotReady += (_, snapshot) => dispatcher.TryEnqueue(() => Update(snapshot));
@@ -42,8 +43,8 @@ internal sealed class PowerService(
 			_settingsRead = DateTime.UtcNow;
 		}
 
-		var downloading = snapshot.Items.Any(i => i.Status == DownloadStatus.Active);
-		var wantAwake = _settings.PreventSleep && downloading;
+		bool downloading = snapshot.Items.Any(i => i.Status == DownloadStatus.Active);
+		bool wantAwake = _settings.PreventSleep && downloading;
 		if (wantAwake != _blockingSleep) {
 			_blockingSleep = wantAwake;
 			SetThreadExecutionState(EsContinuous | (wantAwake ? EsSystemRequired : 0));
@@ -51,8 +52,8 @@ internal sealed class PowerService(
 
 		_taskbar?.Apply(TaskbarProgress.From(snapshot));
 
-		var shouldPause = (_settings.PauseOnBattery && _onBattery) || (_settings.PauseOnMetered && _metered);
-		var decision = _autoPause.Evaluate(shouldPause, snapshot);
+		bool shouldPause = (_settings.PauseOnBattery && _onBattery) || (_settings.PauseOnMetered && _metered);
+		AutoPauseDecision decision = _autoPause.Evaluate(shouldPause, snapshot);
 		if (decision.Action != AutoPauseAction.None) {
 			_ = ApplyAsync(decision);
 		}
@@ -94,7 +95,7 @@ internal sealed class PowerService(
 
 	private static bool ReadMetered() {
 		try {
-			var cost = NetworkInformation.GetInternetConnectionProfile()?.GetConnectionCost();
+			ConnectionCost? cost = NetworkInformation.GetInternetConnectionProfile()?.GetConnectionCost();
 			return cost?.NetworkCostType is NetworkCostType.Fixed or NetworkCostType.Variable;
 		} catch (Exception ex) when (ex is COMException or InvalidOperationException) {
 			return false;

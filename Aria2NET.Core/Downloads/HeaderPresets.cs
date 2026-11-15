@@ -35,8 +35,8 @@ public sealed class HeaderPresets(SettingsStore<HeaderPresetFile> store) {
 		if (name.Length == 0 || name.Length > MaxNameLength || name.Any(char.IsControl)) {
 			return $"Give the preset a name of up to {MaxNameLength} characters.";
 		}
-		var lines = headers.Select(h => h.Trim()).Where(h => h.Length > 0).ToList();
-		var check = new AddOptions(lines, referer, cookie).Validate();
+		List<string> lines = headers.Select(h => h.Trim()).Where(h => h.Length > 0).ToList();
+		string? check = new AddOptions(lines, referer, cookie).Validate();
 		if (check is not null) {
 			return check;
 		}
@@ -44,7 +44,7 @@ public sealed class HeaderPresets(SettingsStore<HeaderPresetFile> store) {
 			return "There is nothing to save: add a header, a referer or a cookie first.";
 		}
 		try {
-			var file = store.Load();
+			HeaderPresetFile file = store.Load();
 			file.Presets.RemoveAll(p => string.Equals(p.Name, name, StringComparison.CurrentCultureIgnoreCase));
 			if (file.Presets.Count >= MaxPresets) {
 				return $"You can keep up to {MaxPresets} presets; delete one first.";
@@ -64,7 +64,7 @@ public sealed class HeaderPresets(SettingsStore<HeaderPresetFile> store) {
 
 	public void Delete(string name) {
 		try {
-			var file = store.Load();
+			HeaderPresetFile file = store.Load();
 			if (file.Presets.RemoveAll(p => string.Equals(p.Name, name, StringComparison.CurrentCultureIgnoreCase)) > 0) {
 				store.Save(file);
 			}

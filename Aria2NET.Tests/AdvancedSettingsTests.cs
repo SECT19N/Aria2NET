@@ -47,7 +47,7 @@ public class RawOptionRulesTests {
 
 	[Fact]
 	public void Text_is_parsed_line_by_line_with_comments_and_the_line_number_in_errors() {
-		var (options, error) = RawOptionRules.Parse("# tweaks\r\nbt-max-peers = 80\r\n\r\nlowest-speed-limit=20K");
+		(Dictionary<string, string>? options, string? error) = RawOptionRules.Parse("# tweaks\r\nbt-max-peers = 80\r\n\r\nlowest-speed-limit=20K");
 		Assert.Null(error);
 		Assert.Equal("80", options["bt-max-peers"]);
 		Assert.Equal("20K", options["lowest-speed-limit"]);
@@ -58,15 +58,15 @@ public class RawOptionRulesTests {
 
 	[Fact]
 	public void The_text_form_round_trips() {
-		var options = new Dictionary<string, string> { ["b-opt"] = "2", ["a-opt"] = "1" };
+		Dictionary<string, string> options = new Dictionary<string, string> { ["b-opt"] = "2", ["a-opt"] = "1" };
 		Assert.Equal("a-opt=1\r\nb-opt=2", RawOptionRules.ToText(options));
 		Assert.Equal(options, RawOptionRules.Parse(RawOptionRules.ToText(options)).Options);
 	}
 
 	[Fact]
 	public void Raw_options_override_the_settings_but_forbidden_ones_in_a_hand_edited_file_are_dropped() {
-		var s = new AppSettings { Split = 5, RawOptions = new() { ["split"] = "16", ["on-download-complete"] = "calc.exe", ["rpc-secret"] = "x" } };
-		var all = EngineOptions.ToGlobalOptions(s);
+		AppSettings s = new AppSettings { Split = 5, RawOptions = new() { ["split"] = "16", ["on-download-complete"] = "calc.exe", ["rpc-secret"] = "x" } };
+		IReadOnlyDictionary<string, string> all = EngineOptions.ToGlobalOptions(s);
 		Assert.Equal("16", all["split"]);
 		Assert.DoesNotContain("on-download-complete", all.Keys);
 		Assert.DoesNotContain("rpc-secret", all.Keys);
@@ -86,9 +86,9 @@ public class LogLevelTests {
 
 	[Fact]
 	public void The_file_logger_level_can_change_while_running() {
-		using var temp = new TempDir();
-		using var provider = new FileLoggerProvider(temp.Path, LogLevel.Warning);
-		var logger = provider.CreateLogger("t");
+		using TempDir temp = new TempDir();
+		using FileLoggerProvider provider = new FileLoggerProvider(temp.Path, LogLevel.Warning);
+		ILogger logger = provider.CreateLogger("t");
 		Assert.False(logger.IsEnabled(LogLevel.Information));
 
 		provider.MinLevel = LogLevel.Debug;
@@ -111,24 +111,24 @@ public class SettingsTransferTests {
 
 	[Fact]
 	public void Export_leaves_out_machine_state_and_secrets() {
-		var s = Machine();
+		AppSettings s = Machine();
 		s.Theme = AppTheme.Dark;
 		s.ProxyUser = "bob";
-		var json = SettingsTransfer.Export(s);
+		string json = SettingsTransfer.Export(s);
 
 		Assert.DoesNotContain("D:\\\\here", json);
 		Assert.DoesNotContain(s.ProxyPasswordProtected!, json);
-		using var doc = JsonDocument.Parse(json);
+		using JsonDocument doc = JsonDocument.Parse(json);
 		Assert.Equal("bob", doc.RootElement.GetProperty("ProxyUser").GetString());
 		Assert.Equal(JsonValueKind.Null, doc.RootElement.GetProperty("Window").ValueKind);
 	}
 
 	[Fact]
 	public void Import_round_trips_preferences_and_keeps_this_pcs_machine_state() {
-		var source = new AppSettings { Theme = AppTheme.Light, Split = 9, SeedRatio = 2.5, RawOptions = new() { ["bt-max-peers"] = "80" }, Conflict = ConflictPolicy.Ask };
-		var current = Machine();
+		AppSettings source = new AppSettings { Theme = AppTheme.Light, Split = 9, SeedRatio = 2.5, RawOptions = new() { ["bt-max-peers"] = "80" }, Conflict = ConflictPolicy.Ask };
+		AppSettings current = Machine();
 
-		var (imported, error) = SettingsTransfer.Import(SettingsTransfer.Export(source), current);
+		(AppSettings? imported, string? error) = SettingsTransfer.Import(SettingsTransfer.Export(source), current);
 
 		Assert.Null(error);
 		Assert.Equal(AppTheme.Light, imported!.Theme);
@@ -142,7 +142,7 @@ public class SettingsTransferTests {
 
 	[Fact]
 	public void Out_of_range_numbers_are_brought_into_range() {
-		var (imported, error) = SettingsTransfer.Import("""{ "SchemaVersion": 1, "MaxConcurrentDownloads": 9999, "Split": -3, "TimeoutSeconds": 0, "SeedRatio": 1e9 }""", new AppSettings());
+		(AppSettings? imported, string? error) = SettingsTransfer.Import("""{ "SchemaVersion": 1, "MaxConcurrentDownloads": 9999, "Split": -3, "TimeoutSeconds": 0, "SeedRatio": 1e9 }""", new AppSettings());
 		Assert.Null(error);
 		Assert.Equal(50, imported!.MaxConcurrentDownloads);
 		Assert.Equal(1, imported.Split);
@@ -162,26 +162,26 @@ public class SettingsTransferTests {
 	[InlineData("""{ "SchemaVersion": 1, "DefaultDownloadFolder": "C:\\x\ndir=D:\\y" }""")]
 	[InlineData("""{ "SchemaVersion": 1, "ListenPortStart": 80 }""")]
 	public void Harmful_or_unknown_files_are_refused_whole(string json) {
-		var (imported, error) = SettingsTransfer.Import(json, new AppSettings());
+		(AppSettings? imported, string? error) = SettingsTransfer.Import(json, new AppSettings());
 		Assert.Null(imported);
 		Assert.False(string.IsNullOrEmpty(error));
 	}
 
 	[Fact]
 	public void An_oversized_file_is_refused() {
-		var (imported, error) = SettingsTransfer.Import(new string(' ', SettingsTransfer.MaxImportBytes + 1), new AppSettings());
+		(AppSettings? imported, string? error) = SettingsTransfer.Import(new string(' ', SettingsTransfer.MaxImportBytes + 1), new AppSettings());
 		Assert.Null(imported);
 		Assert.NotNull(error);
 	}
 
 	[Fact]
 	public void Reset_all_restores_defaults_but_keeps_machine_state_and_drops_the_proxy_password() {
-		var current = Machine();
+		AppSettings current = Machine();
 		current.Theme = AppTheme.Dark;
 		current.Split = 12;
 		current.RawOptions["bt-max-peers"] = "80";
 
-		var fresh = SettingsTransfer.ResetAll(current);
+		AppSettings fresh = SettingsTransfer.ResetAll(current);
 
 		Assert.Equal(AppTheme.System, fresh.Theme);
 		Assert.Equal(5, fresh.Split);
@@ -196,9 +196,9 @@ public class SettingsTransferTests {
 public class ConfInjectionTests {
 	[Fact]
 	public void A_control_character_never_reaches_the_conf_file() {
-		var paths = new AppPaths(@"C:\data", @"C:\tools");
-		var options = new Dictionary<string, string> { ["user-agent"] = "ok\nrpc-secret=stolen", ["split"] = "4" };
-		var text = new Aria2Config(6800, "abc", 42, @"C:\dl", null, options).Render(paths);
+		AppPaths paths = new AppPaths(@"C:\data", @"C:\tools");
+		Dictionary<string, string> options = new Dictionary<string, string> { ["user-agent"] = "ok\nrpc-secret=stolen", ["split"] = "4" };
+		string text = new Aria2Config(6800, "abc", 42, @"C:\dl", null, options).Render(paths);
 		Assert.DoesNotContain("stolen", text);
 		Assert.Contains("split=4", text);
 		Assert.Single(text.Split('\n'), l => l.StartsWith("rpc-secret=", StringComparison.Ordinal));
@@ -215,16 +215,16 @@ public class ConfInjectionTests {
 public class AdvancedSettingsIntegrationTests {
 	[RequiresAria2Fact]
 	public async Task Raw_options_and_log_level_apply_and_a_refused_option_does_not_stop_the_rest() {
-		var (engine, temp) = await DownloadIntegrationTests.StartEngineAsync();
-		using var _ = temp;
-		await using var __ = engine;
-		var store = new SettingsStore<AppSettings>(Path.Combine(temp.Path, "settings.json"), AppSettingsJsonContext.Default.AppSettings);
-		var applier = new SettingsApplier(engine, store, new DownloadOperations(engine, NullLogger<DownloadOperations>.Instance), NullLogger<SettingsApplier>.Instance);
+		(Aria2Engine? engine, TempDir? temp) = await DownloadIntegrationTests.StartEngineAsync();
+		using TempDir _ = temp;
+		await using Aria2Engine __ = engine;
+		SettingsStore<AppSettings> store = new SettingsStore<AppSettings>(Path.Combine(temp.Path, "settings.json"), AppSettingsJsonContext.Default.AppSettings);
+		SettingsApplier applier = new SettingsApplier(engine, store, new DownloadOperations(engine, NullLogger<DownloadOperations>.Instance), NullLogger<SettingsApplier>.Instance);
 
-		var s = new AppSettings { LogLevel = AppLogLevel.Debug, Split = 7, RawOptions = new() { ["bt-max-peers"] = "81", ["max-tries"] = "not-a-number", ["lowest-speed-limit"] = "20K" } };
-		var all = await applier.ApplyAsync(s);
+		AppSettings s = new AppSettings { LogLevel = AppLogLevel.Debug, Split = 7, RawOptions = new() { ["bt-max-peers"] = "81", ["max-tries"] = "not-a-number", ["lowest-speed-limit"] = "20K" } };
+		bool all = await applier.ApplyAsync(s);
 
-		var g = await engine.Rpc!.GetGlobalOptionAsync();
+		IReadOnlyDictionary<string, string> g = await engine.Rpc!.GetGlobalOptionAsync();
 		Assert.False(all); // aria2 refused the unparsable value (it silently accepts names it does not know) ...
 		Assert.Equal("debug", g["log-level"]); // ... but everything else went through
 		Assert.Equal("7", g["split"]);
@@ -234,27 +234,27 @@ public class AdvancedSettingsIntegrationTests {
 
 	[RequiresAria2Fact]
 	public async Task Raw_options_are_part_of_the_conf_at_launch() {
-		using var temp = new TempDir();
-		var paths = new AppPaths(Path.Combine(temp.Path, "data"), RequiresAria2Fact.FindAria2Dir()!);
-		var settings = new AppSettings { RawOptions = new() { ["bt-max-peers"] = "66" }, LogLevel = AppLogLevel.Warning };
-		await using var engine = new Aria2Engine(paths, Path.Combine(temp.Path, "dl"), NullLogger<Aria2Engine>.Instance, () => settings);
+		using TempDir temp = new TempDir();
+		AppPaths paths = new AppPaths(Path.Combine(temp.Path, "data"), RequiresAria2Fact.FindAria2Dir()!);
+		AppSettings settings = new AppSettings { RawOptions = new() { ["bt-max-peers"] = "66" }, LogLevel = AppLogLevel.Warning };
+		await using Aria2Engine engine = new Aria2Engine(paths, Path.Combine(temp.Path, "dl"), NullLogger<Aria2Engine>.Instance, () => settings);
 		await engine.StartAsync();
 
-		var g = await engine.Rpc!.GetGlobalOptionAsync();
+		IReadOnlyDictionary<string, string> g = await engine.Rpc!.GetGlobalOptionAsync();
 		Assert.Equal("66", g["bt-max-peers"]);
 		Assert.Equal("warn", g["log-level"]);
 	}
 
 	[RequiresAria2Fact]
 	public async Task Name_clash_options_are_accepted_per_download_and_globally() {
-		var (engine, temp) = await DownloadIntegrationTests.StartEngineAsync();
-		using var _ = temp;
-		await using var __ = engine;
-		var store = new SettingsStore<AppSettings>(Path.Combine(temp.Path, "settings.json"), AppSettingsJsonContext.Default.AppSettings);
-		var applier = new SettingsApplier(engine, store, new DownloadOperations(engine, NullLogger<DownloadOperations>.Instance), NullLogger<SettingsApplier>.Instance);
+		(Aria2Engine? engine, TempDir? temp) = await DownloadIntegrationTests.StartEngineAsync();
+		using TempDir _ = temp;
+		await using Aria2Engine __ = engine;
+		SettingsStore<AppSettings> store = new SettingsStore<AppSettings>(Path.Combine(temp.Path, "settings.json"), AppSettingsJsonContext.Default.AppSettings);
+		SettingsApplier applier = new SettingsApplier(engine, store, new DownloadOperations(engine, NullLogger<DownloadOperations>.Instance), NullLogger<SettingsApplier>.Instance);
 
 		Assert.True(await applier.ApplyAsync(new AppSettings { Conflict = ConflictPolicy.Overwrite }));
-		var g = await engine.Rpc!.GetGlobalOptionAsync();
+		IReadOnlyDictionary<string, string> g = await engine.Rpc!.GetGlobalOptionAsync();
 		Assert.Equal("true", g["allow-overwrite"]);
 		Assert.Equal("false", g["auto-file-renaming"]);
 	}

@@ -11,7 +11,7 @@ public static class SecretProtector {
 		if (plain.Length == 0) {
 			return "";
 		}
-		var bytes = Encoding.UTF8.GetBytes(plain);
+		byte[] bytes = Encoding.UTF8.GetBytes(plain);
 		return OperatingSystem.IsWindows()
 			? Convert.ToBase64String(ProtectedData.Protect(bytes, Entropy, DataProtectionScope.CurrentUser))
 			: "plain:" + Convert.ToBase64String(bytes); // no DPAPI here; only reached outside Windows

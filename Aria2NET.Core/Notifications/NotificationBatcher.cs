@@ -13,7 +13,7 @@ public sealed class NotificationBatcher(TimeSpan window) {
 	private DateTimeOffset _first;
 
 	public void Add(IEnumerable<DownloadNotification> events, DateTimeOffset now) {
-		foreach (var e in events) {
+		foreach (DownloadNotification e in events) {
 			if (_pending.Count == 0) {
 				_first = now;
 			}
@@ -26,9 +26,9 @@ public sealed class NotificationBatcher(TimeSpan window) {
 		if (_pending.Count == 0 || now - _first < window) {
 			return [];
 		}
-		var toasts = new List<ToastContent>();
-		foreach (var kind in Enum.GetValues<NotificationKind>()) {
-			var items = _pending.Where(p => p.Kind == kind).Select(p => p.Item).ToList();
+		List<ToastContent> toasts = new List<ToastContent>();
+		foreach (NotificationKind kind in Enum.GetValues<NotificationKind>()) {
+			List<DownloadItem> items = _pending.Where(p => p.Kind == kind).Select(p => p.Item).ToList();
 			if (items.Count > 0) {
 				toasts.Add(Describe(kind, items));
 			}
@@ -39,15 +39,15 @@ public sealed class NotificationBatcher(TimeSpan window) {
 
 	private static ToastContent Describe(NotificationKind kind, List<DownloadItem> items) {
 		if (items.Count == 1) {
-			var item = items[0];
+			DownloadItem item = items[0];
 			return kind switch {
 				NotificationKind.Failed => new ToastContent(kind, "Download failed", string.IsNullOrWhiteSpace(item.ErrorMessage) ? item.Name : $"{item.Name}\n{item.ErrorMessage}", item),
 				NotificationKind.TorrentFinished => new ToastContent(kind, "Torrent finished", item.Name, item),
 				_ => new ToastContent(kind, "Download complete", item.Name, item),
 			};
 		}
-		var names = string.Join(", ", items.Take(NamesShown).Select(i => i.Name)) + (items.Count > NamesShown ? $" and {items.Count - NamesShown} more" : "");
-		var title = kind switch {
+		string names = string.Join(", ", items.Take(NamesShown).Select(i => i.Name)) + (items.Count > NamesShown ? $" and {items.Count - NamesShown} more" : "");
+		string title = kind switch {
 			NotificationKind.Failed => $"{items.Count} downloads failed",
 			NotificationKind.TorrentFinished => $"{items.Count} torrents finished",
 			_ => $"{items.Count} downloads completed",

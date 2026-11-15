@@ -37,7 +37,7 @@ public sealed class DownloadMonitor(IAria2Engine engine, ILogger<DownloadMonitor
 	}
 
 	private async Task RunAsync(CancellationToken ct) {
-		using var timer = new PeriodicTimer(_interval);
+		using PeriodicTimer timer = new PeriodicTimer(_interval);
 		do {
 			await PollOnceAsync(ct);
 		} while (await WaitAsync(timer, ct));
@@ -52,12 +52,12 @@ public sealed class DownloadMonitor(IAria2Engine engine, ILogger<DownloadMonitor
 	}
 
 	internal async Task PollOnceAsync(CancellationToken ct) {
-		var rpc = engine.State == EngineState.Running ? engine.Rpc : null;
+		Aria2RpcClient? rpc = engine.State == EngineState.Running ? engine.Rpc : null;
 		if (rpc is null) {
 			return;
 		}
 		try {
-			var snapshot = await rpc.PollAsync(ct);
+			PollSnapshot snapshot = await rpc.PollAsync(ct);
 			_lastTickFailed = false;
 			SnapshotReady?.Invoke(this, snapshot);
 		} catch (OperationCanceledException) when (ct.IsCancellationRequested) {

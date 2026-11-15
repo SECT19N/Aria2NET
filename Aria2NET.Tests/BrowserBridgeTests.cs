@@ -1,6 +1,7 @@
 using System.Runtime.Versioning;
 using System.Text;
 using System.Text.Json;
+using Aria2NET.Core.Downloads;
 using Aria2NET.Core.Shell;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Win32;
@@ -10,15 +11,15 @@ namespace Aria2NET.Tests;
 public class BrowserBridgeMessageTests {
 	[Fact]
 	public void Reads_a_download_with_everything_the_extension_sends() {
-		var (message, error) = BrowserBridge.Parse("""{"type":"download","url":"https://example.com/a.zip","filename":"a.zip","referrer":"https://example.com/page","cookies":"sid=1; theme=dark","userAgent":"Mozilla/5.0"}""");
+		(BrowserMessage? message, string? error) = BrowserBridge.Parse("""{"type":"download","url":"https://example.com/a.zip","filename":"a.zip","referrer":"https://example.com/page","cookies":"sid=1; theme=dark","userAgent":"Mozilla/5.0"}""");
 
 		Assert.Null(error);
-		var request = message!.Download!;
+		BrowserDownloadRequest request = message!.Download!;
 		Assert.Equal("https://example.com/a.zip", request.Url);
 		Assert.Equal("a.zip", request.FileName);
-		var options = request.ToAddOptions();
+		AddOptions options = request.ToAddOptions();
 		Assert.Null(options.Validate());
-		var aria2 = options.ToOptions();
+		IReadOnlyDictionary<string, string> aria2 = options.ToOptions();
 		Assert.Equal("https://example.com/page", aria2["referer"]);
 		Assert.Equal("Cookie: sid=1; theme=dark", aria2["header"]);
 		Assert.Equal("Mozilla/5.0", aria2["user-agent"]);
@@ -26,7 +27,7 @@ public class BrowserBridgeMessageTests {
 
 	[Fact]
 	public void A_ping_carries_no_download() {
-		var (message, error) = BrowserBridge.Parse("""{"type":"ping"}""");
+		(BrowserMessage? message, string? error) = BrowserBridge.Parse("""{"type":"ping"}""");
 
 		Assert.Null(error);
 		Assert.True(message!.IsPing);
@@ -43,7 +44,7 @@ public class BrowserBridgeMessageTests {
 	[InlineData("""{"type":"download","url":"example.com/a.zip"}""")]
 	[InlineData("""{"type":"download","url":"https://example.com/a\nb"}""")]
 	public void Refuses_what_it_should_not_act_on(string json) {
-		var (message, error) = BrowserBridge.Parse(json);
+		(BrowserMessage? message, string? error) = BrowserBridge.Parse(json);
 
 		Assert.Null(message);
 		Assert.False(string.IsNullOrEmpty(error));
@@ -57,16 +58,16 @@ public class BrowserBridgeMessageTests {
 	[InlineData("..", null)]
 	[InlineData("   ", null)]
 	public void Keeps_only_a_bare_file_name(string given, string? expected) {
-		var (message, _) = BrowserBridge.Parse($$"""{"type":"download","url":"https://example.com/x","filename":"{{given}}"}""");
+		(BrowserMessage? message, string? _) = BrowserBridge.Parse($$"""{"type":"download","url":"https://example.com/x","filename":"{{given}}"}""");
 
 		Assert.Equal(expected, message!.Download!.FileName);
 	}
 
 	[Fact]
 	public void Drops_header_values_that_could_smuggle_another_header() {
-		var (message, _) = BrowserBridge.Parse("""{"type":"download","url":"https://example.com/x","referrer":"ftp://example.com/","cookies":"a=1\r\nX-Evil: 1","userAgent":"UA\nX-Evil: 1"}""");
+		(BrowserMessage? message, string? _) = BrowserBridge.Parse("""{"type":"download","url":"https://example.com/x","referrer":"ftp://example.com/","cookies":"a=1\r\nX-Evil: 1","userAgent":"UA\nX-Evil: 1"}""");
 
-		var request = message!.Download!;
+		BrowserDownloadRequest request = message!.Download!;
 		Assert.Null(request.Referrer);
 		Assert.Null(request.Cookies);
 		Assert.Null(request.UserAgent);
@@ -74,14 +75,14 @@ public class BrowserBridgeMessageTests {
 
 	[Fact]
 	public void Refuses_a_message_over_the_size_limit() {
-		var json = $$"""{"type":"download","url":"https://example.com/x","cookies":"{{new string('a', BrowserBridge.MaxMessageBytes)}}"}""";
+		string json = $$"""{"type":"download","url":"https://example.com/x","cookies":"{{new string('a', BrowserBridge.MaxMessageBytes)}}"}""";
 
 		Assert.Null(BrowserBridge.Parse(json).Message);
 	}
 
 	[Fact]
 	public void Never_prints_the_cookies() {
-		var text = new BrowserDownloadRequest("https://example.com/x", Cookies: "secret=1").ToString();
+		string text = new BrowserDownloadRequest("https://example.com/x", Cookies: "secret=1").ToString();
 
 		Assert.DoesNotContain("secret", text);
 	}
@@ -89,7 +90,7 @@ public class BrowserBridgeMessageTests {
 	[Fact]
 	public void The_reply_says_ok_or_why_not() {
 		Assert.True(JsonDocument.Parse(BrowserBridge.Reply(true)).RootElement.GetProperty("ok").GetBoolean());
-		var failed = JsonDocument.Parse(BrowserBridge.Reply(false, "no \"luck\"")).RootElement;
+		JsonElement failed = JsonDocument.Parse(BrowserBridge.Reply(false, "no \"luck\"")).RootElement;
 		Assert.False(failed.GetProperty("ok").GetBoolean());
 		Assert.Equal("no \"luck\"", failed.GetProperty("error").GetString());
 	}
@@ -106,7 +107,7 @@ public class BrowserBridgeMessageTests {
 public class BrowserBridgeFrameTests {
 	[Fact]
 	public async Task A_frame_survives_the_round_trip() {
-		using var stream = new MemoryStream();
+		using MemoryStream stream = new MemoryStream();
 		await BrowserBridge.WriteFrameAsync(stream, """{"type":"ping","note":"žluťoučký"}""");
 		stream.Position = 0;
 
@@ -117,10 +118,10 @@ public class BrowserBridgeFrameTests {
 
 	[Fact]
 	public async Task Refuses_an_oversized_or_cut_off_frame() {
-		var huge = new MemoryStream(BitConverter.GetBytes((uint) BrowserBridge.MaxMessageBytes + 1));
+		MemoryStream huge = new MemoryStream(BitConverter.GetBytes((uint) BrowserBridge.MaxMessageBytes + 1));
 		await Assert.ThrowsAsync<InvalidDataException>(() => BrowserBridge.ReadFrameAsync(huge));
 
-		var cut = new MemoryStream([.. BitConverter.GetBytes(10u), (byte) '{']);
+		MemoryStream cut = new MemoryStream([.. BitConverter.GetBytes(10u), (byte) '{']);
 		await Assert.ThrowsAsync<InvalidDataException>(() => BrowserBridge.ReadFrameAsync(cut));
 	}
 }
@@ -130,17 +131,17 @@ public class BrowserBridgeServerTests {
 
 	[Fact]
 	public async Task The_app_answers_what_the_host_passes_on() {
-		var pipe = NewPipe();
-		var seen = new List<BrowserMessage>();
-		var server = new BrowserBridgeServer(m => {
+		string pipe = NewPipe();
+		List<BrowserMessage> seen = new List<BrowserMessage>();
+		BrowserBridgeServer server = new BrowserBridgeServer(m => {
 			seen.Add(m);
 			return Task.FromResult<string?>(m.Download?.Url.EndsWith("bad") == true ? "No room." : null);
 		}, NullLogger.Instance, pipe);
 		server.Start();
 		try {
-			var good = await BrowserBridge.SendToAppAsync("""{"type":"download","url":"https://example.com/good"}""", TimeSpan.FromSeconds(10), pipe);
-			var bad = await BrowserBridge.SendToAppAsync("""{"type":"download","url":"https://example.com/bad"}""", TimeSpan.FromSeconds(10), pipe);
-			var refused = await BrowserBridge.SendToAppAsync("""{"type":"download","url":"file:///C:/x"}""", TimeSpan.FromSeconds(10), pipe);
+			string? good = await BrowserBridge.SendToAppAsync("""{"type":"download","url":"https://example.com/good"}""", TimeSpan.FromSeconds(10), pipe);
+			string? bad = await BrowserBridge.SendToAppAsync("""{"type":"download","url":"https://example.com/bad"}""", TimeSpan.FromSeconds(10), pipe);
+			string? refused = await BrowserBridge.SendToAppAsync("""{"type":"download","url":"file:///C:/x"}""", TimeSpan.FromSeconds(10), pipe);
 
 			Assert.True(JsonDocument.Parse(good!).RootElement.GetProperty("ok").GetBoolean());
 			Assert.Equal("No room.", JsonDocument.Parse(bad!).RootElement.GetProperty("error").GetString());
@@ -177,19 +178,19 @@ public sealed class NativeMessagingRegistrationTests : IDisposable {
 
 	[Fact]
 	public void Registers_a_manifest_for_chrome_and_edge() {
-		var registration = Create();
+		NativeMessagingRegistration registration = Create();
 		Assert.False(registration.IsRegistered());
 
 		registration.Register();
 
 		Assert.True(registration.IsRegistered());
-		var manifest = JsonDocument.Parse(File.ReadAllText(registration.ManifestPath)).RootElement;
+		JsonElement manifest = JsonDocument.Parse(File.ReadAllText(registration.ManifestPath)).RootElement;
 		Assert.Equal(BrowserBridge.HostName, manifest.GetProperty("name").GetString());
 		Assert.Equal(@"C:\Apps\Aria2NET\Aria2NET.exe", manifest.GetProperty("path").GetString());
 		Assert.Equal("stdio", manifest.GetProperty("type").GetString());
 		Assert.Equal([.. BrowserBridge.AllowedOrigins], manifest.GetProperty("allowed_origins").EnumerateArray().Select(o => o.GetString()!).ToArray());
-		foreach (var browser in new[] { @"Google\Chrome", @"Microsoft\Edge" }) {
-			using var key = _software.OpenSubKey($@"{browser}\NativeMessagingHosts\{BrowserBridge.HostName}");
+		foreach (string? browser in new[] { @"Google\Chrome", @"Microsoft\Edge" }) {
+			using RegistryKey? key = _software.OpenSubKey($@"{browser}\NativeMessagingHosts\{BrowserBridge.HostName}");
 			Assert.Equal(registration.ManifestPath, key!.GetValue(null));
 		}
 	}
@@ -197,7 +198,7 @@ public sealed class NativeMessagingRegistrationTests : IDisposable {
 	[Fact]
 	public void Notices_when_the_app_has_moved_and_repairs_it() {
 		Create().Register();
-		var moved = Create(@"D:\Elsewhere\Aria2NET.exe");
+		NativeMessagingRegistration moved = Create(@"D:\Elsewhere\Aria2NET.exe");
 
 		Assert.False(moved.IsRegistered());
 		moved.Register();
@@ -207,7 +208,7 @@ public sealed class NativeMessagingRegistrationTests : IDisposable {
 
 	[Fact]
 	public void Unregister_removes_everything_and_can_be_repeated() {
-		var registration = Create();
+		NativeMessagingRegistration registration = Create();
 		registration.Register();
 
 		registration.Unregister();

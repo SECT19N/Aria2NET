@@ -19,8 +19,8 @@ public static class InstanceRules {
 		if (string.IsNullOrWhiteSpace(text)) {
 			return null;
 		}
-		var core = text.Trim().Split('+', '-')[0];
-		if (!Version.TryParse(core, out var version) || version.Major < 0 || version.Minor < 0) {
+		string core = text.Trim().Split('+', '-')[0];
+		if (!Version.TryParse(core, out Version? version) || version.Major < 0 || version.Minor < 0) {
 			return null;
 		}
 		return new Version(version.Major, version.Minor, Math.Max(version.Build, 0));

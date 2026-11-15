@@ -100,7 +100,7 @@ public sealed partial class MainWindow : Window {
 
 	public async Task ShowErrorAsync(string title, string message) {
 		BringToFrontIfHidden(); // a dialog on a hidden window would wait there unseen
-		var dialog = new ContentDialog {
+		ContentDialog dialog = new ContentDialog {
 			Title = title,
 			Content = message + Loc.S("Main_ErrorDetails", "\n\nDetails were written to the log file."),
 			CloseButtonText = Loc.S("Common_OK", "OK"),
@@ -112,7 +112,7 @@ public sealed partial class MainWindow : Window {
 	/// <summary>Asks a yes/no question. Returns false when the user cancels or another dialog is already open.</summary>
 	public async Task<bool> ConfirmAsync(string title, string message, string confirmText) {
 		BringToFrontIfHidden();
-		var dialog = new ContentDialog {
+		ContentDialog dialog = new ContentDialog {
 			Title = title,
 			Content = message,
 			PrimaryButtonText = confirmText,
@@ -134,7 +134,7 @@ public sealed partial class MainWindow : Window {
 	}
 
 	private void Nav_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args) {
-		var page = args.IsSettingsSelected
+		Type? page = args.IsSettingsSelected
 			? typeof(SettingsPage)
 			: (args.SelectedItemContainer?.Tag as string) switch {
 				"downloads" => typeof(DownloadsPage),
@@ -142,7 +142,7 @@ public sealed partial class MainWindow : Window {
 				"about" => typeof(AboutPage),
 				_ => null,
 			};
-		var parameter = _navParameter;
+		object? parameter = _navParameter;
 		_navParameter = null;
 		if (page is not null && (parameter is not null || ContentFrame.CurrentSourcePageType != page)) {
 			ContentFrame.Navigate(page, parameter, new SuppressNavigationTransitionInfo());
@@ -164,8 +164,8 @@ public sealed partial class MainWindow : Window {
 		if (args.Reason != AutoSuggestionBoxTextChangeReason.UserInput) {
 			return;
 		}
-		var version = ++_searchVersion;
-		var text = sender.Text;
+		int version = ++_searchVersion;
+		string text = sender.Text;
 		IReadOnlyList<SearchResult> results;
 		try {
 			results = await App.Services.GetRequiredService<GlobalSearch>().FindAsync(text);
@@ -181,7 +181,7 @@ public sealed partial class MainWindow : Window {
 
 	private void GlobalSearch_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args) {
 		// Enter without picking a suggestion opens the first one.
-		var result = args.ChosenSuggestion as SearchResult ?? (sender.ItemsSource as IReadOnlyList<SearchResult>)?.FirstOrDefault();
+		SearchResult? result = args.ChosenSuggestion as SearchResult ?? (sender.ItemsSource as IReadOnlyList<SearchResult>)?.FirstOrDefault();
 		if (result?.Target is not { } target) {
 			return;
 		}
@@ -243,11 +243,11 @@ public sealed partial class MainWindow : Window {
 		try {
 			_savedFit = null;
 			// Indexed on purpose: LINQ over this WinRT list fails to marshal (InvalidCastException).
-			var areas = DisplayArea.FindAll();
-			var displays = new List<ScreenRect>();
-			for (var i = 0; i < areas.Count; i++) {
-				var rect = areas[i].WorkArea;
-				var screen = new ScreenRect(rect.X, rect.Y, rect.Width, rect.Height);
+			IReadOnlyList<DisplayArea> areas = DisplayArea.FindAll();
+			List<ScreenRect> displays = new List<ScreenRect>();
+			for (int i = 0; i < areas.Count; i++) {
+				RectInt32 rect = areas[i].WorkArea;
+				ScreenRect screen = new ScreenRect(rect.X, rect.Y, rect.Width, rect.Height);
 				if (areas[i].IsPrimary) {
 					displays.Insert(0, screen);
 				} else {
@@ -305,9 +305,9 @@ public sealed partial class MainWindow : Window {
 
 	private void SavePlacement() {
 		try {
-			var placement = _lastRestored ?? CurrentPlacement();
+			WindowPlacement placement = _lastRestored ?? CurrentPlacement();
 			placement.Maximized = AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Maximized };
-			var settings = _settings.Load();
+			AppSettings settings = _settings.Load();
 			settings.Window = placement;
 			_settings.Save(settings);
 		} catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
@@ -344,16 +344,16 @@ public sealed partial class MainWindow : Window {
 			return;
 		}
 		args.Cancel = true;
-		var settings = _settings.Load();
+		AppSettings settings = _settings.Load();
 		// Only hide when the tray icon is really there; otherwise the user would have no way back.
 		if (!_exitRequested && settings.CloseToTray && _background.TrayAvailable) {
 			SavePlacement();
 			AppWindow.Hide();
 			return;
 		}
-		if (settings.ConfirmExitWithActive && !_skipExitConfirm && _background.ActiveDownloads is > 0 and var running) {
+		if (settings.ConfirmExitWithActive && !_skipExitConfirm && _background.ActiveDownloads is > 0 and int running) {
 			BringToFront();
-			var message = running == 1
+			string message = running == 1
 				? Loc.S("Main_ExitOne", "A download is still running. Exiting stops it; it continues the next time you open Aria2NET.")
 				: Loc.F("Main_ExitMany", "{0} downloads are still running. Exiting stops them; they continue the next time you open Aria2NET.", running);
 			if (!await ConfirmAsync(Loc.S("Main_ExitTitle", "Exit Aria2NET?"), message, Loc.S("Main_ExitConfirm", "Exit"))) {

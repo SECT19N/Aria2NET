@@ -99,9 +99,9 @@ public sealed partial class DownloadRowViewModel : ObservableObject {
 	}
 
 	private void Describe(DownloadItem item) {
-		var now = DateTimeOffset.Now;
-		var done = item.Status is DownloadStatus.Complete or DownloadStatus.Seeding;
-		var when = done && _finished is { } f ? Loc.F("Row_Finished", "Finished {0}", RowText.When(f, now))
+		DateTimeOffset now = DateTimeOffset.Now;
+		bool done = item.Status is DownloadStatus.Complete or DownloadStatus.Seeding;
+		string when = done && _finished is { } f ? Loc.F("Row_Finished", "Finished {0}", RowText.When(f, now))
 			: _added is { } a ? Loc.F("Row_Added", "Added {0}", RowText.When(a, now))
 			: "";
 		SubText = string.Join(" · ", new[] { RowText.ShortenPath(item.Dir), when }.Where(s => s.Length > 0));
@@ -116,7 +116,7 @@ public sealed partial class DownloadRowViewModel : ObservableObject {
 		};
 		HasPrimary = PrimaryGlyph.Length > 0;
 
-		var lines = new List<string> { item.Name };
+		List<string> lines = new List<string> { item.Name };
 		if (!string.IsNullOrEmpty(item.Path) && !(item.IsTorrent && item.FileCount > 1)) {
 			lines.Add(Loc.F("Row_TipLocation", "Location: {0}", item.Path));
 		} else if (!string.IsNullOrEmpty(item.Dir)) {
@@ -171,7 +171,7 @@ public sealed partial class DownloadRowViewModel : ObservableObject {
 		SizeText = item.TotalBytes > 0
 			? item.Status is DownloadStatus.Complete or DownloadStatus.Seeding ? ByteFormat.Size(item.TotalBytes) : $"{ByteFormat.Size(item.CompletedBytes)} / {ByteFormat.Size(item.TotalBytes)}"
 			: item.CompletedBytes > 0 ? ByteFormat.Size(item.CompletedBytes) : "—";
-		var active = item.Status == DownloadStatus.Active;
+		bool active = item.Status == DownloadStatus.Active;
 		SpeedText = active ? ByteFormat.Speed(item.SpeedBytesPerSec) : item.Status == DownloadStatus.Seeding ? "↑ " + ByteFormat.Speed(item.UploadSpeedBytesPerSec) : "";
 		EtaText = active ? TimeFormat.Eta(item.Eta) : "";
 		StatusText = item.Status switch {
@@ -191,7 +191,7 @@ public sealed partial class DownloadRowViewModel : ObservableObject {
 	}
 
 	private static string ErrorTip(DownloadItem item) {
-		var friendly = Aria2Errors.Describe(item.ErrorCode, item.ErrorMessage);
+		string friendly = Aria2Errors.Describe(item.ErrorCode, item.ErrorMessage);
 		return !string.IsNullOrWhiteSpace(item.ErrorMessage) && !string.Equals(friendly, item.ErrorMessage, StringComparison.Ordinal)
 			? $"{friendly}\n({item.ErrorMessage})"
 			: friendly;

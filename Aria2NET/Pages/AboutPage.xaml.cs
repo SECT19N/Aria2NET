@@ -18,8 +18,8 @@ public sealed partial class AboutPage : Page {
 
 	/// <summary>Shows a text file that ships next to the exe in a scrolling dialog.</summary>
 	private async Task ShowFileAsync(string title, string fileName) {
-		var text = AboutViewModel.ReadShippedText(fileName);
-		var dialog = new ContentDialog {
+		string text = AboutViewModel.ReadShippedText(fileName);
+		ContentDialog dialog = new ContentDialog {
 			Title = title,
 			Content = new ScrollViewer {
 				MaxHeight = 420,

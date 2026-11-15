@@ -152,9 +152,9 @@ public sealed partial class DownloadDetailViewModel : ObservableObject {
 		}
 		_busy = true;
 		try {
-			var geo = await Geo.Value;
+			GeoIpResolver geo = await Geo.Value;
 			HasGeoIp = geo.RangeCount > 0;
-			var snapshot = await TorrentDetailLoader.LoadAsync(rpc, Gid, geo);
+			TorrentDetailSnapshot snapshot = await TorrentDetailLoader.LoadAsync(rpc, Gid, geo);
 			if (!_stopped) {
 				Apply(snapshot);
 				Problem = "";
@@ -203,17 +203,17 @@ public sealed partial class DownloadDetailViewModel : ObservableObject {
 
 	/// <summary>Rebuilds the file rows only when the set of files changes; otherwise just moves their numbers.</summary>
 	private void ApplyFiles(TorrentDetailSnapshot s) {
-		var names = s.Files.Select(f => RelativeName(f.Path, s.Directory)).ToList();
+		List<string> names = s.Files.Select(f => RelativeName(f.Path, s.Directory)).ToList();
 		if (!Files.Select(f => f.Path).SequenceEqual(names)) {
 			Files.Clear();
-			for (var i = 0; i < names.Count; i++) {
+			for (int i = 0; i < names.Count; i++) {
 				Files.Add(new DetailFileRow(s.Files[i].Index, names[i], s.Files[i].Path));
 			}
 		}
-		for (var i = 0; i < s.Files.Count; i++) {
-			var file = s.Files[i];
-			var percent = file.Length > 0 ? Math.Min(100.0, file.CompletedLength * 100.0 / file.Length) : 0;
-			var row = Files[i];
+		for (int i = 0; i < s.Files.Count; i++) {
+			DownloadFile file = s.Files[i];
+			double percent = file.Length > 0 ? Math.Min(100.0, file.CompletedLength * 100.0 / file.Length) : 0;
+			DetailFileRow row = Files[i];
 			row.Size = file.Length > 0 ? ByteFormat.Size(file.Length) : "";
 			row.ShowChoice = Files.Count > 1;
 			row.CanChoose = _editable && Files.Count > 1;
@@ -232,7 +232,7 @@ public sealed partial class DownloadDetailViewModel : ObservableObject {
 			return;
 		}
 		_editable = editable;
-		foreach (var row in Files) {
+		foreach (DetailFileRow row in Files) {
 			row.CanChoose = _editable && Files.Count > 1;
 		}
 	}
@@ -245,7 +245,7 @@ public sealed partial class DownloadDetailViewModel : ObservableObject {
 		if (_choosing || !_editable) {
 			return;
 		}
-		var wanted = Files.Where(f => f.Selected).Select(f => f.Index).ToList();
+		List<int> wanted = Files.Where(f => f.Selected).Select(f => f.Index).ToList();
 		if (wanted.Count == 0) {
 			changed.Selected = true;
 			_notices.Post(new Notice(Loc.S("Detail_FilesTitle", "Could not change the files"), Loc.S("Detail_KeepOne", "At least one file has to stay selected."), InfoBarSeverity.Informational));
@@ -265,7 +265,7 @@ public sealed partial class DownloadDetailViewModel : ObservableObject {
 
 	/// <summary>Downloads only this file.</summary>
 	public Task ChooseOnlyAsync(DetailFileRow only) {
-		foreach (var row in Files) {
+		foreach (DetailFileRow row in Files) {
 			row.Selected = ReferenceEquals(row, only);
 		}
 		return ChooseAsync(only);
@@ -273,7 +273,7 @@ public sealed partial class DownloadDetailViewModel : ObservableObject {
 
 	/// <summary>Downloads every file.</summary>
 	public Task ChooseAllAsync() {
-		foreach (var row in Files) {
+		foreach (DetailFileRow row in Files) {
 			row.Selected = true;
 		}
 		return Files.Count > 0 ? ChooseAsync(Files[0]) : Task.CompletedTask;
@@ -290,32 +290,32 @@ public sealed partial class DownloadDetailViewModel : ObservableObject {
 		if (string.IsNullOrEmpty(path)) {
 			return "";
 		}
-		var relative = string.IsNullOrEmpty(dir) ? path : System.IO.Path.GetRelativePath(dir, path);
+		string relative = string.IsNullOrEmpty(dir) ? path : System.IO.Path.GetRelativePath(dir, path);
 		return relative.Replace('\\', '/');
 	}
 
 	private static void Replace<T>(ObservableCollection<T> target, IEnumerable<T> items) {
-		var list = items.ToList();
+		List<T> list = items.ToList();
 		if (target.SequenceEqual(list)) {
 			return;
 		}
 		target.Clear();
-		foreach (var item in list) {
+		foreach (T item in list) {
 			target.Add(item);
 		}
 	}
 
 	/// <summary>A bar whose colour per slice goes from <paramref name="empty"/> (0) to <paramref name="full"/> (1), with hard edges between slices.</summary>
 	private static LinearGradientBrush Bar(double[] values, Color full, Color empty) {
-		var brush = new LinearGradientBrush { StartPoint = new(0, 0), EndPoint = new(1, 0) };
+		LinearGradientBrush brush = new LinearGradientBrush { StartPoint = new(0, 0), EndPoint = new(1, 0) };
 		if (values.Length == 0) {
 			brush.GradientStops.Add(new GradientStop { Color = empty, Offset = 0 });
 			brush.GradientStops.Add(new GradientStop { Color = empty, Offset = 1 });
 			return brush;
 		}
-		for (var i = 0; i < values.Length; i++) {
-			var v = Math.Clamp(values[i], 0, 1);
-			var color = Color.FromArgb(
+		for (int i = 0; i < values.Length; i++) {
+			double v = Math.Clamp(values[i], 0, 1);
+			Color color = Color.FromArgb(
 				(byte) (empty.A + (full.A - empty.A) * v), (byte) (empty.R + (full.R - empty.R) * v),
 				(byte) (empty.G + (full.G - empty.G) * v), (byte) (empty.B + (full.B - empty.B) * v));
 			brush.GradientStops.Add(new GradientStop { Color = color, Offset = (double) i / values.Length });

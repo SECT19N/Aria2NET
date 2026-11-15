@@ -45,7 +45,7 @@ public sealed class WhenFinishedMachine {
 		if (!_sawWork) {
 			return FinishAction.None;
 		}
-		var fire = Action;
+		FinishAction fire = Action;
 		Arm(FinishAction.None);
 		return fire;
 	}

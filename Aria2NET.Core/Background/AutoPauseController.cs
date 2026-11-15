@@ -24,13 +24,13 @@ public sealed class AutoPauseController {
 	public AutoPauseDecision Evaluate(bool shouldPause, PollSnapshot snapshot) {
 		if (shouldPause && !_paused) {
 			_paused = true;
-			var running = snapshot.Items.Where(i => i.Status is DownloadStatus.Active or DownloadStatus.Waiting or DownloadStatus.Seeding).ToList();
+			List<DownloadItem> running = snapshot.Items.Where(i => i.Status is DownloadStatus.Active or DownloadStatus.Waiting or DownloadStatus.Seeding).ToList();
 			_held = running.Select(i => i.Gid).ToHashSet();
 			return running.Count > 0 ? new AutoPauseDecision(AutoPauseAction.Pause, running) : AutoPauseDecision.Nothing;
 		}
 		if (!shouldPause && _paused) {
 			_paused = false;
-			var resume = snapshot.Items.Where(i => i.Status == DownloadStatus.Paused && _held.Contains(i.Gid)).ToList();
+			List<DownloadItem> resume = snapshot.Items.Where(i => i.Status == DownloadStatus.Paused && _held.Contains(i.Gid)).ToList();
 			_held = [];
 			return resume.Count > 0 ? new AutoPauseDecision(AutoPauseAction.Resume, resume) : AutoPauseDecision.Nothing;
 		}

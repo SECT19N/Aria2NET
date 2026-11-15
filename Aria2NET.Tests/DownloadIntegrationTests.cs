@@ -10,10 +10,10 @@ namespace Aria2NET.Tests;
 [Collection(RealAria2Collection.Name)]
 public class DownloadIntegrationTests {
 	internal static async Task<DownloadItem> WaitForAsync(Aria2RpcClient rpc, string gid, Func<DownloadItem, bool> done) {
-		var deadline = DateTime.UtcNow.AddSeconds(30);
+		DateTime deadline = DateTime.UtcNow.AddSeconds(30);
 		while (DateTime.UtcNow < deadline) {
 			try {
-				var item = await rpc.TellStatusAsync(gid);
+				DownloadItem item = await rpc.TellStatusAsync(gid);
 				if (done(item)) {
 					return item;
 				}
@@ -28,7 +28,7 @@ public class DownloadIntegrationTests {
 	internal static HttpListener StartServer(out string prefix, Func<HttpListenerContext, Task> handle) {
 		HttpListener listener;
 		while (true) {
-			var port = Random.Shared.Next(20000, 60000);
+			int port = Random.Shared.Next(20000, 60000);
 			prefix = $"http://127.0.0.1:{port}/";
 			// A listener whose Start() failed is disposed, so every attempt needs a fresh one.
 			listener = new HttpListener();
@@ -62,53 +62,53 @@ public class DownloadIntegrationTests {
 	}
 
 	internal static async Task<(Aria2Engine Engine, TempDir Temp)> StartEngineAsync() {
-		var temp = new TempDir();
-		var paths = new AppPaths(Path.Combine(temp.Path, "data"), RequiresAria2Fact.FindAria2Dir()!);
-		var engine = new Aria2Engine(paths, Path.Combine(temp.Path, "dl"), NullLogger<Aria2Engine>.Instance);
+		TempDir temp = new TempDir();
+		AppPaths paths = new AppPaths(Path.Combine(temp.Path, "data"), RequiresAria2Fact.FindAria2Dir()!);
+		Aria2Engine engine = new Aria2Engine(paths, Path.Combine(temp.Path, "dl"), NullLogger<Aria2Engine>.Instance);
 		await engine.StartAsync();
 		return (engine, temp);
 	}
 
 	[RequiresAria2Fact]
 	public async Task Downloads_a_file_to_completion_and_names_it_from_Content_Disposition() {
-		var payload = new byte[5 * 1024 * 1024];
+		byte[] payload = new byte[5 * 1024 * 1024];
 		Random.Shared.NextBytes(payload);
-		using var server = StartServer(out var prefix, async ctx => {
+		using HttpListener server = StartServer(out string? prefix, async ctx => {
 			ctx.Response.AddHeader("Content-Disposition", "attachment; filename=\"from-header.bin\"");
 			ctx.Response.ContentLength64 = payload.Length;
 			await ctx.Response.OutputStream.WriteAsync(payload);
 			ctx.Response.Close();
 		});
-		var (engine, temp) = await StartEngineAsync();
-		using var _ = temp;
-		await using var __ = engine;
-		var outDir = Path.Combine(temp.Path, "out");
+		(Aria2Engine? engine, TempDir? temp) = await StartEngineAsync();
+		using TempDir _ = temp;
+		await using Aria2Engine __ = engine;
+		string outDir = Path.Combine(temp.Path, "out");
 
-		var gid = await engine.Rpc!.AddUriAsync([prefix + "download?id=7"], new Dictionary<string, string> { ["dir"] = outDir });
-		var item = await WaitForAsync(engine.Rpc, gid, i => i.Status is DownloadStatus.Complete or DownloadStatus.Error);
+		string gid = await engine.Rpc!.AddUriAsync([prefix + "download?id=7"], new Dictionary<string, string> { ["dir"] = outDir });
+		DownloadItem item = await WaitForAsync(engine.Rpc, gid, i => i.Status is DownloadStatus.Complete or DownloadStatus.Error);
 
 		Assert.Equal(DownloadStatus.Complete, item.Status);
 		Assert.Equal("from-header.bin", item.Name);
 		Assert.Equal(payload.Length, item.TotalBytes);
 		Assert.Equal(payload, await File.ReadAllBytesAsync(Path.Combine(outDir, "from-header.bin")));
 
-		var snapshot = await engine.Rpc.PollAsync();
+		PollSnapshot snapshot = await engine.Rpc.PollAsync();
 		Assert.Contains(snapshot.Items, i => i.Gid == gid && i.Status == DownloadStatus.Complete);
 	}
 
 	[RequiresAria2Fact]
 	public async Task Honors_requested_filename() {
-		using var server = StartServer(out var prefix, async ctx => {
+		using HttpListener server = StartServer(out string? prefix, async ctx => {
 			await ctx.Response.OutputStream.WriteAsync("hello"u8.ToArray());
 			ctx.Response.Close();
 		});
-		var (engine, temp) = await StartEngineAsync();
-		using var _ = temp;
-		await using var __ = engine;
-		var outDir = Path.Combine(temp.Path, "out");
+		(Aria2Engine? engine, TempDir? temp) = await StartEngineAsync();
+		using TempDir _ = temp;
+		await using Aria2Engine __ = engine;
+		string outDir = Path.Combine(temp.Path, "out");
 
-		var gid = await engine.Rpc!.AddUriAsync([prefix + "x"], new Dictionary<string, string> { ["dir"] = outDir, ["out"] = "chosen.txt" });
-		var item = await WaitForAsync(engine.Rpc, gid, i => i.Status is DownloadStatus.Complete or DownloadStatus.Error);
+		string gid = await engine.Rpc!.AddUriAsync([prefix + "x"], new Dictionary<string, string> { ["dir"] = outDir, ["out"] = "chosen.txt" });
+		DownloadItem item = await WaitForAsync(engine.Rpc, gid, i => i.Status is DownloadStatus.Complete or DownloadStatus.Error);
 
 		Assert.Equal(DownloadStatus.Complete, item.Status);
 		Assert.Equal("chosen.txt", item.Name);
@@ -117,17 +117,17 @@ public class DownloadIntegrationTests {
 
 	[RequiresAria2Fact]
 	public async Task Missing_resource_ends_in_error_with_message() {
-		using var server = StartServer(out var prefix, ctx => {
+		using HttpListener server = StartServer(out string? prefix, ctx => {
 			ctx.Response.StatusCode = 404;
 			ctx.Response.Close();
 			return Task.CompletedTask;
 		});
-		var (engine, temp) = await StartEngineAsync();
-		using var _ = temp;
-		await using var __ = engine;
+		(Aria2Engine? engine, TempDir? temp) = await StartEngineAsync();
+		using TempDir _ = temp;
+		await using Aria2Engine __ = engine;
 
-		var gid = await engine.Rpc!.AddUriAsync([prefix + "nope.bin"], new Dictionary<string, string> { ["dir"] = Path.Combine(temp.Path, "out") });
-		var item = await WaitForAsync(engine.Rpc, gid, i => i.Status is DownloadStatus.Complete or DownloadStatus.Error);
+		string gid = await engine.Rpc!.AddUriAsync([prefix + "nope.bin"], new Dictionary<string, string> { ["dir"] = Path.Combine(temp.Path, "out") });
+		DownloadItem item = await WaitForAsync(engine.Rpc, gid, i => i.Status is DownloadStatus.Complete or DownloadStatus.Error);
 
 		Assert.Equal(DownloadStatus.Error, item.Status);
 		Assert.False(string.IsNullOrWhiteSpace(item.ErrorMessage));

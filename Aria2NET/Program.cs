@@ -27,14 +27,14 @@ public static class Program {
 		WinRT.ComWrappersSupport.InitializeComWrappers();
 
 		// Second launch: hand over to the running instance and exit.
-		var instance = AppInstance.FindOrRegisterForKey("Aria2NET.Main");
+		AppInstance instance = AppInstance.FindOrRegisterForKey("Aria2NET.Main");
 		// An older copy that is still running (left in the tray, or started at sign-in from an old folder) would take this launch over.
 		// A newer copy asks it to leave first, then becomes the main instance itself.
 		if (!instance.IsCurrent && InstanceRules.ParseVersion(AboutViewModel.AppVersion) is { } mine && InstanceTakeover.ReplaceOlderCopies(mine)) {
 			instance = AppInstance.FindOrRegisterForKey("Aria2NET.Main");
 		}
 		if (!instance.IsCurrent) {
-			var activation = AppInstance.GetCurrent().GetActivatedEventArgs();
+			AppActivationArguments activation = AppInstance.GetCurrent().GetActivatedEventArgs();
 			Task.Run(() => instance.RedirectActivationToAsync(activation).AsTask()).GetAwaiter().GetResult();
 			return 0;
 		}

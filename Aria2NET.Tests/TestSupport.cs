@@ -18,7 +18,7 @@ internal sealed class FakeHandler(Func<HttpRequestMessage, string, HttpResponseM
 	public List<string> Bodies { get; } = [];
 
 	protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) {
-		var body = request.Content is null ? "" : await request.Content.ReadAsStringAsync(cancellationToken);
+		string body = request.Content is null ? "" : await request.Content.ReadAsStringAsync(cancellationToken);
 		Bodies.Add(body);
 		return respond(request, body);
 	}
@@ -27,9 +27,9 @@ internal sealed class FakeHandler(Func<HttpRequestMessage, string, HttpResponseM
 /// <summary>Fact that is skipped when the bundled aria2c.exe has not been fetched.</summary>
 internal sealed class RequiresAria2Fact : FactAttribute {
 	public static string? FindAria2Dir() {
-		var dir = new DirectoryInfo(AppContext.BaseDirectory);
+		DirectoryInfo? dir = new DirectoryInfo(AppContext.BaseDirectory);
 		while (dir is not null) {
-			var candidate = System.IO.Path.Combine(dir.FullName, "tools", "aria2", "aria2c.exe");
+			string candidate = System.IO.Path.Combine(dir.FullName, "tools", "aria2", "aria2c.exe");
 			if (File.Exists(candidate)) {
 				return System.IO.Path.GetDirectoryName(candidate);
 			}

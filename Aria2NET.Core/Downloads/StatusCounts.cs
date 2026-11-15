@@ -6,7 +6,7 @@ public sealed record StatusCounts(long DownloadSpeed, long UploadSpeed, int Acti
 
 	/// <summary>Counts the way the Downloads page's filter tabs do, so the bar and the tabs never disagree.</summary>
 	public static StatusCounts From(PollSnapshot snapshot) {
-		var items = snapshot.Items.Where(i => !DownloadView.IsSuperseded(i)).ToList();
+		List<DownloadItem> items = snapshot.Items.Where(i => !DownloadView.IsSuperseded(i)).ToList();
 		return new StatusCounts(
 			snapshot.Stats.DownloadSpeed,
 			snapshot.Stats.UploadSpeed,

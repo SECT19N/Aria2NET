@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using Aria2NET.Core.Background;
 using Aria2NET.Core.Downloads;
 using Microsoft.Extensions.Logging;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
@@ -61,17 +62,17 @@ internal sealed class WhenFinishedService(DownloadMonitor monitor, ILoggerFactor
 	/// <summary>Shows a cancellable countdown. Returns true when it ran out or the user chose to go ahead; false when cancelled (or no dialog could be shown, in which case nothing is done).</summary>
 	private static async Task<bool> CountdownAsync(MainWindow window, FinishAction action) {
 		window.BringToFront();
-		var verb = action switch {
+		string verb = action switch {
 			FinishAction.Sleep => Loc.S("Finish_VerbSleep", "go to sleep"),
 			FinishAction.Hibernate => Loc.S("Finish_VerbHibernate", "hibernate"),
 			_ => Loc.S("Finish_VerbShutDown", "shut down"),
 		};
-		var remaining = CountdownSeconds;
-		var text = new TextBlock { TextWrapping = TextWrapping.Wrap };
+		int remaining = CountdownSeconds;
+		TextBlock text = new TextBlock { TextWrapping = TextWrapping.Wrap };
 		void Refresh() => text.Text = Loc.F("Finish_Countdown", "All downloads are finished. The computer will {0} in {1} seconds.", verb, remaining);
 		Refresh();
 
-		var dialog = new ContentDialog {
+		ContentDialog dialog = new ContentDialog {
 			Title = Loc.S("Finish_Title", "Downloads finished"),
 			Content = text,
 			PrimaryButtonText = Loc.F("Finish_Now", "{0} now", WhenFinishedMachine.Label(action)),
@@ -79,8 +80,8 @@ internal sealed class WhenFinishedService(DownloadMonitor monitor, ILoggerFactor
 			DefaultButton = ContentDialogButton.Close,
 			XamlRoot = window.Content.XamlRoot,
 		};
-		var expired = false;
-		var timer = window.DispatcherQueue.CreateTimer();
+		bool expired = false;
+		DispatcherQueueTimer timer = window.DispatcherQueue.CreateTimer();
 		timer.Interval = TimeSpan.FromSeconds(1);
 		timer.Tick += (_, _) => {
 			if (--remaining <= 0) {
@@ -93,7 +94,7 @@ internal sealed class WhenFinishedService(DownloadMonitor monitor, ILoggerFactor
 		};
 		timer.Start();
 		try {
-			var result = await dialog.ShowAsync();
+			ContentDialogResult result = await dialog.ShowAsync();
 			return expired || result == ContentDialogResult.Primary;
 		} catch (InvalidOperationException) {
 			return false; // another dialog is open; never power off without showing the warning

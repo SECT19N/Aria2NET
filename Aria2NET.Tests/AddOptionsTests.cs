@@ -17,7 +17,7 @@ public class AddOptionsTests {
 
 	[Fact]
 	public void Fields_map_to_aria2_option_names() {
-		var o = new AddOptions(["Authorization: Bearer abc", "  X-Token: 1  ", ""], "https://example.com/page", "a=b; c=d", "bob", "p@ss", "bob", "ftp-pass", "SHA-256=ABCDEF12", 500, 20).ToOptions();
+		IReadOnlyDictionary<string, string> o = new AddOptions(["Authorization: Bearer abc", "  X-Token: 1  ", ""], "https://example.com/page", "a=b; c=d", "bob", "p@ss", "bob", "ftp-pass", "SHA-256=ABCDEF12", 500, 20).ToOptions();
 		Assert.Equal("Authorization: Bearer abc\nX-Token: 1\nCookie: a=b; c=d", o["header"]);
 		Assert.Equal("https://example.com/page", o["referer"]);
 		Assert.Equal("bob", o["http-user"]);
@@ -31,7 +31,7 @@ public class AddOptionsTests {
 
 	[Fact]
 	public void A_password_without_a_user_is_not_sent() {
-		var o = new AddOptions(HttpPassword: "secret").ToOptions();
+		IReadOnlyDictionary<string, string> o = new AddOptions(HttpPassword: "secret").ToOptions();
 		Assert.DoesNotContain("http-passwd", o.Keys);
 	}
 
@@ -69,28 +69,28 @@ public class AddOptionsTests {
 
 	[Fact]
 	public void The_record_never_prints_its_secrets() {
-		var text = new AddOptions(["Authorization: topsecret"], Cookie: "session=topsecret", HttpUser: "u", HttpPassword: "topsecret").ToString();
+		string text = new AddOptions(["Authorization: topsecret"], Cookie: "session=topsecret", HttpUser: "u", HttpPassword: "topsecret").ToString();
 		Assert.DoesNotContain("topsecret", text);
 	}
 
 	[Fact]
 	public async Task The_rpc_client_sends_headers_as_a_json_array() {
-		var handler = new FakeHandler((_, _) => new HttpResponseMessage(HttpStatusCode.OK) {
+		FakeHandler handler = new FakeHandler((_, _) => new HttpResponseMessage(HttpStatusCode.OK) {
 			Content = new StringContent("""{"jsonrpc":"2.0","id":"1","result":"0000000000000001"}""", Encoding.UTF8, "application/json"),
 		});
-		var client = new Aria2RpcClient(new HttpClient(handler), new Uri("http://127.0.0.1:1/jsonrpc"), "s");
+		Aria2RpcClient client = new Aria2RpcClient(new HttpClient(handler), new Uri("http://127.0.0.1:1/jsonrpc"), "s");
 		await client.AddUriAsync(["http://x/y"], new Dictionary<string, string> { ["dir"] = "C:\\dl", ["header"] = "A: 1\nB: 2" });
 
-		using var doc = JsonDocument.Parse(handler.Bodies[0]);
-		var options = doc.RootElement.GetProperty("params")[2];
+		using JsonDocument doc = JsonDocument.Parse(handler.Bodies[0]);
+		JsonElement options = doc.RootElement.GetProperty("params")[2];
 		Assert.Equal("C:\\dl", options.GetProperty("dir").GetString());
 		Assert.Equal(["A: 1", "B: 2"], options.GetProperty("header").EnumerateArray().Select(e => e.GetString()!).ToArray());
 	}
 
 	[Fact]
 	public void Torrent_requests_carry_the_extra_options_and_seeding_wins_over_them() {
-		var request = new TorrentAddRequest(@"C:\dl", Seeding: new SeedingOverride(SeedMode.Never), Extra: new AddOptions(MaxDownloadKiBps: 100));
-		var options = request.ToOptions();
+		TorrentAddRequest request = new TorrentAddRequest(@"C:\dl", Seeding: new SeedingOverride(SeedMode.Never), Extra: new AddOptions(MaxDownloadKiBps: 100));
+		IReadOnlyDictionary<string, string> options = request.ToOptions();
 		Assert.Equal("100K", options["max-download-limit"]);
 		Assert.Equal("0", options["seed-time"]);
 	}
@@ -98,14 +98,14 @@ public class AddOptionsTests {
 
 public class HeaderPresetsTests {
 	private static (HeaderPresets Presets, string Path) Create(TempDir temp) {
-		var path = Path.Combine(temp.Path, "presets.json");
+		string path = Path.Combine(temp.Path, "presets.json");
 		return (new HeaderPresets(new SettingsStore<HeaderPresetFile>(path, HeaderPresetJsonContext.Default.HeaderPresetFile)), path);
 	}
 
 	[Fact]
 	public void Saves_lists_replaces_and_deletes_presets() {
-		using var temp = new TempDir();
-		var (presets, _) = Create(temp);
+		using TempDir temp = new TempDir();
+		(HeaderPresets? presets, string _) = Create(temp);
 
 		Assert.Null(presets.Save("Site B", ["X-A: 1"], "https://b.example/", null));
 		Assert.Null(presets.Save("site a", ["X-A: 2"], null, "k=v"));
@@ -121,8 +121,8 @@ public class HeaderPresetsTests {
 
 	[Fact]
 	public void The_cookie_is_stored_protected_not_as_plain_text() {
-		using var temp = new TempDir();
-		var (presets, path) = Create(temp);
+		using TempDir temp = new TempDir();
+		(HeaderPresets? presets, string? path) = Create(temp);
 		Assert.Null(presets.Save("Site", ["X-A: 1"], null, "session=topsecret"));
 
 		Assert.DoesNotContain("topsecret", File.ReadAllText(path));
@@ -131,8 +131,8 @@ public class HeaderPresetsTests {
 
 	[Fact]
 	public void Rejects_empty_names_empty_presets_and_bad_headers() {
-		using var temp = new TempDir();
-		var (presets, _) = Create(temp);
+		using TempDir temp = new TempDir();
+		(HeaderPresets? presets, string _) = Create(temp);
 		Assert.NotNull(presets.Save("", ["X-A: 1"], null, null));
 		Assert.NotNull(presets.Save("Empty", [], null, null));
 		Assert.NotNull(presets.Save("Bad", ["not a header"], null, null));
@@ -145,35 +145,35 @@ public class HeaderPresetsTests {
 public class AddOptionsIntegrationTests {
 	[RequiresAria2Fact]
 	public async Task Headers_referer_and_login_reach_the_server_and_a_limit_is_applied() {
-		var seen = new List<(string? Custom, string? Other, string? Cookie, string? Referer, string? Authorization)>();
-		using var server = DownloadIntegrationTests.StartServer(out var prefix, async ctx => {
+		List<(string? Custom, string? Other, string? Cookie, string? Referer, string? Authorization)> seen = new List<(string? Custom, string? Other, string? Cookie, string? Referer, string? Authorization)>();
+		using HttpListener server = DownloadIntegrationTests.StartServer(out string? prefix, async ctx => {
 			lock (seen) {
 				seen.Add((ctx.Request.Headers["X-Custom"], ctx.Request.Headers["X-Other"], ctx.Request.Headers["Cookie"], ctx.Request.Headers["Referer"], ctx.Request.Headers["Authorization"]));
 			}
-			var body = "hello"u8.ToArray();
+			byte[] body = "hello"u8.ToArray();
 			ctx.Response.ContentLength64 = body.Length;
 			await ctx.Response.OutputStream.WriteAsync(body);
 			ctx.Response.Close();
 		});
-		var (engine, temp) = await DownloadIntegrationTests.StartEngineAsync();
-		using var _ = temp;
-		await using var __ = engine;
-		var outDir = Path.Combine(temp.Path, "out");
+		(Aria2Engine? engine, TempDir? temp) = await DownloadIntegrationTests.StartEngineAsync();
+		using TempDir _ = temp;
+		await using Aria2Engine __ = engine;
+		string outDir = Path.Combine(temp.Path, "out");
 
-		var extra = new AddOptions(["X-Custom: one", "X-Other: two"], "https://ref.example/page", "s=1", HttpUser: "bob", HttpPassword: "pw", MaxDownloadKiBps: 300);
-		var options = extra.ToOptions().ToDictionary(p => p.Key, p => p.Value);
+		AddOptions extra = new AddOptions(["X-Custom: one", "X-Other: two"], "https://ref.example/page", "s=1", HttpUser: "bob", HttpPassword: "pw", MaxDownloadKiBps: 300);
+		Dictionary<string, string> options = extra.ToOptions().ToDictionary(p => p.Key, p => p.Value);
 		options["dir"] = outDir;
-		var gid = await engine.Rpc!.AddUriAsync([prefix + "f.txt"], options);
-		var item = await DownloadIntegrationTests.WaitForAsync(engine.Rpc, gid, i => i.Status is DownloadStatus.Complete or DownloadStatus.Error);
+		string gid = await engine.Rpc!.AddUriAsync([prefix + "f.txt"], options);
+		DownloadItem item = await DownloadIntegrationTests.WaitForAsync(engine.Rpc, gid, i => i.Status is DownloadStatus.Complete or DownloadStatus.Error);
 
 		Assert.Equal(DownloadStatus.Complete, item.Status);
 		Assert.Equal("hello", await File.ReadAllTextAsync(Path.Combine(outDir, "f.txt")));
-		var request = seen.First();
+		(string? Custom, string? Other, string? Cookie, string? Referer, string? Authorization) request = seen.First();
 		Assert.Equal("one", request.Custom);
 		Assert.Equal("two", request.Other);
 		Assert.Equal("s=1", request.Cookie);
 		Assert.Equal("https://ref.example/page", request.Referer);
-		var applied = await engine.Rpc.GetOptionAsync(gid);
+		IReadOnlyDictionary<string, string> applied = await engine.Rpc.GetOptionAsync(gid);
 		Assert.Equal("bob", applied["http-user"]); // aria2 only sends the login after a 401 challenge, which this server never makes
 		Assert.Equal(300 * 1024, long.Parse(applied["max-download-limit"]));
 	}

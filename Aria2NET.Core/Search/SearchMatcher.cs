@@ -15,8 +15,8 @@ public static class SearchMatcher {
 		if (words.Count == 0) {
 			return 3;
 		}
-		var word = words[0];
-		var index = title.IndexOf(word, StringComparison.CurrentCultureIgnoreCase);
+		string word = words[0];
+		int index = title.IndexOf(word, StringComparison.CurrentCultureIgnoreCase);
 		if (index < 0) {
 			return 3;
 		}

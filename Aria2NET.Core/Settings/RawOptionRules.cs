@@ -44,7 +44,7 @@ public static partial class RawOptionRules {
 		if (options.Count > MaxOptions) {
 			return $"At most {MaxOptions} options.";
 		}
-		foreach (var (key, value) in options) {
+		foreach ((string? key, string? value) in options) {
 			if (Validate(key, value) is { } problem) {
 				return problem;
 			}
@@ -54,20 +54,20 @@ public static partial class RawOptionRules {
 
 	/// <summary>Parses text with one <c>key=value</c> per line (blank lines and lines starting with # are skipped).</summary>
 	public static (Dictionary<string, string> Options, string? Error) Parse(string text) {
-		var options = new Dictionary<string, string>(StringComparer.Ordinal);
-		var number = 0;
-		foreach (var raw in text.Split('\n')) {
+		Dictionary<string, string> options = new Dictionary<string, string>(StringComparer.Ordinal);
+		int number = 0;
+		foreach (string raw in text.Split('\n')) {
 			number++;
-			var line = raw.Trim();
+			string line = raw.Trim();
 			if (line.Length == 0 || line.StartsWith('#')) {
 				continue;
 			}
-			var eq = line.IndexOf('=');
+			int eq = line.IndexOf('=');
 			if (eq <= 0) {
 				return (options, $"Line {number}: write it as name=value.");
 			}
-			var key = line[..eq].Trim();
-			var value = line[(eq + 1)..].Trim();
+			string key = line[..eq].Trim();
+			string value = line[(eq + 1)..].Trim();
 			if (Validate(key, value) is { } problem) {
 				return (options, $"Line {number}: {problem}");
 			}

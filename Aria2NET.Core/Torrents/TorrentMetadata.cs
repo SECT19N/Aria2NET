@@ -29,47 +29,47 @@ public sealed record TorrentMetadata(string Name, string InfoHash, IReadOnlyList
 			throw new FormatException("This torrent file has no content description.");
 		}
 
-		var name = Text(info, "name.utf-8") ?? Text(info, "name");
+		string? name = Text(info, "name.utf-8") ?? Text(info, "name");
 		if (string.IsNullOrWhiteSpace(name)) {
 			throw new FormatException("This torrent has no name.");
 		}
 
-		var files = new List<TorrentFileEntry>();
-		if (info.TryGetValue("files", out var fileList)) {
+		List<TorrentFileEntry> files = new List<TorrentFileEntry>();
+		if (info.TryGetValue("files", out object? fileList)) {
 			if (fileList is not List<object> list || list.Count == 0) {
 				throw new FormatException("This torrent lists no files.");
 			}
-			foreach (var item in list) {
-				if (item is not Dictionary<string, object> file || !file.TryGetValue("length", out var len) || len is not long length || length < 0) {
+			foreach (object item in list) {
+				if (item is not Dictionary<string, object> file || !file.TryGetValue("length", out object? len) || len is not long length || length < 0) {
 					throw new FormatException("This torrent has a damaged file list.");
 				}
-				var parts = (file.GetValueOrDefault("path.utf-8") ?? file.GetValueOrDefault("path")) as List<object>;
-				var path = parts is { Count: > 0 } ? string.Join('/', parts.Select(p => p is byte[] b ? Encoding.UTF8.GetString(b) : "")) : "";
+				List<object>? parts = (file.GetValueOrDefault("path.utf-8") ?? file.GetValueOrDefault("path")) as List<object>;
+				string path = parts is { Count: > 0 } ? string.Join('/', parts.Select(p => p is byte[] b ? Encoding.UTF8.GetString(b) : "")) : "";
 				if (path.Length == 0) {
 					throw new FormatException("This torrent has a file without a name.");
 				}
 				files.Add(new TorrentFileEntry(files.Count + 1, path, length));
 			}
-		} else if (info.TryGetValue("length", out var single) && single is long singleLength && singleLength >= 0) {
+		} else if (info.TryGetValue("length", out object? single) && single is long singleLength && singleLength >= 0) {
 			files.Add(new TorrentFileEntry(1, name, singleLength));
 		} else {
 			throw new FormatException("This torrent lists no files.");
 		}
 
-		var trackers = new List<string>();
+		List<string> trackers = new List<string>();
 		if (Text(root, "announce") is { Length: > 0 } announce) {
 			trackers.Add(announce);
 		}
-		if (root.TryGetValue("announce-list", out var tiers) && tiers is List<object> tierList) {
-			foreach (var tier in tierList.OfType<List<object>>()) {
+		if (root.TryGetValue("announce-list", out object? tiers) && tiers is List<object> tierList) {
+			foreach (List<object> tier in tierList.OfType<List<object>>()) {
 				trackers.AddRange(tier.OfType<byte[]>().Select(Encoding.UTF8.GetString));
 			}
 		}
 
-		var hash = Convert.ToHexString(SHA1.HashData(rawInfo)).ToLowerInvariant();
+		string hash = Convert.ToHexString(SHA1.HashData(rawInfo)).ToLowerInvariant();
 		return new TorrentMetadata(name, hash, files, trackers.Distinct(StringComparer.Ordinal).ToList());
 	}
 
 	private static string? Text(Dictionary<string, object> d, string key) =>
-		d.TryGetValue(key, out var v) && v is byte[] bytes ? Encoding.UTF8.GetString(bytes) : null;
+		d.TryGetValue(key, out object? v) && v is byte[] bytes ? Encoding.UTF8.GetString(bytes) : null;
 }

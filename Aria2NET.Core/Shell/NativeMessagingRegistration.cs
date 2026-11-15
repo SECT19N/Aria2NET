@@ -23,16 +23,16 @@ public sealed class NativeMessagingRegistration(string exePath, string manifestD
 	public void Register() {
 		Directory.CreateDirectory(manifestDir);
 		File.WriteAllText(ManifestPath, ManifestJson(), new UTF8Encoding(false));
-		foreach (var browser in BrowserKeys) {
-			using var key = _software.CreateSubKey($@"{browser}\{BrowserBridge.HostName}", writable: true);
+		foreach (string browser in BrowserKeys) {
+			using RegistryKey key = _software.CreateSubKey($@"{browser}\{BrowserBridge.HostName}", writable: true);
 			key.SetValue(null, ManifestPath);
 		}
 	}
 
 	/// <summary>Removes everything <see cref="Register"/> wrote. Safe to call when nothing is registered.</summary>
 	public void Unregister() {
-		foreach (var browser in BrowserKeys) {
-			using var key = _software.OpenSubKey(browser, writable: true);
+		foreach (string browser in BrowserKeys) {
+			using RegistryKey? key = _software.OpenSubKey(browser, writable: true);
 			key?.DeleteSubKeyTree(BrowserBridge.HostName, throwOnMissingSubKey: false);
 		}
 		if (File.Exists(ManifestPath)) {
@@ -45,8 +45,8 @@ public sealed class NativeMessagingRegistration(string exePath, string manifestD
 		if (!File.Exists(ManifestPath) || !string.Equals(File.ReadAllText(ManifestPath), ManifestJson(), StringComparison.Ordinal)) {
 			return false;
 		}
-		foreach (var browser in BrowserKeys) {
-			using var key = _software.OpenSubKey($@"{browser}\{BrowserBridge.HostName}");
+		foreach (string browser in BrowserKeys) {
+			using RegistryKey? key = _software.OpenSubKey($@"{browser}\{BrowserBridge.HostName}");
 			if (!string.Equals(key?.GetValue(null) as string, ManifestPath, StringComparison.OrdinalIgnoreCase)) {
 				return false;
 			}
@@ -55,15 +55,15 @@ public sealed class NativeMessagingRegistration(string exePath, string manifestD
 	}
 
 	internal string ManifestJson() {
-		using var stream = new MemoryStream();
-		using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true })) {
+		using MemoryStream stream = new MemoryStream();
+		using (Utf8JsonWriter writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true })) {
 			writer.WriteStartObject();
 			writer.WriteString("name", BrowserBridge.HostName);
 			writer.WriteString("description", "Hands browser downloads to Aria2NET");
 			writer.WriteString("path", exePath);
 			writer.WriteString("type", "stdio");
 			writer.WriteStartArray("allowed_origins");
-			foreach (var origin in BrowserBridge.AllowedOrigins) {
+			foreach (string origin in BrowserBridge.AllowedOrigins) {
 				writer.WriteStringValue(origin);
 			}
 			writer.WriteEndArray();

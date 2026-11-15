@@ -12,7 +12,7 @@ public class SearchMatcherTests {
 
 	[Fact]
 	public void Needs_every_word_but_they_may_sit_in_different_fields() {
-		var words = SearchMatcher.Words("UBUNTU releases");
+		string[] words = SearchMatcher.Words("UBUNTU releases");
 
 		Assert.True(SearchMatcher.Matches(words, "ubuntu-24.04.iso", "https://releases.ubuntu.com/x"));
 		Assert.False(SearchMatcher.Matches(words, "ubuntu-24.04.iso", null));
@@ -32,7 +32,7 @@ public class SearchMatcherTests {
 	public void Returns_the_best_matches_first_and_no_more_than_the_limit() {
 		string[] titles = ["Predownload check", "Alt download limit", "Proxy address", "Download limit", "Downloads at once"];
 
-		var best = SearchMatcher.Best(titles, ["download"], t => t, _ => [], 3);
+		List<string> best = SearchMatcher.Best(titles, ["download"], t => t, _ => [], 3);
 
 		Assert.Equal(["Download limit", "Downloads at once", "Alt download limit"], best);
 	}
@@ -41,7 +41,7 @@ public class SearchMatcherTests {
 	public void Finds_an_item_by_a_field_other_than_its_title() {
 		(string Name, string Url)[] items = [("file.zip", "https://example.com/a"), ("other.zip", "https://mirror.test/b")];
 
-		var best = SearchMatcher.Best(items, ["mirror"], i => i.Name, i => [i.Url], 5);
+		List<(string Name, string Url)> best = SearchMatcher.Best(items, ["mirror"], i => i.Name, i => [i.Url], 5);
 
 		Assert.Equal("other.zip", Assert.Single(best).Name);
 	}

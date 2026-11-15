@@ -16,7 +16,7 @@ public sealed class RestartPolicy(int maxRestarts = 3, TimeSpan? window = null, 
 		if (_attempts.Count >= maxRestarts) {
 			return null;
 		}
-		var delay = _delays[Math.Min(_attempts.Count, _delays.Count - 1)];
+		TimeSpan delay = _delays[Math.Min(_attempts.Count, _delays.Count - 1)];
 		_attempts.Enqueue(nowUtc);
 		return delay;
 	}
@@ -82,7 +82,7 @@ public sealed class EngineSupervisor : IDisposable {
 	private async Task RunAsync() {
 		try {
 			while (_engine.State == EngineState.Crashed && !_cts.IsCancellationRequested) {
-				var wait = _policy.NextDelay(_clock());
+				TimeSpan? wait = _policy.NextDelay(_clock());
 				if (wait is null) {
 					_logger?.LogError("aria2 keeps crashing; automatic restart stopped. Last error: {Error}", _engine.LastError);
 					lock (_gate) {

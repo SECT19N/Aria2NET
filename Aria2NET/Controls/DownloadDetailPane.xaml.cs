@@ -7,6 +7,7 @@ using Aria2NET.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Windows.ApplicationModel.DataTransfer;
 
 namespace Aria2NET.Controls;
 
@@ -83,8 +84,8 @@ public sealed partial class DownloadDetailPane : UserControl {
 		if (Tabs is null || PiecesPanel is null) {
 			return; // still loading the XAML
 		}
-		var torrent = Row?.Item is { IsTorrent: true, IsMetadata: false };
-		var torrentOnly = torrent ? Visibility.Visible : Visibility.Collapsed;
+		bool torrent = Row?.Item is { IsTorrent: true, IsMetadata: false };
+		Visibility torrentOnly = torrent ? Visibility.Visible : Visibility.Collapsed;
 		PeersTab.Visibility = torrentOnly;
 		TrackersTab.Visibility = torrentOnly;
 		PiecesTab.Visibility = torrentOnly;
@@ -94,13 +95,13 @@ public sealed partial class DownloadDetailPane : UserControl {
 		SourceLine.Visibility = string.IsNullOrEmpty(Detail?.Source) ? Visibility.Collapsed : Visibility.Visible;
 		ErrorLine.Visibility = Row?.Item.Status == Aria2NET.Core.Downloads.DownloadStatus.Error && !string.IsNullOrEmpty(Row.StatusTip) ? Visibility.Visible : Visibility.Collapsed;
 		ProblemText.Visibility = string.IsNullOrEmpty(Detail?.Problem) ? Visibility.Collapsed : Visibility.Visible;
-		var editable = torrent && Row?.Item.Status is DownloadStatus.Active or DownloadStatus.Waiting or DownloadStatus.Paused;
+		bool editable = torrent && Row?.Item.Status is DownloadStatus.Active or DownloadStatus.Waiting or DownloadStatus.Paused;
 		Detail?.SetEditable(editable);
 		SelectAllButton.IsEnabled = editable;
 		FilesTools.Visibility = Detail is { Files.Count: > 1 } ? Visibility.Visible : Visibility.Collapsed;
 
 		// A plain download has no peers, trackers or pieces: show General instead, but remember the user's choice for the next torrent.
-		var tab = torrent || _tab is "General" or "Files" ? _tab : "General";
+		string tab = torrent || _tab is "General" or "Files" ? _tab : "General";
 		_refreshing = true;
 		try {
 			Tabs.SelectedItem = Tabs.Items.FirstOrDefault(i => (string) i.Tag == tab) ?? Tabs.Items[0];
@@ -132,17 +133,17 @@ public sealed partial class DownloadDetailPane : UserControl {
 		if (Detail is not { } detail || (e.OriginalSource as FrameworkElement)?.DataContext is not DetailFileRow row) {
 			return;
 		}
-		var exists = File.Exists(row.FullPath);
-		var menu = new MenuFlyout();
+		bool exists = File.Exists(row.FullPath);
+		MenuFlyout menu = new MenuFlyout();
 		menu.Items.Add(Entry(Loc.S("Detail_OpenFile", "Open file"), exists, () => ShellLauncher.TryOpenFile(row.FullPath, out _)));
 		menu.Items.Add(Entry(Loc.S("Detail_ShowInFolder", "Show in folder"), !string.IsNullOrEmpty(row.FullPath), () => {
-			var folder = Path.GetDirectoryName(row.FullPath);
+			string? folder = Path.GetDirectoryName(row.FullPath);
 			if (!string.IsNullOrEmpty(folder)) {
 				ShellLauncher.TryOpenFolder(folder, exists ? row.FullPath : null, out _);
 			}
 		}));
 		menu.Items.Add(Entry(Loc.S("Detail_CopyPath", "Copy path"), !string.IsNullOrEmpty(row.FullPath), () => {
-			var package = new Windows.ApplicationModel.DataTransfer.DataPackage();
+			DataPackage package = new Windows.ApplicationModel.DataTransfer.DataPackage();
 			package.SetText(row.FullPath);
 			Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
 		}));
@@ -159,13 +160,13 @@ public sealed partial class DownloadDetailPane : UserControl {
 	}
 
 	private static MenuFlyoutItem Entry(string text, bool enabled, Action click) {
-		var item = new MenuFlyoutItem { Text = text, IsEnabled = enabled };
+		MenuFlyoutItem item = new MenuFlyoutItem { Text = text, IsEnabled = enabled };
 		item.Click += (_, _) => click();
 		return item;
 	}
 
 	private static MenuFlyoutItem Entry(string text, bool enabled, Func<Task> click) {
-		var item = new MenuFlyoutItem { Text = text, IsEnabled = enabled };
+		MenuFlyoutItem item = new MenuFlyoutItem { Text = text, IsEnabled = enabled };
 		item.Click += async (_, _) => await click();
 		return item;
 	}

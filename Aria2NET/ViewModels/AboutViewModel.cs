@@ -21,7 +21,7 @@ public sealed class AboutViewModel {
 	/// <summary>Text of a file shipped next to the exe (the license, the notices), or a short explanation when it is missing.</summary>
 	public static string ReadShippedText(string fileName) {
 		try {
-			var path = Path.Combine(AppContext.BaseDirectory, fileName);
+			string path = Path.Combine(AppContext.BaseDirectory, fileName);
 			return File.Exists(path) ? File.ReadAllText(path) : Loc.F("About_FileMissing", "{0} was not found next to the app. It is also in the project repository.", fileName);
 		} catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
 			return Loc.F("About_FileUnreadable", "{0} could not be read: {1}", fileName, ex.Message);

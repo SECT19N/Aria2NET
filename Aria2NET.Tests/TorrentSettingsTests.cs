@@ -10,7 +10,7 @@ namespace Aria2NET.Tests;
 public class TorrentOptionsTests {
 	[Fact]
 	public void Defaults_match_what_aria2_already_does() {
-		var o = EngineOptions.TorrentOptions(new AppSettings());
+		IReadOnlyDictionary<string, string> o = EngineOptions.TorrentOptions(new AppSettings());
 		Assert.Equal("6881-6999", o["listen-port"]);
 		Assert.Equal("6881", o["dht-listen-port"]);
 		Assert.Equal("true", o["enable-dht"]);
@@ -27,7 +27,7 @@ public class TorrentOptionsTests {
 	[InlineData(TorrentEncryption.Prefer, "arc4", "false")]
 	[InlineData(TorrentEncryption.Require, "arc4", "true")]
 	public void Encryption_maps_to_crypto_level_and_requirement(TorrentEncryption mode, string level, string require) {
-		var o = EngineOptions.TorrentOptions(new AppSettings { Encryption = mode });
+		IReadOnlyDictionary<string, string> o = EngineOptions.TorrentOptions(new AppSettings { Encryption = mode });
 		Assert.Equal(level, o["bt-min-crypto-level"]);
 		Assert.Equal(require, o["bt-require-crypto"]);
 	}
@@ -40,7 +40,7 @@ public class TorrentOptionsTests {
 
 	[Fact]
 	public void Seed_rule_and_dht6_follow_the_settings() {
-		var o = EngineOptions.TorrentOptions(new AppSettings { SeedRatio = 2.5, SeedTimeMinutes = 90, EnableDht = true, UseIPv6 = false });
+		IReadOnlyDictionary<string, string> o = EngineOptions.TorrentOptions(new AppSettings { SeedRatio = 2.5, SeedTimeMinutes = 90, EnableDht = true, UseIPv6 = false });
 		Assert.Equal("2.5", o["seed-ratio"]);
 		Assert.Equal("90", o["seed-time"]);
 		Assert.Equal("false", o["enable-dht6"]);
@@ -73,8 +73,8 @@ public class TorrentOptionsTests {
 
 	[Fact]
 	public void Launch_only_settings_are_listed_so_the_restart_bar_can_catch_them() {
-		var live = EngineOptions.LiveOptions(new AppSettings());
-		foreach (var key in new[] { "listen-port", "dht-listen-port", "enable-dht", "enable-dht6" }) {
+		IReadOnlyDictionary<string, string> live = EngineOptions.LiveOptions(new AppSettings());
+		foreach (string? key in new[] { "listen-port", "dht-listen-port", "enable-dht", "enable-dht6" }) {
 			Assert.Contains(key, EngineOptions.LaunchOnlyKeys);
 			Assert.DoesNotContain(key, live.Keys);
 		}
@@ -83,8 +83,8 @@ public class TorrentOptionsTests {
 
 	[Fact]
 	public void Conf_leaves_out_empty_values_but_keeps_user_values_last() {
-		var paths = new AppPaths(@"C:\data", @"C:\tools");
-		var text = new Aria2Config(6800, "abc", 42, @"C:\dl", null, EngineOptions.ToGlobalOptions(new AppSettings { SeedRatio = 2.0 })).Render(paths);
+		AppPaths paths = new AppPaths(@"C:\data", @"C:\tools");
+		string text = new Aria2Config(6800, "abc", 42, @"C:\dl", null, EngineOptions.ToGlobalOptions(new AppSettings { SeedRatio = 2.0 })).Render(paths);
 		Assert.DoesNotContain("seed-time=", text);
 		Assert.DoesNotContain("all-proxy=", text);
 		Assert.True(text.LastIndexOf("seed-ratio=2.0", StringComparison.Ordinal) > text.LastIndexOf("seed-ratio=1.0", StringComparison.Ordinal));
@@ -95,15 +95,15 @@ public class TorrentOptionsTests {
 public class TorrentSettingsIntegrationTests {
 	[RequiresAria2Fact]
 	public async Task Peer_and_seeding_options_apply_live_while_ports_and_dht_wait_for_a_restart() {
-		var (engine, temp) = await DownloadIntegrationTests.StartEngineAsync();
-		using var _ = temp;
-		await using var __ = engine;
-		var store = new SettingsStore<AppSettings>(Path.Combine(temp.Path, "settings.json"), AppSettingsJsonContext.Default.AppSettings);
-		var applier = new SettingsApplier(engine, store, new DownloadOperations(engine, NullLogger<DownloadOperations>.Instance), NullLogger<SettingsApplier>.Instance);
+		(Aria2Engine? engine, TempDir? temp) = await DownloadIntegrationTests.StartEngineAsync();
+		using TempDir _ = temp;
+		await using Aria2Engine __ = engine;
+		SettingsStore<AppSettings> store = new SettingsStore<AppSettings>(Path.Combine(temp.Path, "settings.json"), AppSettingsJsonContext.Default.AppSettings);
+		SettingsApplier applier = new SettingsApplier(engine, store, new DownloadOperations(engine, NullLogger<DownloadOperations>.Instance), NullLogger<SettingsApplier>.Instance);
 
-		var s = new AppSettings { EnablePex = false, EnableLpd = false, Encryption = TorrentEncryption.Require, SeedRatio = 2.5, SeedTimeMinutes = 90, ListenPortStart = 7001, ListenPortEnd = 7010, EnableDht = false };
+		AppSettings s = new AppSettings { EnablePex = false, EnableLpd = false, Encryption = TorrentEncryption.Require, SeedRatio = 2.5, SeedTimeMinutes = 90, ListenPortStart = 7001, ListenPortEnd = 7010, EnableDht = false };
 		Assert.True(await applier.ApplyAsync(s));
-		var g = await engine.Rpc!.GetGlobalOptionAsync();
+		IReadOnlyDictionary<string, string> g = await engine.Rpc!.GetGlobalOptionAsync();
 		Assert.Equal("false", g["enable-peer-exchange"]);
 		Assert.Equal("false", g["bt-enable-lpd"]);
 		Assert.Equal("arc4", g["bt-min-crypto-level"]);
@@ -124,13 +124,13 @@ public class TorrentSettingsIntegrationTests {
 
 	[RequiresAria2Fact]
 	public async Task Ports_dht_and_seed_rule_take_effect_when_the_engine_starts() {
-		using var temp = new TempDir();
-		var paths = new AppPaths(Path.Combine(temp.Path, "data"), RequiresAria2Fact.FindAria2Dir()!);
-		var settings = new AppSettings { ListenPortStart = 7001, ListenPortEnd = 7010, DhtPort = 7011, EnableDht = false, SeedRatio = 3.0, SeedTimeMinutes = 45 };
-		await using var engine = new Aria2Engine(paths, Path.Combine(temp.Path, "dl"), NullLogger<Aria2Engine>.Instance, () => settings);
+		using TempDir temp = new TempDir();
+		AppPaths paths = new AppPaths(Path.Combine(temp.Path, "data"), RequiresAria2Fact.FindAria2Dir()!);
+		AppSettings settings = new AppSettings { ListenPortStart = 7001, ListenPortEnd = 7010, DhtPort = 7011, EnableDht = false, SeedRatio = 3.0, SeedTimeMinutes = 45 };
+		await using Aria2Engine engine = new Aria2Engine(paths, Path.Combine(temp.Path, "dl"), NullLogger<Aria2Engine>.Instance, () => settings);
 		await engine.StartAsync();
 
-		var g = await engine.Rpc!.GetGlobalOptionAsync();
+		IReadOnlyDictionary<string, string> g = await engine.Rpc!.GetGlobalOptionAsync();
 		Assert.Equal("7001-7010", g["listen-port"]);
 		Assert.Equal("7011", g["dht-listen-port"]);
 		Assert.Equal("false", g["enable-dht"]);

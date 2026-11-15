@@ -8,13 +8,13 @@ public static class LaunchArguments {
 	/// <summary>The links and files among the command-line arguments, in order. Other arguments (and files that are not torrents) are ignored.</summary>
 	/// <param name="baseDirectory">Relative file names are resolved against this (the working directory by default).</param>
 	public static IReadOnlyList<string> Extract(IEnumerable<string> args, string? baseDirectory = null) {
-		var result = new List<string>();
-		foreach (var raw in args) {
-			var arg = raw.Trim();
+		List<string> result = new List<string>();
+		foreach (string raw in args) {
+			string arg = raw.Trim();
 			if (arg.Length == 0 || arg.StartsWith('-') || arg.StartsWith('/') && !Path.IsPathFullyQualified(arg)) {
 				continue;
 			}
-			var token = arg;
+			string token = arg;
 			if (!arg.StartsWith("magnet:", StringComparison.OrdinalIgnoreCase) && !Path.IsPathFullyQualified(arg)) {
 				try {
 					token = Path.GetFullPath(arg, baseDirectory ?? Directory.GetCurrentDirectory());
@@ -45,17 +45,17 @@ public static class LaunchArguments {
 
 	/// <summary>Splits a command line into arguments the way Windows does (spaces separate, double quotes group, backslashes before a quote escape it).</summary>
 	public static IReadOnlyList<string> Split(string? commandLine) {
-		var args = new List<string>();
+		List<string> args = new List<string>();
 		if (string.IsNullOrWhiteSpace(commandLine)) {
 			return args;
 		}
-		var current = new StringBuilder();
-		var inQuotes = false;
-		var started = false;
-		for (var i = 0; i < commandLine.Length; i++) {
-			var c = commandLine[i];
+		StringBuilder current = new StringBuilder();
+		bool inQuotes = false;
+		bool started = false;
+		for (int i = 0; i < commandLine.Length; i++) {
+			char c = commandLine[i];
 			if (c == '\\') {
-				var slashes = 0;
+				int slashes = 0;
 				while (i < commandLine.Length && commandLine[i] == '\\') {
 					slashes++;
 					i++;

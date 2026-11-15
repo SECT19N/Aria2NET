@@ -37,8 +37,8 @@ internal sealed class MinWindowSize {
 
 	private IntPtr OnMessage(IntPtr hwnd, uint message, IntPtr wParam, IntPtr lParam, UIntPtr id, UIntPtr data) {
 		if (message == WmGetMinMaxInfo && lParam != IntPtr.Zero) {
-			var info = Marshal.PtrToStructure<MinMaxInfo>(lParam);
-			var scale = Math.Max(96, GetDpiForWindow(hwnd)) / 96.0;
+			MinMaxInfo info = Marshal.PtrToStructure<MinMaxInfo>(lParam);
+			double scale = Math.Max(96, GetDpiForWindow(hwnd)) / 96.0;
 			info.MinTrackSize.X = (int) Math.Round(_width * scale);
 			info.MinTrackSize.Y = (int) Math.Round(_height * scale);
 			Marshal.StructureToPtr(info, lParam, false);

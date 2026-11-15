@@ -49,8 +49,8 @@ public partial class App : Application {
 	private static ILogger Log => Services.GetRequiredService<ILoggerFactory>().CreateLogger("App");
 
 	private static ServiceProvider ConfigureServices() {
-		var services = new ServiceCollection();
-		var paths = AppPaths.CreateDefault();
+		ServiceCollection services = new ServiceCollection();
+		AppPaths paths = AppPaths.CreateDefault();
 		paths.EnsureDirectories();
 
 		_dataLock = DataFolderLock.TryAcquire(paths.LockFile);
@@ -61,8 +61,8 @@ public partial class App : Application {
 		}
 
 		services.AddSingleton(paths);
-		var startupSettings = new SettingsStore<AppSettings>(paths.SettingsFile, AppSettingsJsonContext.Default.AppSettings).Load();
-		var fileLogger = new FileLoggerProvider(paths.LogsDir, EngineOptions.AppLogLevelFor(startupSettings.LogLevel));
+		AppSettings startupSettings = new SettingsStore<AppSettings>(paths.SettingsFile, AppSettingsJsonContext.Default.AppSettings).Load();
+		FileLoggerProvider fileLogger = new FileLoggerProvider(paths.LogsDir, EngineOptions.AppLogLevelFor(startupSettings.LogLevel));
 		services.AddSingleton(fileLogger);
 		// The provider does the filtering, so its level can change while the app runs.
 		services.AddLogging(b => b.ClearProviders().SetMinimumLevel(LogLevel.Trace).AddProvider(fileLogger));
@@ -71,7 +71,7 @@ public partial class App : Application {
 		services.AddSingleton(sp => new HeaderPresets(new SettingsStore<HeaderPresetFile>(
 			paths.PresetsFile, HeaderPresetJsonContext.Default.HeaderPresetFile, sp.GetRequiredService<ILogger<HeaderPresets>>())));
 		services.AddSingleton<IAria2Engine>(sp => {
-			var store = sp.GetRequiredService<SettingsStore<AppSettings>>();
+			SettingsStore<AppSettings> store = sp.GetRequiredService<SettingsStore<AppSettings>>();
 			return new Aria2Engine(paths, DefaultFolderResolver.UserDownloads(), sp.GetRequiredService<ILogger<Aria2Engine>>(), store.Load);
 		});
 		services.AddSingleton<SettingsApplier>(sp => new SettingsApplier(
@@ -116,18 +116,18 @@ public partial class App : Application {
 		Services.GetRequiredService<WhenFinishedService>().Start(_window);
 		Services.GetRequiredService<PowerService>().Start(_window);
 		Services.GetRequiredService<DiskRetryService>().Start();
-		var background = Services.GetRequiredService<BackgroundCoordinator>();
+		BackgroundCoordinator background = Services.GetRequiredService<BackgroundCoordinator>();
 		background.Start(_window);
 		Services.GetRequiredService<ToastService>().Start(_window);
 		Services.GetRequiredService<BrowserCatch>().Start();
 		RefreshStartupEntry();
 		// A newer copy asks this one to leave instead of being handed over to it (see InstanceTakeover).
 		InstanceTakeover.ListenForReplaceRequest(_window.DispatcherQueue, () => _window.RequestExit(confirm: false));
-		var updates = Services.GetRequiredService<UpdateService>();
+		UpdateService updates = Services.GetRequiredService<UpdateService>();
 		updates.RestartRequested = _window.RestartToUpdateAsync;
 		updates.StartAutoCheck();
 		// A sign-in start stays in the tray when asked to, but never without a tray icon: the window would then be unreachable.
-		var hidden = StartedAtSignIn && background.TrayAvailable && Services.GetRequiredService<SettingsStore<AppSettings>>().Load().StartMinimized;
+		bool hidden = StartedAtSignIn && background.TrayAvailable && Services.GetRequiredService<SettingsStore<AppSettings>>().Load().StartMinimized;
 		if (!hidden) {
 			_window.Activate();
 		}
@@ -150,7 +150,7 @@ public partial class App : Application {
 
 	private static async Task StartEngineAsync() {
 		try {
-			var engine = Services.GetRequiredService<IAria2Engine>();
+			IAria2Engine engine = Services.GetRequiredService<IAria2Engine>();
 			Services.GetRequiredService<SettingsApplier>().Start();
 			await engine.StartAsync();
 			if (engine.State == EngineState.Running && Services.GetRequiredService<SettingsStore<AppSettings>>().Load().StartPaused) {
@@ -166,8 +166,8 @@ public partial class App : Application {
 	/// <summary>Refreshes the cached public tracker list when it is a week old and hands it to the running engine. The engine reads the cache itself on every start, so failing here costs nothing.</summary>
 	private static async Task RefreshTrackerListAsync(IAria2Engine engine) {
 		try {
-			var trackers = Services.GetRequiredService<TrackerListService>();
-			var url = TrackerListService.SourceUrl(Services.GetRequiredService<SettingsStore<AppSettings>>().Load());
+			TrackerListService trackers = Services.GetRequiredService<TrackerListService>();
+			string? url = TrackerListService.SourceUrl(Services.GetRequiredService<SettingsStore<AppSettings>>().Load());
 			if (url is null || !trackers.IsStale(DateTime.UtcNow)) {
 				return; // extra trackers are switched off, or the cached list is fresh
 			}

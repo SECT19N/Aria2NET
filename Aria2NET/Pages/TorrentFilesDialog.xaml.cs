@@ -58,15 +58,15 @@ public sealed partial class TorrentFilesDialog : ContentDialog {
 		if (!_ready) {
 			return;
 		}
-		var count = _tree.SelectedCount;
-		var bytes = _tree.SelectedBytes;
+		int count = _tree.SelectedCount;
+		long bytes = _tree.SelectedBytes;
 		SummaryText.Text = Loc.F("Files_Selected", "{0} of {1} selected · {2}", count, _tree.TotalCount, ByteFormat.Size(bytes));
 
-		var folder = FolderBox.Text.Trim();
-		var folderOk = folder.Length > 0 && Path.IsPathFullyQualified(folder);
-		var free = folderOk ? DiskSpace.FreeBytes(folder) : null;
+		string folder = FolderBox.Text.Trim();
+		bool folderOk = folder.Length > 0 && Path.IsPathFullyQualified(folder);
+		long? free = folderOk ? DiskSpace.FreeBytes(folder) : null;
 		if (free is { } f) {
-			var fits = bytes <= f;
+			bool fits = bytes <= f;
 			SpaceText.Text = fits ? Loc.F("Files_Free", "{0} free in this folder.", ByteFormat.Size(f)) : Loc.F("Files_NoSpace", "Not enough space: this needs {0} but only {1} is free.", ByteFormat.Size(bytes), ByteFormat.Size(f));
 			SpaceText.Foreground = fits ? (Brush) Application.Current.Resources["TextFillColorSecondaryBrush"] : (Brush) Application.Current.Resources["SystemFillColorCriticalBrush"];
 		} else {
@@ -89,7 +89,7 @@ public sealed partial class TorrentFilesDialog : ContentDialog {
 			FileList.Height = 48;
 		} else {
 			// Use the room the window has instead of a fixed small list.
-			var window = (App.Window.Content as FrameworkElement)?.XamlRoot?.Size.Height ?? 800;
+			double window = (App.Window.Content as FrameworkElement)?.XamlRoot?.Size.Height ?? 800;
 			FileList.Height = Math.Clamp(window - 520, 220, 520);
 		}
 	}
@@ -97,9 +97,9 @@ public sealed partial class TorrentFilesDialog : ContentDialog {
 	/// <summary>The list shows only what is visible: every folder row, and the rows under the folders that are open.</summary>
 	private void RebuildRows() {
 		Rows.Clear();
-		foreach (var root in _roots) {
+		foreach (TorrentTreeItem root in _roots) {
 			Rows.Add(root);
-			foreach (var below in root.VisibleDescendants()) {
+			foreach (TorrentTreeItem below in root.VisibleDescendants()) {
 				Rows.Add(below);
 			}
 		}
@@ -107,13 +107,13 @@ public sealed partial class TorrentFilesDialog : ContentDialog {
 
 	// Opening or closing one folder changes only the rows under it, so the list keeps its scroll position.
 	private void OnExpandedChanged(TorrentTreeItem item) {
-		var at = Rows.IndexOf(item);
+		int at = Rows.IndexOf(item);
 		if (at < 0) {
 			return;
 		}
 		if (item.IsExpanded) {
-			var insertAt = at + 1;
-			foreach (var below in item.VisibleDescendants()) {
+			int insertAt = at + 1;
+			foreach (TorrentTreeItem below in item.VisibleDescendants()) {
 				Rows.Insert(insertAt++, below);
 			}
 		} else {
@@ -128,7 +128,7 @@ public sealed partial class TorrentFilesDialog : ContentDialog {
 	private void CollapseAll_Click(object sender, RoutedEventArgs e) => SetAllExpanded(false);
 
 	private void SetAllExpanded(bool value) {
-		foreach (var root in _roots) {
+		foreach (TorrentTreeItem root in _roots) {
 			root.SetExpandedAll(value);
 		}
 		RebuildRows();
@@ -154,7 +154,7 @@ public sealed partial class TorrentFilesDialog : ContentDialog {
 	}
 
 	private async void Browse_Click(object sender, RoutedEventArgs e) {
-		var picker = new FolderPicker();
+		FolderPicker picker = new FolderPicker();
 		picker.FileTypeFilter.Add("*");
 		InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(App.Window));
 		if (await picker.PickSingleFolderAsync() is { } folder) {

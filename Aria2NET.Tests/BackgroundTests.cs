@@ -14,23 +14,23 @@ internal static class Snap {
 public class AutoPauseControllerTests {
 	[Fact]
 	public void Going_onto_battery_pauses_what_runs_and_plugging_in_resumes_exactly_that() {
-		var controller = new AutoPauseController();
-		var running = Snap.Of(Snap.Item("a", DownloadStatus.Active), Snap.Item("b", DownloadStatus.Waiting), Snap.Item("mine", DownloadStatus.Paused));
+		AutoPauseController controller = new AutoPauseController();
+		PollSnapshot running = Snap.Of(Snap.Item("a", DownloadStatus.Active), Snap.Item("b", DownloadStatus.Waiting), Snap.Item("mine", DownloadStatus.Paused));
 
-		var pause = controller.Evaluate(true, running);
+		AutoPauseDecision pause = controller.Evaluate(true, running);
 		Assert.Equal(AutoPauseAction.Pause, pause.Action);
 		Assert.Equal(["a", "b"], pause.Items.Select(i => i.Gid));
 
-		var after = Snap.Of(Snap.Item("a", DownloadStatus.Paused), Snap.Item("b", DownloadStatus.Paused), Snap.Item("mine", DownloadStatus.Paused));
-		var resume = controller.Evaluate(false, after);
+		PollSnapshot after = Snap.Of(Snap.Item("a", DownloadStatus.Paused), Snap.Item("b", DownloadStatus.Paused), Snap.Item("mine", DownloadStatus.Paused));
+		AutoPauseDecision resume = controller.Evaluate(false, after);
 		Assert.Equal(AutoPauseAction.Resume, resume.Action);
 		Assert.Equal(["a", "b"], resume.Items.Select(i => i.Gid)); // the one the user paused stays paused
 	}
 
 	[Fact]
 	public void It_acts_on_the_change_only() {
-		var controller = new AutoPauseController();
-		var running = Snap.Of(Snap.Item("a", DownloadStatus.Active));
+		AutoPauseController controller = new AutoPauseController();
+		PollSnapshot running = Snap.Of(Snap.Item("a", DownloadStatus.Active));
 
 		Assert.Equal(AutoPauseAction.None, controller.Evaluate(false, running).Action);
 		Assert.Equal(AutoPauseAction.Pause, controller.Evaluate(true, running).Action);
@@ -39,17 +39,17 @@ public class AutoPauseControllerTests {
 
 	[Fact]
 	public void A_download_the_user_resumed_meanwhile_is_not_touched_on_the_way_back() {
-		var controller = new AutoPauseController();
+		AutoPauseController controller = new AutoPauseController();
 		controller.Evaluate(true, Snap.Of(Snap.Item("a", DownloadStatus.Active)));
 
-		var decision = controller.Evaluate(false, Snap.Of(Snap.Item("a", DownloadStatus.Active)));
+		AutoPauseDecision decision = controller.Evaluate(false, Snap.Of(Snap.Item("a", DownloadStatus.Active)));
 
 		Assert.Equal(AutoPauseAction.None, decision.Action);
 	}
 
 	[Fact]
 	public void Nothing_running_means_nothing_to_pause_or_resume() {
-		var controller = new AutoPauseController();
+		AutoPauseController controller = new AutoPauseController();
 
 		Assert.Equal(AutoPauseAction.None, controller.Evaluate(true, Snap.Of()).Action);
 		Assert.Equal(AutoPauseAction.None, controller.Evaluate(false, Snap.Of(Snap.Item("late", DownloadStatus.Paused))).Action);
@@ -59,7 +59,7 @@ public class AutoPauseControllerTests {
 public class TaskbarProgressTests {
 	[Fact]
 	public void Progress_adds_up_the_unfinished_downloads_only() {
-		var progress = TaskbarProgress.From(Snap.Of(
+		TaskbarProgress progress = TaskbarProgress.From(Snap.Of(
 			Snap.Item("a", DownloadStatus.Active, 100, 50),
 			Snap.Item("b", DownloadStatus.Waiting, 300, 0),
 			Snap.Item("done", DownloadStatus.Complete, 1000, 1000)));
@@ -83,7 +83,7 @@ public class TaskbarProgressTests {
 public class WhenFinishedMachineTests {
 	[Fact]
 	public void It_fires_once_when_the_work_that_was_running_has_finished_and_then_disarms() {
-		var machine = new WhenFinishedMachine();
+		WhenFinishedMachine machine = new WhenFinishedMachine();
 		machine.Arm(FinishAction.Shutdown);
 
 		Assert.Equal(FinishAction.None, machine.Observe(Snap.Of(Snap.Item("a", DownloadStatus.Active))));
@@ -94,7 +94,7 @@ public class WhenFinishedMachineTests {
 
 	[Fact]
 	public void Arming_with_nothing_running_waits_for_the_next_downloads() {
-		var machine = new WhenFinishedMachine();
+		WhenFinishedMachine machine = new WhenFinishedMachine();
 		machine.Arm(FinishAction.Sleep);
 
 		Assert.Equal(FinishAction.None, machine.Observe(Snap.Of()));
@@ -105,7 +105,7 @@ public class WhenFinishedMachineTests {
 
 	[Fact]
 	public void Paused_downloads_are_not_finished() {
-		var machine = new WhenFinishedMachine();
+		WhenFinishedMachine machine = new WhenFinishedMachine();
 		machine.Arm(FinishAction.Exit);
 		machine.Observe(Snap.Of(Snap.Item("a", DownloadStatus.Active)));
 
@@ -114,7 +114,7 @@ public class WhenFinishedMachineTests {
 
 	[Fact]
 	public void Seeding_does_not_hold_it_back() {
-		var machine = new WhenFinishedMachine();
+		WhenFinishedMachine machine = new WhenFinishedMachine();
 		machine.Arm(FinishAction.Exit);
 		machine.Observe(Snap.Of(Snap.Item("t", DownloadStatus.Active)));
 
@@ -123,7 +123,7 @@ public class WhenFinishedMachineTests {
 
 	[Fact]
 	public void Disarming_cancels_a_pending_action() {
-		var machine = new WhenFinishedMachine();
+		WhenFinishedMachine machine = new WhenFinishedMachine();
 		machine.Arm(FinishAction.Shutdown);
 		machine.Observe(Snap.Of(Snap.Item("a", DownloadStatus.Active)));
 		machine.Arm(FinishAction.None);
@@ -133,7 +133,7 @@ public class WhenFinishedMachineTests {
 
 	[Fact]
 	public void The_power_and_restart_settings_have_safe_defaults() {
-		var s = new AppSettings();
+		AppSettings s = new AppSettings();
 
 		Assert.True(s.PreventSleep);
 		Assert.False(s.PauseOnBattery);

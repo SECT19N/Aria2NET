@@ -38,9 +38,9 @@ public sealed class BrowserCatch(SettingsStore<AppSettings> settings, AppPaths p
 
 	/// <summary>Switches catching on or off. Returns an error text when the registration could not be written.</summary>
 	public string? SetEnabled(bool enabled) {
-		var problem = Apply(enabled);
+		string? problem = Apply(enabled);
 		try {
-			var s = settings.Load();
+			AppSettings s = settings.Load();
 			s.CatchBrowserDownloads = enabled && problem is null;
 			settings.Save(s);
 		} catch (IOException ex) {
@@ -75,7 +75,7 @@ public sealed class BrowserCatch(SettingsStore<AppSettings> settings, AppPaths p
 		if (message.Download is not { } request) {
 			return Task.FromResult<string?>(null); // a ping: being here is the answer
 		}
-		var done = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+		TaskCompletionSource<string?> done = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
 		if (!_dispatcher.TryEnqueue(async () => {
 			try {
 				done.TrySetResult(await downloads.AddFromBrowserAsync(request));
@@ -109,12 +109,12 @@ internal static class BrowserHost {
 	}
 
 	private static async Task<int> RunAsync() {
-		using var input = Console.OpenStandardInput();
-		using var output = Console.OpenStandardOutput();
+		using Stream input = Console.OpenStandardInput();
+		using Stream output = Console.OpenStandardOutput();
 		if (await BrowserBridge.ReadFrameAsync(input) is not { } json) {
 			return 0;
 		}
-		var (message, error) = BrowserBridge.Parse(json);
+		(BrowserMessage? message, string? error) = BrowserBridge.Parse(json);
 		string reply;
 		if (message is null) {
 			reply = BrowserBridge.Reply(false, error);
@@ -133,7 +133,7 @@ internal static class BrowserHost {
 			return reply;
 		}
 		// The running app holds this event (see InstanceTakeover). Running but not listening means catching is switched off.
-		if (EventWaitHandle.TryOpenExisting(InstanceRules.ReplaceEventName, out var running)) {
+		if (EventWaitHandle.TryOpenExisting(InstanceRules.ReplaceEventName, out EventWaitHandle? running)) {
 			running.Dispose();
 			return null;
 		}
@@ -143,7 +143,7 @@ internal static class BrowserHost {
 		// Through the shell, so the app does not inherit this process's pipes to the browser.
 		using (Process.Start(new ProcessStartInfo(exe, LaunchArguments.BackgroundArgument) { UseShellExecute = true })) {
 		}
-		var deadline = DateTime.UtcNow + AppStartTimeout;
+		DateTime deadline = DateTime.UtcNow + AppStartTimeout;
 		while (DateTime.UtcNow < deadline) {
 			if (await BrowserBridge.SendToAppAsync(json, TimeSpan.FromSeconds(1)) is { } late) {
 				return late;

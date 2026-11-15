@@ -74,11 +74,11 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 	private async Task StartCoreAsync(CancellationToken ct) {
 		LastError = null;
 		// Read on every start so a restart picks up a changed default folder and the other options.
-		var userSettings = _settings?.Invoke();
+		AppSettings? userSettings = _settings?.Invoke();
 		if (userSettings is not null) {
 			_downloadDir = DefaultFolderResolver.ForEngine(userSettings);
 		}
-		var exe = Path.GetFullPath(_paths.Aria2Exe);
+		string exe = Path.GetFullPath(_paths.Aria2Exe);
 		if (!File.Exists(exe)) {
 			Fail($"aria2c.exe not found at {exe}. Run tools/get-aria2.ps1.");
 			return;
@@ -87,7 +87,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 		try {
 			_paths.EnsureDirectories();
 			Directory.CreateDirectory(_downloadDir);
-			var session = SessionFile.PrepareForStart(_paths, _logger);
+			SessionPrepareResult session = SessionFile.PrepareForStart(_paths, _logger);
 			if (session.Repaired) {
 				NoticeRaised?.Invoke(this, new EngineNotice(EngineNoticeKind.SessionRepaired, session.RestoredFrom is null
 					? "The list of unfinished downloads was damaged and could not be recovered, so it starts empty."
@@ -100,9 +100,9 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 
 		KillOrphans(exe);
 
-		for (var attempt = 1; attempt <= MaxStartAttempts; attempt++) {
+		for (int attempt = 1; attempt <= MaxStartAttempts; attempt++) {
 			ct.ThrowIfCancellationRequested();
-			var config = Aria2Config.CreateRandom(_downloadDir, Environment.ProcessId,
+			Aria2Config config = Aria2Config.CreateRandom(_downloadDir, Environment.ProcessId,
 				userSettings?.Trackers == TrackerSource.Off ? null : TrackerListService.ReadCache(_paths),
 				userSettings is null ? null : EngineOptions.ToGlobalOptions(userSettings));
 			File.WriteAllText(_paths.Aria2ConfFile, config.Render(_paths));
@@ -115,8 +115,8 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 				return;
 			}
 
-			var rpc = new Aria2RpcClient(_http, new Uri($"http://127.0.0.1:{config.Port}/jsonrpc"), config.Secret);
-			var version = await WaitUntilReadyAsync(process, rpc, ct);
+			Aria2RpcClient rpc = new Aria2RpcClient(_http, new Uri($"http://127.0.0.1:{config.Port}/jsonrpc"), config.Secret);
+			Aria2Version? version = await WaitUntilReadyAsync(process, rpc, ct);
 			if (version is not null) {
 				_process = process;
 				_stopping = false;
@@ -142,7 +142,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 	}
 
 	private Process LaunchProcess(string exe) {
-		var psi = new ProcessStartInfo(exe) {
+		ProcessStartInfo psi = new ProcessStartInfo(exe) {
 			UseShellExecute = false,
 			CreateNoWindow = true,
 			WorkingDirectory = _paths.EngineDir,
@@ -151,7 +151,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 		};
 		psi.ArgumentList.Add("--conf-path=" + _paths.Aria2ConfFile);
 
-		var process = new Process { StartInfo = psi, EnableRaisingEvents = true };
+		Process process = new Process { StartInfo = psi, EnableRaisingEvents = true };
 		process.OutputDataReceived += (_, e) => LogProcessLine(e.Data);
 		process.ErrorDataReceived += (_, e) => LogProcessLine(e.Data);
 		process.Start();
@@ -167,7 +167,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 	}
 
 	private static async Task<Aria2Version?> WaitUntilReadyAsync(Process process, Aria2RpcClient rpc, CancellationToken ct) {
-		using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+		using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
 		timeout.CancelAfter(ReadyTimeout);
 		while (!process.HasExited) {
 			try {
@@ -189,8 +189,8 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 	}
 
 	private async Task StopCoreAsync() {
-		var process = _process;
-		var rpc = Rpc;
+		Process? process = _process;
+		Aria2RpcClient? rpc = Rpc;
 		_process = null;
 		Rpc = null;
 		Version = null;
@@ -204,7 +204,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 			if (!process.HasExited) {
 				if (rpc is not null) {
 					try {
-						using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+						using CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
 						await rpc.SaveSessionAsync(cts.Token);
 						await rpc.ShutdownAsync(cts.Token);
 					} catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or Aria2RpcException) {
@@ -212,7 +212,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 					}
 				}
 				try {
-					using var cts = new CancellationTokenSource(ExitTimeout);
+					using CancellationTokenSource cts = new CancellationTokenSource(ExitTimeout);
 					await process.WaitForExitAsync(cts.Token);
 				} catch (OperationCanceledException) {
 					KillQuietly(process);
@@ -242,7 +242,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 	}
 
 	private void KillOrphans(string exe) {
-		foreach (var p in Process.GetProcessesByName("aria2c")) {
+		foreach (Process p in Process.GetProcessesByName("aria2c")) {
 			try {
 				if (string.Equals(p.MainModule?.FileName, exe, StringComparison.OrdinalIgnoreCase)) {
 					_logger.LogWarning("Killing orphaned aria2c (pid {Pid})", p.Id);

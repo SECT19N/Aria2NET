@@ -12,14 +12,14 @@ internal sealed record TestTorrent(string Name, byte[] TorrentFile, string InfoH
 
 	/// <summary>Builds a torrent over random data. One file gives a single-file torrent, several give a multi-file one rooted at <paramref name="name"/>.</summary>
 	public static TestTorrent Create(string name, string announce, params (string Path, int Size)[] files) {
-		var data = files.Select(f => (f.Path, Data: RandomNumberGenerator.GetBytes(f.Size))).ToList();
-		var all = data.SelectMany(f => f.Data).ToArray();
-		var pieces = new List<byte>();
-		for (var i = 0; i < all.Length; i += PieceLength) {
+		List<(string Path, byte[] Data)> data = files.Select(f => (f.Path, Data: RandomNumberGenerator.GetBytes(f.Size))).ToList();
+		byte[] all = data.SelectMany(f => f.Data).ToArray();
+		List<byte> pieces = new List<byte>();
+		for (int i = 0; i < all.Length; i += PieceLength) {
 			pieces.AddRange(SHA1.HashData(all.AsSpan(i, Math.Min(PieceLength, all.Length - i))));
 		}
 
-		var info = new Dictionary<string, object> {
+		Dictionary<string, object> info = new Dictionary<string, object> {
 			["name"] = name,
 			["piece length"] = (long) PieceLength,
 			["pieces"] = pieces.ToArray(),
@@ -33,9 +33,9 @@ internal sealed record TestTorrent(string Name, byte[] TorrentFile, string InfoH
 			}).ToList();
 		}
 
-		var root = new Dictionary<string, object> { ["announce"] = announce, ["info"] = info };
-		var file = Bencode.Encode(root);
-		var hash = Convert.ToHexString(SHA1.HashData(Bencode.FindRawTopLevelValue(file, "info")!)).ToLowerInvariant();
+		Dictionary<string, object> root = new Dictionary<string, object> { ["announce"] = announce, ["info"] = info };
+		byte[] file = Bencode.Encode(root);
+		string hash = Convert.ToHexString(SHA1.HashData(Bencode.FindRawTopLevelValue(file, "info")!)).ToLowerInvariant();
 		return new TestTorrent(name, file, hash, data);
 	}
 
@@ -43,8 +43,8 @@ internal sealed record TestTorrent(string Name, byte[] TorrentFile, string InfoH
 
 	/// <summary>Writes the payload where a seeder expects to find it and returns the folder to pass as <c>dir</c>.</summary>
 	public string WritePayload(string dir) {
-		foreach (var (path, data) in Files) {
-			var full = Files.Count == 1 ? Path.Combine(dir, Name) : Path.Combine(dir, Name, path.Replace('/', Path.DirectorySeparatorChar));
+		foreach ((string? path, byte[]? data) in Files) {
+			string full = Files.Count == 1 ? Path.Combine(dir, Name) : Path.Combine(dir, Name, path.Replace('/', Path.DirectorySeparatorChar));
 			Directory.CreateDirectory(Path.GetDirectoryName(full)!);
 			File.WriteAllBytes(full, data);
 		}
@@ -60,11 +60,11 @@ internal sealed class LocalTracker : IDisposable {
 	public int Announces { get; private set; }
 
 	public LocalTracker(int seederPort) {
-		_listener = DownloadIntegrationTests.StartServer(out var prefix, async ctx => {
+		_listener = DownloadIntegrationTests.StartServer(out string? prefix, async ctx => {
 			Announces++;
-			var peer = new List<byte>([127, 0, 0, 1]);
+			List<byte> peer = new List<byte>([127, 0, 0, 1]);
 			peer.AddRange([(byte) (seederPort >> 8), (byte) (seederPort & 0xFF)]);
-			var body = Bencode.Encode(new Dictionary<string, object> {
+			byte[] body = Bencode.Encode(new Dictionary<string, object> {
 				["interval"] = 60L,
 				["complete"] = 1L,
 				["incomplete"] = 1L,
@@ -88,7 +88,7 @@ internal sealed class SeederProcess : IDisposable {
 	public int Port { get; }
 
 	public static int FreePort() {
-		using var probe = new TcpListener(IPAddress.Loopback, 0);
+		using TcpListener probe = new TcpListener(IPAddress.Loopback, 0);
 		probe.Start();
 		return ((IPEndPoint) probe.LocalEndpoint).Port;
 	}
@@ -98,21 +98,21 @@ internal sealed class SeederProcess : IDisposable {
 	/// <param name="port">Port the seeder listens on; the tracker must hand out the same one.</param>
 	public SeederProcess(string torrentPath, string payloadDir, int port, string? uploadLimit = null) {
 		Port = port;
-		var args = new[] {
+		string[] args = new[] {
 			"--no-conf", "--enable-rpc=false", "--enable-dht=false", "--enable-dht6=false", "--bt-enable-lpd=false",
 			"--enable-peer-exchange=false", "--bt-seed-unverified=true", "--seed-ratio=0.0", $"--max-overall-upload-limit={uploadLimit ?? "0"}",
 			$"--listen-port={port}", $"--dir={payloadDir}", "--console-log-level=error", torrentPath,
 		};
 		// The engine kills any aria2c running from its own exe path on start (orphan cleanup), so the seeder runs from a copy.
-		var exe = Path.Combine(_exeDir.Path, "aria2c.exe");
+		string exe = Path.Combine(_exeDir.Path, "aria2c.exe");
 		File.Copy(Path.Combine(RequiresAria2Fact.FindAria2Dir()!, "aria2c.exe"), exe);
-		var psi = new ProcessStartInfo(exe) {
+		ProcessStartInfo psi = new ProcessStartInfo(exe) {
 			CreateNoWindow = true,
 			UseShellExecute = false,
 			RedirectStandardOutput = true,
 			RedirectStandardError = true,
 		};
-		foreach (var a in args) {
+		foreach (string? a in args) {
 			psi.ArgumentList.Add(a);
 		}
 		_process = Process.Start(psi)!;
@@ -147,12 +147,12 @@ internal sealed class Swarm : IDisposable {
 	public string Root => _temp.Path;
 
 	public Swarm((string Path, int Size)[] files, string? seederUploadLimit = null) {
-		var port = SeederProcess.FreePort();
+		int port = SeederProcess.FreePort();
 		Tracker = new LocalTracker(port);
 		Torrent = TestTorrent.Create("swarm", Tracker.AnnounceUrl, files);
-		var torrentPath = Path.Combine(_temp.Path, "swarm.torrent");
+		string torrentPath = Path.Combine(_temp.Path, "swarm.torrent");
 		File.WriteAllBytes(torrentPath, Torrent.TorrentFile);
-		var payload = Torrent.WritePayload(Path.Combine(_temp.Path, "seed"));
+		string payload = Torrent.WritePayload(Path.Combine(_temp.Path, "seed"));
 		Seeder = new SeederProcess(torrentPath, payload, port, seederUploadLimit);
 		LeechDir = Path.Combine(_temp.Path, "leech");
 		Directory.CreateDirectory(LeechDir);

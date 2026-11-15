@@ -13,7 +13,7 @@ public sealed class DataFolderLock : IDisposable {
 	public static DataFolderLock? TryAcquire(string lockFile) {
 		Directory.CreateDirectory(Path.GetDirectoryName(lockFile)!);
 		try {
-			var stream = new FileStream(lockFile, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+			FileStream stream = new FileStream(lockFile, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
 			return new DataFolderLock(stream);
 		} catch (IOException) {
 			return null;

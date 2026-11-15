@@ -83,7 +83,7 @@ public sealed partial class ShellViewModel : ObservableObject {
 	}
 
 	private void Refresh() {
-		var recovering = _engine.State == EngineState.Crashed && _supervisor.IsRecovering;
+		bool recovering = _engine.State == EngineState.Crashed && _supervisor.IsRecovering;
 		(StatusText, StatusBrush) = _engine.State switch {
 			EngineState.Running => (Loc.F("Shell_Running", "aria2 {0} · Running", _engine.Version?.Version), Good),
 			EngineState.Starting => (Loc.S("Shell_Starting", "Engine: starting…"), Busy),
