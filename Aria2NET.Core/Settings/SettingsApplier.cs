@@ -47,9 +47,9 @@ public sealed class SettingsApplier(IAria2Engine engine, SettingsStore<AppSettin
 			return false;
 		}
 		try {
-			Dictionary<string, string> options = new Dictionary<string, string>(EngineOptions.LiveOptions(s));
+			Dictionary<string, string> options = [with(EngineOptions.LiveOptions(s))];
 			// Hand-typed options go one by one afterwards: aria2 may refuse one, and that must not stop the rest from being applied.
-			List<KeyValuePair<string, string>> raw = (s.RawOptions ?? []).Where(o => RawOptionRules.Validate(o.Key, o.Value) is null).ToList();
+			List<KeyValuePair<string, string>> raw = [.. (s.RawOptions ?? []).Where(o => RawOptionRules.Validate(o.Key, o.Value) is null)];
 			foreach ((string? key, string _) in raw) {
 				options.Remove(key);
 			}

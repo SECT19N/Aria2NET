@@ -22,7 +22,7 @@ public sealed partial class DownloadsViewModel {
 	public Func<TorrentPrompt, Task<TorrentChoice>>? PromptTorrent { get; set; }
 
 	private async Task<bool> AddTorrentFileAsync(string path, string folder, AddOptions? extra = null) {
-		FileInfo info = new FileInfo(path);
+		FileInfo info = new(path);
 		if (!info.Exists) {
 			throw new FileNotFoundException("The file does not exist.");
 		}
@@ -52,7 +52,7 @@ public sealed partial class DownloadsViewModel {
 	}
 
 	private async Task AddMetalinkFileAsync(string path, string folder, AddOptions? extra = null) {
-		FileInfo info = new FileInfo(path);
+		FileInfo info = new(path);
 		if (!info.Exists) {
 			throw new FileNotFoundException("The file does not exist.");
 		}
@@ -85,7 +85,7 @@ public sealed partial class DownloadsViewModel {
 				return; // failed (the row shows the error) or removed by the user
 			}
 			followerGid = resolved.Gid;
-			List<TorrentFileEntry> files = resolved.Files.Select(f => new TorrentFileEntry(f.Index, RelativeName(f.Path, folder, resolved.Name, resolved.Files.Count), f.Length)).ToList();
+			List<TorrentFileEntry> files = [.. resolved.Files.Select(f => new TorrentFileEntry(f.Index, RelativeName(f.Path, folder, resolved.Name, resolved.Files.Count), f.Length))];
 			TorrentChoice choice = await AskAsync(new TorrentPrompt(resolved.Name, files, folder, FolderEditable: false, Note: null))
 				?? DefaultChoice(folder, files);
 			if (choice.Files.Count == 0) {
@@ -112,7 +112,7 @@ public sealed partial class DownloadsViewModel {
 		PromptTorrent is { } ask ? await ask(prompt) : null;
 
 	private static TorrentChoice DefaultChoice(string folder, IReadOnlyList<TorrentFileEntry> files) =>
-		new(folder, files.Select(f => f.Index).ToList(), SeedingOverride.Default, AllocationChoice.Default);
+		new(folder, [.. files.Select(f => f.Index)], SeedingOverride.Default, AllocationChoice.Default);
 
 	private void AlreadyAdded(string name, string gid) {
 		_notices.Post(new Notice(Loc.S("Torrent_AlreadyTitle", "Already in the list"), Loc.F("Torrent_AlreadyBody", "{0} is already being downloaded.", name), InfoBarSeverity.Informational));

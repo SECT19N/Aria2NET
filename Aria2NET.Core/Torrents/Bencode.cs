@@ -37,7 +37,7 @@ public static class Bencode {
 	}
 
 	public static byte[] Encode(object value) {
-		using MemoryStream ms = new MemoryStream();
+		using MemoryStream ms = new();
 		Write(ms, value);
 		return ms.ToArray();
 	}
@@ -66,7 +66,7 @@ public static class Bencode {
 				}
 			case 'l': {
 					pos++;
-					List<object> list = new List<object>();
+					List<object> list = [];
 					while (true) {
 						if (pos >= data.Length) {
 							throw new FormatException("Unterminated list.");
@@ -80,7 +80,7 @@ public static class Bencode {
 				}
 			case 'd': {
 					pos++;
-					Dictionary<string, object> dict = new Dictionary<string, object>(StringComparer.Ordinal);
+					Dictionary<string, object> dict = [with(StringComparer.Ordinal)];
 					while (true) {
 						if (pos >= data.Length) {
 							throw new FormatException("Unterminated dictionary.");

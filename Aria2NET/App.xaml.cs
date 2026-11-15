@@ -49,7 +49,7 @@ public partial class App : Application {
 	private static ILogger Log => Services.GetRequiredService<ILoggerFactory>().CreateLogger("App");
 
 	private static ServiceProvider ConfigureServices() {
-		ServiceCollection services = new ServiceCollection();
+		ServiceCollection services = new();
 		AppPaths paths = AppPaths.CreateDefault();
 		paths.EnsureDirectories();
 
@@ -62,7 +62,7 @@ public partial class App : Application {
 
 		services.AddSingleton(paths);
 		AppSettings startupSettings = new SettingsStore<AppSettings>(paths.SettingsFile, AppSettingsJsonContext.Default.AppSettings).Load();
-		FileLoggerProvider fileLogger = new FileLoggerProvider(paths.LogsDir, EngineOptions.AppLogLevelFor(startupSettings.LogLevel));
+		FileLoggerProvider fileLogger = new(paths.LogsDir, EngineOptions.AppLogLevelFor(startupSettings.LogLevel));
 		services.AddSingleton(fileLogger);
 		// The provider does the filtering, so its level can change while the app runs.
 		services.AddLogging(b => b.ClearProviders().SetMinimumLevel(LogLevel.Trace).AddProvider(fileLogger));

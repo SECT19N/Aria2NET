@@ -68,11 +68,11 @@ internal sealed class WhenFinishedService(DownloadMonitor monitor, ILoggerFactor
 			_ => Loc.S("Finish_VerbShutDown", "shut down"),
 		};
 		int remaining = CountdownSeconds;
-		TextBlock text = new TextBlock { TextWrapping = TextWrapping.Wrap };
+		TextBlock text = new() { TextWrapping = TextWrapping.Wrap };
 		void Refresh() => text.Text = Loc.F("Finish_Countdown", "All downloads are finished. The computer will {0} in {1} seconds.", verb, remaining);
 		Refresh();
 
-		ContentDialog dialog = new ContentDialog {
+		ContentDialog dialog = new() {
 			Title = Loc.S("Finish_Title", "Downloads finished"),
 			Content = text,
 			PrimaryButtonText = Loc.F("Finish_Now", "{0} now", WhenFinishedMachine.Label(action)),

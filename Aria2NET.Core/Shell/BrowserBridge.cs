@@ -99,8 +99,8 @@ public static class BrowserBridge {
 
 	/// <summary>The answer sent back to the extension.</summary>
 	public static string Reply(bool ok, string? error = null) {
-		using MemoryStream stream = new MemoryStream();
-		using (Utf8JsonWriter writer = new Utf8JsonWriter(stream)) {
+		using MemoryStream stream = new();
+		using (Utf8JsonWriter writer = new(stream)) {
 			writer.WriteStartObject();
 			writer.WriteBoolean("ok", ok);
 			if (!string.IsNullOrEmpty(error)) {
@@ -173,7 +173,7 @@ public static class BrowserBridge {
 
 	/// <summary>Sends one frame to the running app and returns its answer. Null when the app is not listening (not running, or catching is off).</summary>
 	public static async Task<string?> SendToAppAsync(string json, TimeSpan connectTimeout, string? pipeName = null, CancellationToken ct = default) {
-		await using NamedPipeClientStream pipe = new NamedPipeClientStream(".", pipeName ?? PipeName, PipeDirection.InOut, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
+		await using NamedPipeClientStream pipe = new(".", pipeName ?? PipeName, PipeDirection.InOut, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
 		try {
 			await pipe.ConnectAsync(connectTimeout, ct);
 		} catch (Exception ex) when (ex is TimeoutException or IOException or UnauthorizedAccessException) {
@@ -223,7 +223,7 @@ public sealed class BrowserBridgeServer(Func<BrowserMessage, Task<string?>> hand
 	private async Task RunAsync(CancellationToken ct) {
 		while (!ct.IsCancellationRequested) {
 			try {
-				await using NamedPipeServerStream pipe = new NamedPipeServerStream(_pipeName, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances,
+				await using NamedPipeServerStream pipe = new(_pipeName, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances,
 					PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
 				await pipe.WaitForConnectionAsync(ct);
 				// A client that connects and then says nothing must not block the next one for ever.

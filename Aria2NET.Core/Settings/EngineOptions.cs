@@ -34,7 +34,7 @@ public static class EngineOptions {
 
 	/// <summary>Every option the settings pages control, for the conf file at launch. Use <see cref="LiveOptions"/> for a running engine.</summary>
 	public static IReadOnlyDictionary<string, string> ToGlobalOptions(AppSettings s) {
-		Dictionary<string, string> options = new Dictionary<string, string> {
+		Dictionary<string, string> options = new() {
 			[MaxConcurrent] = Math.Max(1, s.MaxConcurrentDownloads).ToString(),
 			["max-connection-per-server"] = Math.Clamp(s.MaxConnectionsPerServer, 1, 16).ToString(),
 			["split"] = Math.Max(1, s.Split).ToString(),
@@ -151,7 +151,7 @@ public static class EngineOptions {
 	/// <summary>The proxy Windows would use for an ordinary web address, or null for a direct connection.</summary>
 	private static Uri? SystemProxyUri() {
 		try {
-			Uri target = new Uri("https://example.com/");
+			Uri target = new("https://example.com/");
 			IWebProxy proxy = HttpClient.DefaultProxy;
 			return proxy.IsBypassed(target) ? null : proxy.GetProxy(target);
 		} catch (Exception ex) when (ex is InvalidOperationException or UriFormatException or PlatformNotSupportedException) {

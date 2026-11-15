@@ -38,7 +38,7 @@ public static class WindowPlacementFitter {
 			return null;
 		}
 
-		ScreenRect rect = new ScreenRect(saved.X, saved.Y, Math.Max(saved.Width, MinWidth), Math.Max(saved.Height, MinHeight));
+		ScreenRect rect = new(saved.X, saved.Y, Math.Max(saved.Width, MinWidth), Math.Max(saved.Height, MinHeight));
 		ScreenRect? target = displays
 			.Select(d => (Display: d, Visible: d.Intersect(rect)))
 			.Where(p => p.Visible.Width >= MinVisibleWidth && p.Visible.Height >= MinVisibleHeight)

@@ -23,7 +23,7 @@ public sealed partial class TorrentTreeItem : ObservableObject {
 		_changed = changed;
 		_expandedChanged = expandedChanged;
 		Depth = depth;
-		Children = node.Children.Select(c => new TorrentTreeItem(c, depth + 1, changed, expandedChanged)).ToList();
+		Children = [.. node.Children.Select(c => new TorrentTreeItem(c, depth + 1, changed, expandedChanged))];
 		node.PropertyChanged += (_, _) => OnPropertyChanged(nameof(IsChecked));
 	}
 

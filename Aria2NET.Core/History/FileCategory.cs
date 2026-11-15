@@ -21,7 +21,7 @@ public static class FileCategory {
 	}
 
 	private static Dictionary<string, string> Build() {
-		Dictionary<string, string> map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+		Dictionary<string, string> map = [with(StringComparer.OrdinalIgnoreCase)];
 		void Add(string category, string extensions) {
 			foreach (string ext in extensions.Split(' ')) {
 				map[ext] = category;

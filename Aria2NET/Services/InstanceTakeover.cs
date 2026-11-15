@@ -27,7 +27,7 @@ internal static class InstanceTakeover {
 				request.Set();
 			}
 			WaitForExit(older, TimeSpan.FromSeconds(20));
-			older = older.Where(IsRunning).ToList();
+			older = [.. older.Where(IsRunning)];
 		}
 
 		if (older.Count > 0) {
@@ -48,7 +48,7 @@ internal static class InstanceTakeover {
 			WaitForExit(older, TimeSpan.FromSeconds(10));
 		}
 
-		List<Process> left = older.Where(IsRunning).ToList();
+		List<Process> left = [.. older.Where(IsRunning)];
 		foreach (Process process in older) {
 			process.Dispose();
 		}
@@ -59,7 +59,7 @@ internal static class InstanceTakeover {
 	private static List<Process> OlderCopies(Version mine) {
 		int self = Environment.ProcessId;
 		int session = Process.GetCurrentProcess().SessionId;
-		List<Process> result = new List<Process>();
+		List<Process> result = [];
 		foreach (Process process in Process.GetProcessesByName(ProcessName)) {
 			if (process.Id != self && process.SessionId == session && InstanceRules.RunningCopyIsOlder(VersionOf(process), mine)) {
 				result.Add(process);
@@ -105,7 +105,7 @@ internal static class InstanceTakeover {
 	/// is a background thread, so it never keeps the process alive.
 	/// </summary>
 	public static void ListenForReplaceRequest(DispatcherQueue dispatcher, Action exit) {
-		EventWaitHandle request = new EventWaitHandle(false, EventResetMode.AutoReset, InstanceRules.ReplaceEventName);
+		EventWaitHandle request = new(false, EventResetMode.AutoReset, InstanceRules.ReplaceEventName);
 		new Thread(() => {
 			while (request.WaitOne()) {
 				dispatcher.TryEnqueue(() => exit());

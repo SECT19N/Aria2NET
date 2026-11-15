@@ -8,7 +8,7 @@ public static class LaunchArguments {
 	/// <summary>The links and files among the command-line arguments, in order. Other arguments (and files that are not torrents) are ignored.</summary>
 	/// <param name="baseDirectory">Relative file names are resolved against this (the working directory by default).</param>
 	public static IReadOnlyList<string> Extract(IEnumerable<string> args, string? baseDirectory = null) {
-		List<string> result = new List<string>();
+		List<string> result = [];
 		foreach (string raw in args) {
 			string arg = raw.Trim();
 			if (arg.Length == 0 || arg.StartsWith('-') || arg.StartsWith('/') && !Path.IsPathFullyQualified(arg)) {
@@ -45,11 +45,11 @@ public static class LaunchArguments {
 
 	/// <summary>Splits a command line into arguments the way Windows does (spaces separate, double quotes group, backslashes before a quote escape it).</summary>
 	public static IReadOnlyList<string> Split(string? commandLine) {
-		List<string> args = new List<string>();
+		List<string> args = [];
 		if (string.IsNullOrWhiteSpace(commandLine)) {
 			return args;
 		}
-		StringBuilder current = new StringBuilder();
+		StringBuilder current = new();
 		bool inQuotes = false;
 		bool started = false;
 		for (int i = 0; i < commandLine.Length; i++) {

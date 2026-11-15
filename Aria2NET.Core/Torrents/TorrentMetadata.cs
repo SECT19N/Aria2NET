@@ -34,7 +34,7 @@ public sealed record TorrentMetadata(string Name, string InfoHash, IReadOnlyList
 			throw new FormatException("This torrent has no name.");
 		}
 
-		List<TorrentFileEntry> files = new List<TorrentFileEntry>();
+		List<TorrentFileEntry> files = [];
 		if (info.TryGetValue("files", out object? fileList)) {
 			if (fileList is not List<object> list || list.Count == 0) {
 				throw new FormatException("This torrent lists no files.");
@@ -56,7 +56,7 @@ public sealed record TorrentMetadata(string Name, string InfoHash, IReadOnlyList
 			throw new FormatException("This torrent lists no files.");
 		}
 
-		List<string> trackers = new List<string>();
+		List<string> trackers = [];
 		if (Text(root, "announce") is { Length: > 0 } announce) {
 			trackers.Add(announce);
 		}
@@ -67,7 +67,7 @@ public sealed record TorrentMetadata(string Name, string InfoHash, IReadOnlyList
 		}
 
 		string hash = Convert.ToHexString(SHA1.HashData(rawInfo)).ToLowerInvariant();
-		return new TorrentMetadata(name, hash, files, trackers.Distinct(StringComparer.Ordinal).ToList());
+		return new TorrentMetadata(name, hash, files, [.. trackers.Distinct(StringComparer.Ordinal)]);
 	}
 
 	private static string? Text(Dictionary<string, object> d, string key) =>

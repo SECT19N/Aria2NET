@@ -45,7 +45,7 @@ public sealed class DiskRetryPlanner {
 
 	/// <summary>Looks at a poll and returns the failed downloads whose waiting time is over. Each is returned once until <see cref="Started"/> or <see cref="Failed"/>.</summary>
 	public IReadOnlyList<DownloadItem> Due(PollSnapshot snapshot, DateTimeOffset now) {
-		List<DownloadItem> due = new List<DownloadItem>();
+		List<DownloadItem> due = [];
 		lock (_gate) {
 			foreach (DownloadItem? item in snapshot.Items.Where(IsDiskError)) {
 				if (!_tries.TryGetValue(item.Gid, out Tries? t)) {

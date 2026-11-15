@@ -15,7 +15,7 @@ public sealed record DownloadFilePlan(IReadOnlyList<string> Files, IReadOnlyList
 		if (string.IsNullOrWhiteSpace(dir)) {
 			return Empty;
 		}
-		List<string> paths = new List<string>();
+		List<string> paths = [];
 		if (status.TryGetProperty("files", out JsonElement files) && files.ValueKind == JsonValueKind.Array) {
 			paths.AddRange(files.EnumerateArray().Select(f => Str(f, "path")).Where(p => !string.IsNullOrWhiteSpace(p) && !p!.StartsWith("[METADATA]", StringComparison.Ordinal))!);
 		}
@@ -27,8 +27,8 @@ public sealed record DownloadFilePlan(IReadOnlyList<string> Files, IReadOnlyList
 	/// <param name="folderName">The torrent's name when it has several files, so they live in <c>dir/folderName</c>.</param>
 	public static DownloadFilePlan Build(string dir, IEnumerable<string> filePaths, string? folderName) {
 		string root = Path.GetFullPath(dir);
-		List<string> fileList = filePaths.Select(Path.GetFullPath).Where(p => Inside(root, p)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-		List<string> controls = fileList.Select(p => p + ".aria2").ToList();
+		List<string> fileList = [.. filePaths.Select(Path.GetFullPath).Where(p => Inside(root, p)).Distinct(StringComparer.OrdinalIgnoreCase)];
+		List<string> controls = [.. fileList.Select(p => p + ".aria2")];
 		string? folder = null;
 		if (!string.IsNullOrWhiteSpace(folderName) && folderName.IndexOfAny(Path.GetInvalidFileNameChars()) < 0) {
 			string candidate = Path.GetFullPath(Path.Combine(root, folderName));

@@ -26,7 +26,7 @@ public sealed class GlobalSearch(DownloadsViewModel downloads, HistoryService hi
 		if (words.Length == 0) {
 			return [];
 		}
-		List<SearchResult> results = new List<SearchResult>();
+		List<SearchResult> results = [];
 
 		IReadOnlyList<DownloadItem> live = downloads.AllItems;
 		results.AddRange(SearchMatcher.Best(live, words, i => i.Name, i => [i.FirstUri, i.Path], PerGroup).Select(i => new SearchResult(

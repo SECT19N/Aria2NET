@@ -37,7 +37,7 @@ public sealed class DownloadMonitor(IAria2Engine engine, ILogger<DownloadMonitor
 	}
 
 	private async Task RunAsync(CancellationToken ct) {
-		using PeriodicTimer timer = new PeriodicTimer(_interval);
+		using PeriodicTimer timer = new(_interval);
 		do {
 			await PollOnceAsync(ct);
 		} while (await WaitAsync(timer, ct));

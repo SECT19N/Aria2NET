@@ -78,7 +78,7 @@ public sealed partial class TorrentFilesDialog : ContentDialog {
 	// ---------------------------------------------------------------- the tree
 
 	private void BuildTree() {
-		_roots = _tree.Roots.Select(r => new TorrentTreeItem(r, 0, Refresh, OnExpandedChanged)).ToList();
+		_roots = [.. _tree.Roots.Select(r => new TorrentTreeItem(r, 0, Refresh, OnExpandedChanged))];
 		if (_roots is [{ Children.Count: > 0 } only]) {
 			only.SetExpanded(true); // a torrent that is just one folder: show what is in it
 		}
@@ -154,7 +154,7 @@ public sealed partial class TorrentFilesDialog : ContentDialog {
 	}
 
 	private async void Browse_Click(object sender, RoutedEventArgs e) {
-		FolderPicker picker = new FolderPicker();
+		FolderPicker picker = new();
 		picker.FileTypeFilter.Add("*");
 		InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(App.Window));
 		if (await picker.PickSingleFolderAsync() is { } folder) {

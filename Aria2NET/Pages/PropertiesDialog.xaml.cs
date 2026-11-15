@@ -33,7 +33,7 @@ public sealed partial class PropertiesDialog : ContentDialog {
 		if (string.IsNullOrWhiteSpace(value)) {
 			return;
 		}
-		StackPanel panel = new StackPanel { Spacing = 2 };
+		StackPanel panel = new() { Spacing = 2 };
 		panel.Children.Add(new TextBlock { Text = label, Opacity = 0.7, FontSize = 12 });
 		panel.Children.Add(new TextBlock { Text = value, IsTextSelectionEnabled = true, TextWrapping = TextWrapping.Wrap, FontWeight = FontWeights.Normal });
 		Fields.Children.Add(panel);

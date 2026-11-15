@@ -34,8 +34,7 @@ public static class SearchMatcher {
 
 	/// <summary>The best <paramref name="limit"/> matches, best first; equally good ones keep the order they came in.</summary>
 	public static List<T> Best<T>(IEnumerable<T> items, IReadOnlyList<string> words, Func<T, string> title, Func<T, string?[]> otherFields, int limit) =>
-		items.Where(i => Matches(words, [title(i), .. otherFields(i)]))
+		[.. items.Where(i => Matches(words, [title(i), .. otherFields(i)]))
 			.OrderBy(i => Rank(words, title(i)))
-			.Take(limit)
-			.ToList();
+			.Take(limit)];
 }

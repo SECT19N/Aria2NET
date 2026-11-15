@@ -28,7 +28,7 @@ public sealed record SeedingOverride(SeedMode Mode = SeedMode.Default, double Ra
 			["seed-time"] = Settings.EngineOptions.NoSeedTime,
 		},
 		SeedMode.Never => new Dictionary<string, string> { ["seed-time"] = "0" },
-		_ => new Dictionary<string, string>(),
+		_ => [],
 	};
 }
 
@@ -52,7 +52,7 @@ public sealed record TorrentAddRequest(
 
 	/// <param name="includeDir">False when changing a download that already exists: aria2 ignores a new <c>dir</c> for it (checked against 1.37.0).</param>
 	public IReadOnlyDictionary<string, string> ToOptions(bool includeDir = true) {
-		Dictionary<string, string> options = new Dictionary<string, string>();
+		Dictionary<string, string> options = [];
 		if (includeDir) {
 			options["dir"] = Dir;
 		}

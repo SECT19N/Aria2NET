@@ -203,7 +203,7 @@ public sealed partial class DownloadDetailViewModel : ObservableObject {
 
 	/// <summary>Rebuilds the file rows only when the set of files changes; otherwise just moves their numbers.</summary>
 	private void ApplyFiles(TorrentDetailSnapshot s) {
-		List<string> names = s.Files.Select(f => RelativeName(f.Path, s.Directory)).ToList();
+		List<string> names = [.. s.Files.Select(f => RelativeName(f.Path, s.Directory))];
 		if (!Files.Select(f => f.Path).SequenceEqual(names)) {
 			Files.Clear();
 			for (int i = 0; i < names.Count; i++) {
@@ -245,7 +245,7 @@ public sealed partial class DownloadDetailViewModel : ObservableObject {
 		if (_choosing || !_editable) {
 			return;
 		}
-		List<int> wanted = Files.Where(f => f.Selected).Select(f => f.Index).ToList();
+		List<int> wanted = [.. Files.Where(f => f.Selected).Select(f => f.Index)];
 		if (wanted.Count == 0) {
 			changed.Selected = true;
 			_notices.Post(new Notice(Loc.S("Detail_FilesTitle", "Could not change the files"), Loc.S("Detail_KeepOne", "At least one file has to stay selected."), InfoBarSeverity.Informational));
@@ -290,12 +290,12 @@ public sealed partial class DownloadDetailViewModel : ObservableObject {
 		if (string.IsNullOrEmpty(path)) {
 			return "";
 		}
-		string relative = string.IsNullOrEmpty(dir) ? path : System.IO.Path.GetRelativePath(dir, path);
+		string relative = string.IsNullOrEmpty(dir) ? path : Path.GetRelativePath(dir, path);
 		return relative.Replace('\\', '/');
 	}
 
 	private static void Replace<T>(ObservableCollection<T> target, IEnumerable<T> items) {
-		List<T> list = items.ToList();
+		List<T> list = [.. items];
 		if (target.SequenceEqual(list)) {
 			return;
 		}
@@ -307,7 +307,7 @@ public sealed partial class DownloadDetailViewModel : ObservableObject {
 
 	/// <summary>A bar whose colour per slice goes from <paramref name="empty"/> (0) to <paramref name="full"/> (1), with hard edges between slices.</summary>
 	private static LinearGradientBrush Bar(double[] values, Color full, Color empty) {
-		LinearGradientBrush brush = new LinearGradientBrush { StartPoint = new(0, 0), EndPoint = new(1, 0) };
+		LinearGradientBrush brush = new() { StartPoint = new(0, 0), EndPoint = new(1, 0) };
 		if (values.Length == 0) {
 			brush.GradientStops.Add(new GradientStop { Color = empty, Offset = 0 });
 			brush.GradientStops.Add(new GradientStop { Color = empty, Offset = 1 });

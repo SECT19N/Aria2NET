@@ -27,7 +27,7 @@ public sealed class Database(string path, string backupsDir, ILogger? logger = n
 	public string Path => path;
 
 	public SqliteConnection Open() {
-		SqliteConnection connection = new SqliteConnection(_connectionString);
+		SqliteConnection connection = new(_connectionString);
 		try {
 			connection.Open();
 			using SqliteCommand pragma = connection.CreateCommand();
@@ -60,7 +60,7 @@ public sealed class Database(string path, string backupsDir, ILogger? logger = n
 		}
 
 		string? backup = null;
-		List<Migration> pending = _migrations.Where(m => m.Version > current).OrderBy(m => m.Version).ToList();
+		List<Migration> pending = [.. _migrations.Where(m => m.Version > current).OrderBy(m => m.Version)];
 		if (pending.Count > 0 && current > 0) {
 			backup = Backup(connection, $"history-v{current}", keep: 5);
 			logger?.LogInformation("Backed up history database to {Backup} before migrating from v{From}", backup, current);

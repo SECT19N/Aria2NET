@@ -8,7 +8,7 @@ public static class HistoryExport {
 	private static readonly string[] Header = ["Name", "Status", "Size (bytes)", "URL", "Folder", "Path", "Category", "Added (UTC)", "Finished (UTC)", "Error"];
 
 	public static string ToCsv(IEnumerable<HistoryEntry> entries) {
-		StringBuilder sb = new StringBuilder();
+		StringBuilder sb = new();
 		sb.AppendJoin(',', Header.Select(Quote)).Append("\r\n");
 		foreach (HistoryEntry e in entries) {
 			sb.AppendJoin(',', new[] {
@@ -20,8 +20,8 @@ public static class HistoryExport {
 	}
 
 	public static string ToJson(IEnumerable<HistoryEntry> entries) {
-		using MemoryStream stream = new MemoryStream();
-		using (Utf8JsonWriter w = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true })) {
+		using MemoryStream stream = new();
+		using (Utf8JsonWriter w = new(stream, new JsonWriterOptions { Indented = true })) {
 			w.WriteStartArray();
 			foreach (HistoryEntry e in entries) {
 				w.WriteStartObject();

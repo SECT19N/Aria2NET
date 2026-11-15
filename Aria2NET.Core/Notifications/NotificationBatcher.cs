@@ -26,9 +26,9 @@ public sealed class NotificationBatcher(TimeSpan window) {
 		if (_pending.Count == 0 || now - _first < window) {
 			return [];
 		}
-		List<ToastContent> toasts = new List<ToastContent>();
+		List<ToastContent> toasts = [];
 		foreach (NotificationKind kind in Enum.GetValues<NotificationKind>()) {
-			List<DownloadItem> items = _pending.Where(p => p.Kind == kind).Select(p => p.Item).ToList();
+			List<DownloadItem> items = [.. _pending.Where(p => p.Kind == kind).Select(p => p.Item)];
 			if (items.Count > 0) {
 				toasts.Add(Describe(kind, items));
 			}

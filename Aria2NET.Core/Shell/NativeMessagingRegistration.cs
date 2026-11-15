@@ -55,8 +55,8 @@ public sealed class NativeMessagingRegistration(string exePath, string manifestD
 	}
 
 	internal string ManifestJson() {
-		using MemoryStream stream = new MemoryStream();
-		using (Utf8JsonWriter writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true })) {
+		using MemoryStream stream = new();
+		using (Utf8JsonWriter writer = new(stream, new JsonWriterOptions { Indented = true })) {
 			writer.WriteStartObject();
 			writer.WriteString("name", BrowserBridge.HostName);
 			writer.WriteString("description", "Hands browser downloads to Aria2NET");

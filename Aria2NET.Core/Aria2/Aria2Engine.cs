@@ -115,7 +115,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 				return;
 			}
 
-			Aria2RpcClient rpc = new Aria2RpcClient(_http, new Uri($"http://127.0.0.1:{config.Port}/jsonrpc"), config.Secret);
+			Aria2RpcClient rpc = new(_http, new Uri($"http://127.0.0.1:{config.Port}/jsonrpc"), config.Secret);
 			Aria2Version? version = await WaitUntilReadyAsync(process, rpc, ct);
 			if (version is not null) {
 				_process = process;
@@ -142,7 +142,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 	}
 
 	private Process LaunchProcess(string exe) {
-		ProcessStartInfo psi = new ProcessStartInfo(exe) {
+		ProcessStartInfo psi = new(exe) {
 			UseShellExecute = false,
 			CreateNoWindow = true,
 			WorkingDirectory = _paths.EngineDir,
@@ -151,7 +151,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 		};
 		psi.ArgumentList.Add("--conf-path=" + _paths.Aria2ConfFile);
 
-		Process process = new Process { StartInfo = psi, EnableRaisingEvents = true };
+		Process process = new() { StartInfo = psi, EnableRaisingEvents = true };
 		process.OutputDataReceived += (_, e) => LogProcessLine(e.Data);
 		process.ErrorDataReceived += (_, e) => LogProcessLine(e.Data);
 		process.Start();
@@ -204,7 +204,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 			if (!process.HasExited) {
 				if (rpc is not null) {
 					try {
-						using CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+						using CancellationTokenSource cts = new(TimeSpan.FromSeconds(3));
 						await rpc.SaveSessionAsync(cts.Token);
 						await rpc.ShutdownAsync(cts.Token);
 					} catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or Aria2RpcException) {
@@ -212,7 +212,7 @@ public sealed class Aria2Engine(AppPaths paths, string downloadDir, ILogger<Aria
 					}
 				}
 				try {
-					using CancellationTokenSource cts = new CancellationTokenSource(ExitTimeout);
+					using CancellationTokenSource cts = new(ExitTimeout);
 					await process.WaitForExitAsync(cts.Token);
 				} catch (OperationCanceledException) {
 					KillQuietly(process);

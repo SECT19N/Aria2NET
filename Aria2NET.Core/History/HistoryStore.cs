@@ -109,8 +109,8 @@ public sealed class HistoryStore(Database database, ILogger? logger = null) {
 		using SqliteConnection connection = database.Open();
 		using SqliteTransaction tx = connection.BeginTransaction();
 
-		HashSet<string> known = new HashSet<string>(StringComparer.Ordinal);
-		List<(long Id, string Gid, string? Uri, string? Dir, string? Hash)> unfinished = new List<(long Id, string Gid, string? Uri, string? Dir, string? Hash)>();
+		HashSet<string> known = [with(StringComparer.Ordinal)];
+		List<(long Id, string Gid, string? Uri, string? Dir, string? Hash)> unfinished = [];
 		using (SqliteCommand select = connection.CreateCommand()) {
 			select.Transaction = tx;
 			select.CommandText = "SELECT id, gid, uri, dir, status, info_hash FROM downloads";
@@ -125,7 +125,7 @@ public sealed class HistoryStore(Database database, ILogger? logger = null) {
 		}
 
 		HashSet<string> liveGids = live.Select(i => i.Gid).ToHashSet(StringComparer.Ordinal);
-		List<DownloadItem> strangers = live.Where(i => !known.Contains(i.Gid)).ToList();
+		List<DownloadItem> strangers = [.. live.Where(i => !known.Contains(i.Gid))];
 		int interrupted = 0;
 		int relinked = 0;
 		string nowText = Format(nowUtc);
@@ -206,7 +206,7 @@ public sealed class HistoryStore(Database database, ILogger? logger = null) {
 		using SqliteCommand command = connection.CreateCommand();
 		command.CommandText = "SELECT DISTINCT host FROM downloads WHERE host IS NOT NULL AND host <> '' ORDER BY host";
 		using SqliteDataReader reader = command.ExecuteReader();
-		List<string> result = new List<string>();
+		List<string> result = [];
 		while (reader.Read()) {
 			result.Add(reader.GetString(0));
 		}
@@ -220,7 +220,7 @@ public sealed class HistoryStore(Database database, ILogger? logger = null) {
 		command.CommandText = "SELECT dir FROM downloads WHERE dir IS NOT NULL AND dir <> '' GROUP BY dir ORDER BY MAX(added_utc) DESC LIMIT $limit";
 		command.Parameters.AddWithValue("$limit", limit);
 		using SqliteDataReader reader = command.ExecuteReader();
-		List<string> result = new List<string>();
+		List<string> result = [];
 		while (reader.Read()) {
 			result.Add(reader.GetString(0));
 		}
@@ -272,8 +272,8 @@ public sealed class HistoryStore(Database database, ILogger? logger = null) {
 	}
 
 	private static (string Where, Action<SqliteCommand> Bind) BuildWhere(HistoryQuery q) {
-		List<string> clauses = new List<string>();
-		List<Action<SqliteCommand>> binds = new List<Action<SqliteCommand>>();
+		List<string> clauses = [];
+		List<Action<SqliteCommand>> binds = [];
 
 		if (!string.IsNullOrWhiteSpace(q.Search)) {
 			clauses.Add("(name LIKE $search ESCAPE '\\' OR uri LIKE $search ESCAPE '\\' OR path LIKE $search ESCAPE '\\')");
@@ -281,7 +281,7 @@ public sealed class HistoryStore(Database database, ILogger? logger = null) {
 			binds.Add(c => c.Parameters.AddWithValue("$search", pattern));
 		}
 		if (q.Statuses is { Count: > 0 }) {
-			List<string> names = q.Statuses.Select((_, i) => "$st" + i).ToList();
+			List<string> names = [.. q.Statuses.Select((_, i) => "$st" + i)];
 			clauses.Add($"status IN ({string.Join(", ", names)})");
 			binds.Add(c => {
 				for (int i = 0; i < names.Count; i++) {
@@ -311,7 +311,7 @@ public sealed class HistoryStore(Database database, ILogger? logger = null) {
 	}
 
 	private static List<HistoryEntry> ReadAll(SqliteCommand command) {
-		List<HistoryEntry> result = new List<HistoryEntry>();
+		List<HistoryEntry> result = [];
 		using SqliteDataReader reader = command.ExecuteReader();
 		while (reader.Read()) {
 			result.Add(new HistoryEntry(

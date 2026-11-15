@@ -35,7 +35,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 	private bool _baselineTaken;
 
 	/// <summary>Every download in the list, whatever the filter (the title-bar search looks through these).</summary>
-	public IReadOnlyList<DownloadItem> AllItems => _items.Where(i => !_hidden.Contains(i.Gid)).ToList();
+	public IReadOnlyList<DownloadItem> AllItems => [.. _items.Where(i => !_hidden.Contains(i.Gid))];
 
 	/// <summary>Rows currently shown (after filter and sort).</summary>
 	public ObservableCollection<DownloadRowViewModel> Rows { get; } = [];
@@ -280,7 +280,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 			return invalid;
 		}
 
-		List<string> failures = new List<string>();
+		List<string> failures = [];
 		int accepted = 0;
 		foreach (string url in urls) {
 			try {
@@ -346,7 +346,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		if (_restoring is not null || _syncing) {
 			return;
 		}
-		_selection = rows.ToList();
+		_selection = [.. rows];
 		RefreshCapabilities();
 	}
 
@@ -355,7 +355,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		SetSelection(actual);
 	}
 
-	private List<DownloadItem> SelectedItems() => _selection.Select(r => r.Item).ToList();
+	private List<DownloadItem> SelectedItems() => [.. _selection.Select(r => r.Item)];
 
 	private void RefreshCapabilities() {
 		List<DownloadItem> items = SelectedItems();
@@ -378,7 +378,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		CanChangeSeeding = items.Count > 0 && items.All(DownloadCapabilities.CanChangeSeeding);
 		DetailRow = _selection.Count == 1 ? _selection[0] : null;
 
-		List<DownloadItem> visible = _items.Where(i => !_hidden.Contains(i.Gid)).ToList();
+		List<DownloadItem> visible = [.. _items.Where(i => !_hidden.Contains(i.Gid))];
 		CanPauseAll = IsEngineUp && visible.Any(i => i.Status is DownloadStatus.Active or DownloadStatus.Seeding or DownloadStatus.Waiting);
 		CanResumeAll = IsEngineUp && visible.Any(i => i.Status == DownloadStatus.Paused);
 		CanClearCompleted = visible.Any(i => i.Status == DownloadStatus.Complete);
@@ -479,11 +479,11 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 	}
 
 	public void CopyUrl() {
-		List<string?> urls = SelectedItems().Select(i => i.FirstUri).Where(u => !string.IsNullOrEmpty(u)).ToList();
+		List<string?> urls = [.. SelectedItems().Select(i => i.FirstUri).Where(u => !string.IsNullOrEmpty(u))];
 		if (urls.Count == 0) {
 			return;
 		}
-		DataPackage package = new DataPackage();
+		DataPackage package = new();
 		package.SetText(string.Join(Environment.NewLine, urls));
 		Clipboard.SetContent(package);
 	}
@@ -621,7 +621,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 		}
 
 		TrackTimes(snapshot.Items);
-		_items = snapshot.Items.Where(i => !DownloadView.IsSuperseded(i)).ToList();
+		_items = [.. snapshot.Items.Where(i => !DownloadView.IsSuperseded(i))];
 		_hidden.RemoveWhere(gid => !snapshot.Items.Any(i => i.Gid == gid));
 		CheckDiskSpace(_items);
 
@@ -654,10 +654,10 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 
 	/// <summary>Updates the rows from the latest snapshot, filter and sort. Rows are changed in place, never rebuilt.</summary>
 	private void Rebuild() {
-		List<DownloadItem> visible = _items.Where(i => !_hidden.Contains(i.Gid)).ToList();
+		List<DownloadItem> visible = [.. _items.Where(i => !_hidden.Contains(i.Gid))];
 
 		// Keep a row object per GID that still exists, so selection and scroll survive refreshes.
-		HashSet<string> present = new HashSet<string>(_items.Select(i => i.Gid));
+		HashSet<string> present = [.. _items.Select(i => i.Gid)];
 		foreach (string gid in _byGid.Keys.Where(g => !present.Contains(g)).ToList()) {
 			_byGid.Remove(gid);
 		}
@@ -675,9 +675,9 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 			row.SetTimes(added, finished);
 		}
 
-		List<DownloadRowViewModel> desired = DownloadView.Apply(visible, Filter, SortColumn, SortDescending).Select(i => _byGid[i.Gid]).ToList();
+		List<DownloadRowViewModel> desired = [.. DownloadView.Apply(visible, Filter, SortColumn, SortDescending).Select(i => _byGid[i.Gid])];
 		// ListView reports a lost selection while rows move, so remember it first and ignore those events.
-		List<DownloadRowViewModel> before = _selection.ToList();
+		List<DownloadRowViewModel> before = [.. _selection];
 		bool changed;
 		_syncing = true;
 		try {
@@ -710,7 +710,7 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 
 	private bool SyncRows(List<DownloadRowViewModel> desired) {
 		bool changed = false;
-		HashSet<DownloadRowViewModel> keep = new HashSet<DownloadRowViewModel>(desired);
+		HashSet<DownloadRowViewModel> keep = [.. desired];
 		for (int i = Rows.Count - 1; i >= 0; i--) {
 			if (!keep.Contains(Rows[i])) {
 				Rows.RemoveAt(i);

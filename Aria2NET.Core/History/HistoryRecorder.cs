@@ -35,7 +35,7 @@ public sealed class HistoryRecorder(HistoryStore store, ILogger? logger = null, 
 
 	private void Record(IReadOnlyList<DownloadItem> allItems) {
 		// A magnet's metadata placeholder is only a stage of the torrent that follows it; the follower is the one that counts.
-		List<DownloadItem> items = allItems.Where(i => !i.IsMetadata).ToList();
+		List<DownloadItem> items = [.. allItems.Where(i => !i.IsMetadata)];
 		DateTime now = _clock();
 		if (_reconcileNext) {
 			ReconcileResult result = store.Reconcile(items, now);
@@ -50,9 +50,8 @@ public sealed class HistoryRecorder(HistoryStore store, ILogger? logger = null, 
 		}
 
 		HashSet<string> current = items.Select(i => i.Gid).ToHashSet(StringComparer.Ordinal);
-		List<string> vanished = _seen.Where(p => !current.Contains(p.Key) && p.Value.Status is DownloadStatus.Active or DownloadStatus.Waiting or DownloadStatus.Paused)
-			.Select(p => p.Key).ToList();
-		List<DownloadItem> changed = items.Where(i => !_seen.TryGetValue(i.Gid, out Seen seen) || seen != Seen.Of(i)).ToList();
+		List<string> vanished = [.. _seen.Where(p => !current.Contains(p.Key) && p.Value.Status is DownloadStatus.Active or DownloadStatus.Waiting or DownloadStatus.Paused).Select(p => p.Key)];
+		List<DownloadItem> changed = [.. items.Where(i => !_seen.TryGetValue(i.Gid, out Seen seen) || seen != Seen.Of(i))];
 
 		if (vanished.Count > 0) {
 			store.MarkRemoved(vanished, now);

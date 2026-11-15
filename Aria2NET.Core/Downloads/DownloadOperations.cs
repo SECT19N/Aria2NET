@@ -66,13 +66,13 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 	public async Task<IReadOnlyList<string>> RemoveAsync(IReadOnlyCollection<DownloadItem> items, bool deleteFiles, CancellationToken ct = default) {
 		Aria2RpcClient rpc = Rpc;
 		// Ask for the file lists first: once removed, aria2 forgets everything but the first file.
-		List<(DownloadItem Item, DownloadFilePlan Plan)> plans = new List<(DownloadItem Item, DownloadFilePlan Plan)>();
+		List<(DownloadItem Item, DownloadFilePlan Plan)> plans = [];
 		if (deleteFiles) {
 			foreach (DownloadItem item in items) {
 				plans.Add((item, await PlanFilesAsync(rpc, item, ct)));
 			}
 		}
-		List<string> live = items.Where(DownloadCapabilities.IsLive).Select(i => i.Gid).ToList();
+		List<string> live = [.. items.Where(DownloadCapabilities.IsLive).Select(i => i.Gid)];
 		if (live.Count > 0) {
 			await rpc.RemoveAsync(live, ct);
 		}
@@ -82,7 +82,7 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 			logger.LogDebug("removeDownloadResult reported {Count} already-gone entries", leftover.Count);
 		}
 
-		List<string> problems = new List<string>();
+		List<string> problems = [];
 		foreach ((DownloadItem? item, DownloadFilePlan? plan) in plans) {
 			// Off the UI thread: recycling or deleting a large (pre-allocated) torrent takes long enough to freeze the window.
 			await Task.Run(() => DeleteFilesAsync(item, plan, problems, ct), ct);
@@ -169,7 +169,7 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 			throw new InvalidOperationException("This download cannot be retried.");
 		}
 		Aria2RpcClient rpc = Rpc;
-		Dictionary<string, string> options = new Dictionary<string, string>();
+		Dictionary<string, string> options = [];
 		if (!string.IsNullOrEmpty(item.Dir)) {
 			options["dir"] = item.Dir;
 		}
@@ -243,7 +243,7 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 			}
 			rpc = _forcedRpc;
 			// Still waiting for a slot or running: keep the extra slot.
-			List<string> keep = _forced.Where(gid => snapshot.Items.Any(i => i.Gid == gid && i.Status is DownloadStatus.Active or DownloadStatus.Waiting)).ToList();
+			List<string> keep = [.. _forced.Where(gid => snapshot.Items.Any(i => i.Gid == gid && i.Status is DownloadStatus.Active or DownloadStatus.Waiting))];
 			if (keep.Count == _forced.Count) {
 				return;
 			}
@@ -280,7 +280,7 @@ public sealed class DownloadOperations(IAria2Engine engine, ILogger<DownloadOper
 		using JsonDocument status = await rpc.TellStatusFullAsync(gid, ct);
 		JsonElement root = status.RootElement;
 		DownloadItem item = DownloadItem.FromJson(root);
-		List<(string, string)> uris = new List<(string, string)>();
+		List<(string, string)> uris = [];
 		if (root.TryGetProperty("files", out JsonElement files) && files.ValueKind == JsonValueKind.Array && files.GetArrayLength() > 0
 			&& files[0].TryGetProperty("uris", out JsonElement list) && list.ValueKind == JsonValueKind.Array) {
 			foreach (JsonElement u in list.EnumerateArray()) {

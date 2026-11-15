@@ -36,7 +36,7 @@ public sealed class FileLoggerProvider : ILoggerProvider {
 	public void Dispose() { }
 
 	private void Write(string category, LogLevel level, string message, Exception? exception) {
-		StringBuilder sb = new StringBuilder();
+		StringBuilder sb = new();
 		sb.Append(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"))
 			.Append(" [").Append(level.ToString()[..3].ToUpperInvariant()).Append("] ")
 			.Append(category).Append(": ").Append(message);

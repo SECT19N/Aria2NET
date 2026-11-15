@@ -26,8 +26,8 @@ public sealed class TrackerListService(HttpClient http, AppPaths paths, ILogger<
 
 	/// <summary>Keeps tracker addresses only. The result is written into aria2's config file, so a line with a comma, space or newline could smuggle in another option and is rejected.</summary>
 	public static IReadOnlyList<string> Parse(string? text) {
-		List<string> result = new List<string>();
-		HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		List<string> result = [];
+		HashSet<string> seen = [with(StringComparer.OrdinalIgnoreCase)];
 		foreach (string raw in (text ?? "").Split('\n')) {
 			string line = raw.Trim();
 			if (line.Length == 0 || line.StartsWith('#') || line.Any(c => char.IsWhiteSpace(c) || char.IsControl(c) || c == ',')) {
@@ -78,7 +78,7 @@ public sealed class TrackerListService(HttpClient http, AppPaths paths, ILogger<
 				return null;
 			}
 			await using Stream stream = await response.Content.ReadAsStreamAsync(ct);
-			using MemoryStream buffer = new MemoryStream();
+			using MemoryStream buffer = new();
 			byte[] chunk = new byte[16 * 1024];
 			int read;
 			while ((read = await stream.ReadAsync(chunk, ct)) > 0) {

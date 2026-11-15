@@ -82,7 +82,7 @@ internal sealed class TrayIcon : IDisposable {
 	}
 
 	private bool Notify(uint message) {
-		NotifyIconData data = new NotifyIconData {
+		NotifyIconData data = new() {
 			cbSize = Marshal.SizeOf<NotifyIconData>(),
 			hWnd = _hwnd,
 			uID = IconId,
@@ -188,7 +188,7 @@ internal sealed class TrayIcon : IDisposable {
 				return icon; // not a 32-bit icon of the expected size
 			}
 			byte[] pixels = new byte[size * size * 4];
-			BitmapInfoHeader header = new BitmapInfoHeader { biSize = Marshal.SizeOf<BitmapInfoHeader>(), biWidth = size, biHeight = -size, biPlanes = 1, biBitCount = 32 };
+			BitmapInfoHeader header = new() { biSize = Marshal.SizeOf<BitmapInfoHeader>(), biWidth = size, biHeight = -size, biPlanes = 1, biBitCount = 32 };
 			nint screen = GetDC(IntPtr.Zero);
 			int read = GetDIBits(screen, info.hbmColor, 0, (uint) size, pixels, ref header, 0);
 			ReleaseDC(IntPtr.Zero, screen);

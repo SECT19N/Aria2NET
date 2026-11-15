@@ -76,29 +76,28 @@ public sealed class PersistenceCoordinator(
 	private void ScanLeftovers(PollSnapshot snapshot) {
 		try {
 			AppSettings saved = settings.Load();
-			List<string> folders = new List<string>();
+			List<string> folders = [];
 			if (history.Store is { } store) {
 				folders.AddRange(store.Folders());
 			}
 			folders.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads"));
 			folders.AddRange(new[] { saved.DefaultDownloadFolder, saved.LastUsedFolder }.Where(f => !string.IsNullOrWhiteSpace(f))!);
 
-			List<(OrphanFile Orphan, HistoryEntry? Entry)> candidates = OrphanFiles.Find(folders, snapshot.Items)
+			List<(OrphanFile Orphan, HistoryEntry? Entry)> candidates = [.. OrphanFiles.Find(folders, snapshot.Items)
 				.Select(o => (Orphan: o, Entry: history.Store?.FindByPath(o.DataFile)))
 				// A download the user removed or that failed is not "lost": don't nag about it.
-				.Where(x => x.Entry is null || x.Entry.Status is HistoryStatus.Interrupted or HistoryStatus.Active or HistoryStatus.Waiting or HistoryStatus.Paused)
-				.ToList();
+				.Where(x => x.Entry is null || x.Entry.Status is HistoryStatus.Interrupted or HistoryStatus.Active or HistoryStatus.Waiting or HistoryStatus.Paused)];
 			if (candidates.Count == 0) {
 				return;
 			}
 
-			List<(OrphanFile Orphan, HistoryEntry? Entry)> resumable = candidates.Where(x => !string.IsNullOrEmpty(x.Entry?.Uri)).ToList();
+			List<(OrphanFile Orphan, HistoryEntry? Entry)> resumable = [.. candidates.Where(x => !string.IsNullOrEmpty(x.Entry?.Uri))];
 			string message = (candidates.Count == 1 ? Loc.S("Persist_LeftoverOne", "1 partly downloaded file was left behind by an earlier session.") : Loc.F("Persist_LeftoverMany", "{0} partly downloaded files were left behind by an earlier session.", candidates.Count))
 				+ (resumable.Count > 0 ? Loc.F("Persist_CanResume", " {0} can be resumed.", resumable.Count) : Loc.S("Persist_CannotResume", " They cannot be resumed because their links are not known."));
 
 			notices.Post(new Notice(Loc.S("Persist_FoundTitle", "Unfinished downloads found"), message, InfoBarSeverity.Informational,
 				resumable.Count == 0 ? null : new NoticeAction(Loc.F("Persist_Resume", "Resume {0}", resumable.Count), () => ResumeAsync(resumable)),
-				new NoticeAction(Loc.S("Persist_DeleteLeftovers", "Delete leftovers"), () => DeleteAsync(candidates.Select(c => c.Orphan).ToList()))));
+				new NoticeAction(Loc.S("Persist_DeleteLeftovers", "Delete leftovers"), () => DeleteAsync([.. candidates.Select(c => c.Orphan)]))));
 		} catch (Exception ex) {
 			logger.LogWarning(ex, "Scanning for leftover download files failed");
 		}

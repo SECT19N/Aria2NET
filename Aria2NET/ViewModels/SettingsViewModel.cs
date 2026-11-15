@@ -69,7 +69,7 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 	}
 
 	public void ResetDownloads() {
-		AppSettings d = new AppSettings();
+		AppSettings d = new();
 		Update(s => {
 			s.DefaultDownloadFolder = d.DefaultDownloadFolder;
 			s.MaxConcurrentDownloads = d.MaxConcurrentDownloads;
@@ -95,7 +95,7 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 	}
 
 	public void ResetTorrents() {
-		AppSettings d = new AppSettings();
+		AppSettings d = new();
 		Update(s => {
 			s.ListenPortStart = d.ListenPortStart;
 			s.ListenPortEnd = d.ListenPortEnd;
@@ -112,7 +112,7 @@ public sealed class SettingsViewModel(AppPaths paths, SettingsStore<AppSettings>
 	}
 
 	public void ResetNetwork() {
-		AppSettings d = new AppSettings();
+		AppSettings d = new();
 		Update(s => {
 			s.Proxy = d.Proxy;
 			s.ProxyAddress = d.ProxyAddress;

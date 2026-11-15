@@ -65,14 +65,14 @@ public static class MagnetLink {
 public static class SelectFileSpec {
 	/// <summary>Null when nothing needs to be said: every file is chosen, so aria2's default (all) applies. Throws when nothing is chosen.</summary>
 	public static string? Build(IEnumerable<int> selected, int totalFiles) {
-		List<int> sorted = selected.Distinct().Where(i => i >= 1 && i <= totalFiles).Order().ToList();
+		List<int> sorted = [.. selected.Distinct().Where(i => i >= 1 && i <= totalFiles).Order()];
 		if (sorted.Count == 0) {
 			throw new ArgumentException("Choose at least one file.", nameof(selected));
 		}
 		if (sorted.Count == totalFiles) {
 			return null;
 		}
-		List<string> parts = new List<string>();
+		List<string> parts = [];
 		for (int i = 0; i < sorted.Count;) {
 			int start = sorted[i];
 			int end = start;

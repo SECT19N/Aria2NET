@@ -116,7 +116,7 @@ public sealed partial class DownloadRowViewModel : ObservableObject {
 		};
 		HasPrimary = PrimaryGlyph.Length > 0;
 
-		List<string> lines = new List<string> { item.Name };
+		List<string> lines = [item.Name];
 		if (!string.IsNullOrEmpty(item.Path) && !(item.IsTorrent && item.FileCount > 1)) {
 			lines.Add(Loc.F("Row_TipLocation", "Location: {0}", item.Path));
 		} else if (!string.IsNullOrEmpty(item.Dir)) {

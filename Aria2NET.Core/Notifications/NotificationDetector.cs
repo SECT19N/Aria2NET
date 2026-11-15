@@ -27,8 +27,8 @@ public sealed class NotificationDetector {
 	}
 
 	public IReadOnlyList<DownloadNotification> Observe(PollSnapshot snapshot) {
-		List<DownloadNotification> found = new List<DownloadNotification>();
-		Dictionary<string, DownloadStatus> next = new Dictionary<string, DownloadStatus>(snapshot.Items.Count);
+		List<DownloadNotification> found = [];
+		Dictionary<string, DownloadStatus> next = [with(snapshot.Items.Count)];
 		foreach (DownloadItem item in snapshot.Items) {
 			// A magnet's metadata placeholder is not something the user downloads; the torrent it leads to is announced instead.
 			if (item.IsMetadata) {

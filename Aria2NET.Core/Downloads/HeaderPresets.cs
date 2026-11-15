@@ -27,7 +27,7 @@ public sealed class HeaderPresets(SettingsStore<HeaderPresetFile> store) {
 	public const int MaxNameLength = 60;
 
 	public IReadOnlyList<HeaderPreset> List() =>
-		store.Load().Presets.Where(p => p.Name.Length > 0).OrderBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
+		[.. store.Load().Presets.Where(p => p.Name.Length > 0).OrderBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase)];
 
 	/// <summary>Saves under <paramref name="name"/>, replacing a preset with the same name. Returns an error text, or null when saved.</summary>
 	public string? Save(string name, IEnumerable<string> headers, string? referer, string? cookie) {
@@ -35,7 +35,7 @@ public sealed class HeaderPresets(SettingsStore<HeaderPresetFile> store) {
 		if (name.Length == 0 || name.Length > MaxNameLength || name.Any(char.IsControl)) {
 			return $"Give the preset a name of up to {MaxNameLength} characters.";
 		}
-		List<string> lines = headers.Select(h => h.Trim()).Where(h => h.Length > 0).ToList();
+		List<string> lines = [.. headers.Select(h => h.Trim()).Where(h => h.Length > 0)];
 		string? check = new AddOptions(lines, referer, cookie).Validate();
 		if (check is not null) {
 			return check;

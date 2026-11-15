@@ -7,14 +7,14 @@ public static class OrphanFiles {
 	/// <summary>Control files in <paramref name="folders"/> that no live download owns. Only the top level of each folder is scanned.</summary>
 	public static IReadOnlyList<OrphanFile> Find(IEnumerable<string> folders, IEnumerable<DownloadItem> live) {
 		HashSet<string> owned = live.Select(i => i.Path).Where(p => !string.IsNullOrEmpty(p)).Select(p => Path.GetFullPath(p!)).ToHashSet(StringComparer.OrdinalIgnoreCase);
-		List<OrphanFile> result = new List<OrphanFile>();
+		List<OrphanFile> result = [];
 		foreach (string? folder in folders.Where(f => !string.IsNullOrWhiteSpace(f)).Select(Path.GetFullPath).Distinct(StringComparer.OrdinalIgnoreCase)) {
 			if (!Directory.Exists(folder)) {
 				continue;
 			}
 			IEnumerable<string> files;
 			try {
-				files = Directory.EnumerateFiles(folder, "*.aria2", SearchOption.TopDirectoryOnly).ToList();
+				files = [.. Directory.EnumerateFiles(folder, "*.aria2", SearchOption.TopDirectoryOnly)];
 			} catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
 				continue;
 			}

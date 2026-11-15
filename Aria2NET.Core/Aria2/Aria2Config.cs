@@ -17,7 +17,7 @@ public sealed record Aria2Config(int Port, string Secret, int ParentPid, string 
 		Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
 
 	public static int FindFreeLoopbackPort() {
-		TcpListener listener = new TcpListener(IPAddress.Loopback, 0);
+		TcpListener listener = new(IPAddress.Loopback, 0);
 		listener.Start();
 		try {
 			return ((IPEndPoint) listener.LocalEndpoint).Port;
@@ -30,7 +30,7 @@ public sealed record Aria2Config(int Port, string Secret, int ParentPid, string 
 	public static string TrackerOptionValue(IEnumerable<string> trackers) => string.Join(",", trackers);
 
 	public string Render(AppPaths paths) {
-		StringBuilder sb = new StringBuilder();
+		StringBuilder sb = new();
 		sb.AppendLine("enable-rpc=true");
 		sb.AppendLine($"rpc-listen-port={Port}");
 		sb.AppendLine($"rpc-secret={Secret}");

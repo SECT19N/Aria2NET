@@ -42,8 +42,8 @@ public sealed partial class SettingsPage : Page {
 			FinishBox.Items.Add(WhenFinishedMachine.Label(action));
 		}
 		FinishBox.SelectedIndex = (int) FinishService.Action;
-		foreach ((string Label, int Days) choice in SettingsViewModel.RetentionChoices) {
-			RetentionBox.Items.Add(choice.Label);
+		foreach ((string Label, int Days) in SettingsViewModel.RetentionChoices) {
+			RetentionBox.Items.Add(Label);
 		}
 		RetentionBox.SelectedIndex = ViewModel.RetentionIndex;
 		RetentionBox.IsEnabled = ViewModel.HistoryAvailable;
@@ -217,11 +217,11 @@ public sealed partial class SettingsPage : Page {
 		if (_loading || UserAgentBox.SelectedIndex < 0) {
 			return;
 		}
-		(string Label, string? Value) choice = SettingsViewModel.UserAgentChoices[UserAgentBox.SelectedIndex];
+		(string Label, string? Value) = SettingsViewModel.UserAgentChoices[UserAgentBox.SelectedIndex];
 		bool custom = UserAgentBox.SelectedIndex == SettingsViewModel.UserAgentChoices.Count - 1;
 		UserAgentText.Visibility = custom ? Visibility.Visible : Visibility.Collapsed;
 		if (!custom) {
-			ViewModel.Update(s => s.UserAgent = choice.Value);
+			ViewModel.Update(s => s.UserAgent = Value);
 		}
 	}
 
@@ -395,9 +395,7 @@ public sealed partial class SettingsPage : Page {
 		foreach (SettingsSection section in _sections) {
 			PageRoot.Children.Add(section.Panel);
 		}
-		_index ??= _sections
-			.SelectMany(s => Labelled(s.Panel).Select(c => new SettingsTarget(s.Tab, s.Title, c.Label)).Prepend(new SettingsTarget(s.Tab, s.Title, null)))
-			.ToList();
+		_index ??= [.. _sections.SelectMany(s => Labelled(s.Panel).Select(c => new SettingsTarget(s.Tab, s.Title, c.Label)).Prepend(new SettingsTarget(s.Tab, s.Title, null)))];
 		SelectTab(_tab);
 		ShowSections();
 	}
@@ -485,7 +483,7 @@ public sealed partial class SettingsPage : Page {
 
 	private async void ExportSettings_Click(object sender, RoutedEventArgs e) {
 		try {
-			FileSavePicker picker = new Windows.Storage.Pickers.FileSavePicker { SuggestedFileName = "aria2net-settings", SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary };
+			FileSavePicker picker = new() { SuggestedFileName = "aria2net-settings", SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary };
 			picker.FileTypeChoices.Add("Aria2NET settings", [".json"]);
 			WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(App.Window));
 			if (await picker.PickSaveFileAsync() is not { } file) {
@@ -500,7 +498,7 @@ public sealed partial class SettingsPage : Page {
 
 	private async void ImportSettings_Click(object sender, RoutedEventArgs e) {
 		try {
-			FileOpenPicker picker = new Windows.Storage.Pickers.FileOpenPicker();
+			FileOpenPicker picker = new();
 			picker.FileTypeFilter.Add(".json");
 			WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(App.Window));
 			if (await picker.PickSingleFileAsync() is not { } file) {
@@ -570,7 +568,7 @@ public sealed partial class SettingsPage : Page {
 	}
 
 	private async void BrowseFolder_Click(object sender, RoutedEventArgs e) {
-		FolderPicker picker = new Windows.Storage.Pickers.FolderPicker();
+		FolderPicker picker = new();
 		picker.FileTypeFilter.Add("*");
 		WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(App.Window));
 		if (await picker.PickSingleFolderAsync() is { } folder) {

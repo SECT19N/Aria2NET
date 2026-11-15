@@ -38,7 +38,7 @@ public sealed class GeoIpResolver {
 			}
 			using FileStream file = File.OpenRead(path);
 			using Stream stream = path.EndsWith(".gz", StringComparison.OrdinalIgnoreCase) ? new GZipStream(file, CompressionMode.Decompress) : (Stream) file;
-			using StreamReader reader = new StreamReader(stream);
+			using StreamReader reader = new(stream);
 			return FromCsv(reader);
 		} catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException) {
 			return Empty;
@@ -46,11 +46,11 @@ public sealed class GeoIpResolver {
 	}
 
 	public static GeoIpResolver FromCsv(TextReader reader) {
-		List<(uint Start, uint End, string Country)> v4 = new List<(uint Start, uint End, string Country)>();
-		List<(UInt128 Start, UInt128 End, string Country)> v6 = new List<(UInt128 Start, UInt128 End, string Country)>();
+		List<(uint Start, uint End, string Country)> v4 = [];
+		List<(UInt128 Start, UInt128 End, string Country)> v6 = [];
 		string? line;
 		while ((line = reader.ReadLine()) is not null) {
-			string[] parts = line.Split(',').Select(p => p.Trim().Trim('"')).ToArray();
+			string[] parts = [.. line.Split(',').Select(p => p.Trim().Trim('"'))];
 			if (parts.Length < 3 || parts[2].Length != 2 || !IPAddress.TryParse(parts[0], out IPAddress? start) || !IPAddress.TryParse(parts[1], out IPAddress? end)) {
 				continue;
 			}

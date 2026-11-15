@@ -45,7 +45,7 @@ public static class FileConflicts {
 	public static IReadOnlyDictionary<string, string> OptionsFor(ConflictChoice choice) => choice switch {
 		ConflictChoice.Overwrite => new Dictionary<string, string> { ["allow-overwrite"] = "true", ["auto-file-renaming"] = "false", ["continue"] = "false" },
 		ConflictChoice.Rename => new Dictionary<string, string> { ["allow-overwrite"] = "false", ["auto-file-renaming"] = "true", ["continue"] = "false" },
-		_ => new Dictionary<string, string>(),
+		_ => [],
 	};
 
 	/// <summary>The choice that follows from the policy without asking; null for <see cref="ConflictPolicy.Ask"/>.</summary>

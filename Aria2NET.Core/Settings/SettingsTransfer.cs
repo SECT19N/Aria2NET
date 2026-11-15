@@ -60,7 +60,7 @@ public static class SettingsTransfer {
 
 	/// <summary>Defaults for every preference; the machine state stays.</summary>
 	public static AppSettings ResetAll(AppSettings current) {
-		AppSettings fresh = new AppSettings();
+		AppSettings fresh = new();
 		KeepMachineState(current, fresh);
 		fresh.ProxyPasswordProtected = null; // the proxy is reset to none, so its password goes too
 		return fresh;

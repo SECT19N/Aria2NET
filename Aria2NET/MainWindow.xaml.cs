@@ -100,7 +100,7 @@ public sealed partial class MainWindow : Window {
 
 	public async Task ShowErrorAsync(string title, string message) {
 		BringToFrontIfHidden(); // a dialog on a hidden window would wait there unseen
-		ContentDialog dialog = new ContentDialog {
+		ContentDialog dialog = new() {
 			Title = title,
 			Content = message + Loc.S("Main_ErrorDetails", "\n\nDetails were written to the log file."),
 			CloseButtonText = Loc.S("Common_OK", "OK"),
@@ -112,7 +112,7 @@ public sealed partial class MainWindow : Window {
 	/// <summary>Asks a yes/no question. Returns false when the user cancels or another dialog is already open.</summary>
 	public async Task<bool> ConfirmAsync(string title, string message, string confirmText) {
 		BringToFrontIfHidden();
-		ContentDialog dialog = new ContentDialog {
+		ContentDialog dialog = new() {
 			Title = title,
 			Content = message,
 			PrimaryButtonText = confirmText,
@@ -171,11 +171,11 @@ public sealed partial class MainWindow : Window {
 			results = await App.Services.GetRequiredService<GlobalSearch>().FindAsync(text);
 		} catch (Exception ex) {
 			_logger.LogWarning(ex, "Search failed");
-			results = Array.Empty<SearchResult>();
+			results = [];
 		}
 		// A slower, older search must not replace the results of what is typed now.
 		if (version == _searchVersion) {
-			sender.ItemsSource = results.Count > 0 || string.IsNullOrWhiteSpace(text) ? results : new[] { NoResult };
+			sender.ItemsSource = results.Count > 0 || string.IsNullOrWhiteSpace(text) ? results : [NoResult];
 		}
 	}
 
@@ -244,10 +244,10 @@ public sealed partial class MainWindow : Window {
 			_savedFit = null;
 			// Indexed on purpose: LINQ over this WinRT list fails to marshal (InvalidCastException).
 			IReadOnlyList<DisplayArea> areas = DisplayArea.FindAll();
-			List<ScreenRect> displays = new List<ScreenRect>();
+			List<ScreenRect> displays = [];
 			for (int i = 0; i < areas.Count; i++) {
 				RectInt32 rect = areas[i].WorkArea;
-				ScreenRect screen = new ScreenRect(rect.X, rect.Y, rect.Width, rect.Height);
+				ScreenRect screen = new(rect.X, rect.Y, rect.Width, rect.Height);
 				if (areas[i].IsPrimary) {
 					displays.Insert(0, screen);
 				} else {

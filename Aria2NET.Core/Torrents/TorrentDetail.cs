@@ -178,7 +178,7 @@ public static class TorrentDetailLoader {
 
 		string? comment = null;
 		DateTimeOffset? created = null;
-		List<TorrentTracker> trackers = new List<TorrentTracker>();
+		List<TorrentTracker> trackers = [];
 		if (status.TryGetProperty("bittorrent", out JsonElement bt) && bt.ValueKind == JsonValueKind.Object) {
 			comment = Str(bt, "comment");
 			if (long.TryParse(bt.TryGetProperty("creationDate", out JsonElement cd) ? cd.ToString() : null, NumberStyles.None, CultureInfo.InvariantCulture, out long seconds) && seconds > 0) {

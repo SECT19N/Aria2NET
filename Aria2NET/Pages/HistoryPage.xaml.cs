@@ -122,7 +122,7 @@ public sealed partial class HistoryPage : Page {
 	private async void Redownload_Click(object sender, RoutedEventArgs e) => await StartAgainAsync(null);
 
 	private async void DownloadTo_Click(object sender, RoutedEventArgs e) {
-		FolderPicker picker = new FolderPicker();
+		FolderPicker picker = new();
 		picker.FileTypeFilter.Add("*");
 		InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(App.Window));
 		if (await picker.PickSingleFolderAsync() is { } folder) {
@@ -170,7 +170,7 @@ public sealed partial class HistoryPage : Page {
 	private async void ExportJson_Click(object sender, RoutedEventArgs e) => await ExportAsync(json: true);
 
 	private async Task ExportAsync(bool json) {
-		FileSavePicker picker = new FileSavePicker { SuggestedFileName = "aria2net-history", SuggestedStartLocation = PickerLocationId.DocumentsLibrary };
+		FileSavePicker picker = new() { SuggestedFileName = "aria2net-history", SuggestedStartLocation = PickerLocationId.DocumentsLibrary };
 		picker.FileTypeChoices.Add(json ? "JSON" : "CSV (opens in Excel)", [json ? ".json" : ".csv"]);
 		InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(App.Window));
 		if (await picker.PickSaveFileAsync() is { } file) {

@@ -14,12 +14,13 @@ public static partial class RawOptionRules {
 	private static partial Regex KeyPattern();
 
 	/// <summary>Options the app owns (connection to the engine, files it writes, session handling) or that can run programs or write arbitrary files.</summary>
-	private static readonly HashSet<string> Blocked = new(StringComparer.Ordinal) {
+	private static readonly HashSet<string> Blocked = [
+		with(StringComparer.Ordinal),
 		"enable-rpc", "stop-with-process", "input-file", "save-session", "save-session-interval", "dir", "log", "conf-path", "no-conf",
 		"dht-file-path", "dht-file-path6", "daemon", "quiet", "enable-color", "console-log-level", "help", "version", "gid", "pause",
 		"server-stat-of", "server-stat-if", "save-cookies", "load-cookies", "netrc-path", "rpc-save-upload-metadata",
 		"bt-save-metadata", "bt-load-saved-metadata", "metalink-file", "torrent-file", "bt-external-ip", "out", "checksum",
-	};
+	];
 
 	/// <summary>Null when the option is allowed; otherwise why not.</summary>
 	public static string? Validate(string key, string value) {
@@ -54,7 +55,7 @@ public static partial class RawOptionRules {
 
 	/// <summary>Parses text with one <c>key=value</c> per line (blank lines and lines starting with # are skipped).</summary>
 	public static (Dictionary<string, string> Options, string? Error) Parse(string text) {
-		Dictionary<string, string> options = new Dictionary<string, string>(StringComparer.Ordinal);
+		Dictionary<string, string> options = [with(StringComparer.Ordinal)];
 		int number = 0;
 		foreach (string raw in text.Split('\n')) {
 			number++;

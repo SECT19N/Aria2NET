@@ -75,7 +75,7 @@ public sealed class BrowserCatch(SettingsStore<AppSettings> settings, AppPaths p
 		if (message.Download is not { } request) {
 			return Task.FromResult<string?>(null); // a ping: being here is the answer
 		}
-		TaskCompletionSource<string?> done = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+		TaskCompletionSource<string?> done = new(TaskCreationOptions.RunContinuationsAsynchronously);
 		if (!_dispatcher.TryEnqueue(async () => {
 			try {
 				done.TrySetResult(await downloads.AddFromBrowserAsync(request));

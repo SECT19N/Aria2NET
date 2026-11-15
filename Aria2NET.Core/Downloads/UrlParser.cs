@@ -19,9 +19,9 @@ public static class UrlParser {
 
 	/// <summary>Splits pasted text into tokens (whitespace separated), trims, drops duplicates and sorts into valid and invalid.</summary>
 	public static UrlParseResult Parse(string? text) {
-		List<string> valid = new List<string>();
-		List<string> invalid = new List<string>();
-		HashSet<string> seen = new HashSet<string>(StringComparer.Ordinal);
+		List<string> valid = [];
+		List<string> invalid = [];
+		HashSet<string> seen = [with(StringComparer.Ordinal)];
 		foreach (string token in Tokens(text)) {
 			if (!seen.Add(token)) {
 				continue;

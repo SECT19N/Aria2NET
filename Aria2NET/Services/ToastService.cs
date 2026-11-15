@@ -77,12 +77,12 @@ internal sealed class ToastService(
 			return [];
 		}
 		// A download that failed on a sleeping disk is started again by itself; only the last failure is worth a toast.
-		found = found.Where(n => !(n.Kind == NotificationKind.Failed && diskRetry.WillRetry(n.Item))).ToList();
-		return found.Where(n => n.Kind switch {
+		found = [.. found.Where(n => !(n.Kind == NotificationKind.Failed && diskRetry.WillRetry(n.Item)))];
+		return [.. found.Where(n => n.Kind switch {
 			NotificationKind.Completed => s.NotifyOnComplete,
 			NotificationKind.Failed => s.NotifyOnFailed,
 			_ => s.NotifyOnTorrentFinished,
-		}).ToList();
+		})];
 	}
 
 	private static AppNotification Build(ToastContent toast, bool sound) {

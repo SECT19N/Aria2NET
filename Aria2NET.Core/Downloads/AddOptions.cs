@@ -35,7 +35,7 @@ public sealed partial record AddOptions(
 
 	/// <summary>The header lines to send: the ones typed, then the cookie as a <c>Cookie</c> header.</summary>
 	public IReadOnlyList<string> HeaderLines() {
-		List<string> lines = (Headers ?? []).Select(h => h.Trim()).Where(h => h.Length > 0).ToList();
+		List<string> lines = [.. (Headers ?? []).Select(h => h.Trim()).Where(h => h.Length > 0)];
 		if (!string.IsNullOrWhiteSpace(Cookie)) {
 			lines.Add("Cookie: " + Cookie.Trim());
 		}
@@ -77,7 +77,7 @@ public sealed partial record AddOptions(
 
 	/// <summary>aria2 per-download options. The <c>header</c> value holds one header per line; the RPC client turns it into the array aria2 expects.</summary>
 	public IReadOnlyDictionary<string, string> ToOptions() {
-		Dictionary<string, string> options = new Dictionary<string, string>();
+		Dictionary<string, string> options = [];
 		IReadOnlyList<string> headers = HeaderLines();
 		if (headers.Count > 0) {
 			options["header"] = string.Join('\n', headers);
