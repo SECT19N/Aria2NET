@@ -34,6 +34,8 @@ public sealed partial class MainWindow : Window {
 	public ShellViewModel ViewModel { get; } = App.Services.GetRequiredService<ShellViewModel>();
 	public NoticeCenter Notices { get; } = App.Services.GetRequiredService<NoticeCenter>();
 
+	private readonly MinWindowSize? _minSize; // lives as long as the window
+
 	public MainWindow() {
 		InitializeComponent();
 
@@ -41,6 +43,7 @@ public sealed partial class MainWindow : Window {
 		SetTitleBar(AppTitleBar);
 		AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico"));
 		AppWindow.Closing += OnClosing;
+		_minSize = new MinWindowSize(WindowNative.GetWindowHandle(this), 760, 520);
 		RestorePlacement();
 		AppWindow.Changed += OnAppWindowChanged;
 		Activated += OnFirstActivated;

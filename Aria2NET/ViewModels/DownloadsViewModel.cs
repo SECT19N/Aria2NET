@@ -669,6 +669,12 @@ public sealed partial class DownloadsViewModel : ObservableObject {
 			}
 		}
 
+		foreach (var row in _byGid.Values.Where(r => r.NeedsTimes && r.TimeLookups < 5)) {
+			row.TimeLookups++;
+			var (added, finished) = Times(row.Gid);
+			row.SetTimes(added, finished);
+		}
+
 		var desired = DownloadView.Apply(visible, Filter, SortColumn, SortDescending).Select(i => _byGid[i.Gid]).ToList();
 		// ListView reports a lost selection while rows move, so remember it first and ignore those events.
 		var before = _selection.ToList();

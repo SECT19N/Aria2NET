@@ -97,7 +97,10 @@ public sealed partial class DownloadsPage : Page {
 	private void DetailPane_CloseRequested(object? sender, EventArgs e) => ViewModel.SetShowDetails(false);
 
 	// The list always keeps room for a few rows, however small the window gets.
-	private void ListArea_SizeChanged(object sender, SizeChangedEventArgs e) => DetailPane.MaxHeight = Math.Max(120, ListArea.ActualHeight - 150);
+	private void ListArea_SizeChanged(object sender, SizeChangedEventArgs e) {
+		DetailPane.MaxHeight = Math.Max(120, ListArea.ActualHeight - 150);
+		UpdateNarrow();
+	}
 
 	private double _paneStartHeight;
 
@@ -109,7 +112,127 @@ public sealed partial class DownloadsPage : Page {
 
 	private void Rows_Changed(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) => RowStripes.RefreshLater(DownloadList);
 
-	private void List_ContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args) => RowStripes.Apply(args);
+	// ---------------------------------------------------------------- row buttons, hover and narrow windows
+
+	/// <summary>Whether the pointer is over a row; kept on the row's container because containers are recycled.</summary>
+	private sealed class Hover {
+		public bool Over;
+	}
+
+	private void List_ContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args) {
+		RowStripes.Apply(args);
+		if (args.ItemContainer is not ListViewItem item) {
+			return;
+		}
+		if (item.Tag is not Hover) {
+			item.Tag = new Hover();
+			item.PointerEntered += (_, _) => SetOver(item, true);
+			item.PointerExited += (_, _) => SetOver(item, false);
+			item.GotFocus += (_, _) => ShowActions(item);
+			item.LostFocus += (_, _) => ShowActions(item);
+		}
+		((Hover) item.Tag).Over = false; // a recycled container may still say true
+		if (args.InRecycleQueue) {
+			return;
+		}
+		ShowActions(item);
+		if (item.ContentTemplateRoot is Grid row) {
+			ApplyColumns(row);
+		}
+	}
+
+	private static void SetOver(ListViewItem item, bool over) {
+		if (item.Tag is Hover hover) {
+			hover.Over = over;
+		}
+		ShowActions(item);
+	}
+
+	/// <summary>The row's buttons show under the pointer, on the selected rows and on the row with the keyboard focus; elsewhere they would only be noise.</summary>
+	private static void ShowActions(ListViewItem item) {
+		var visible = item.IsSelected || item.Tag is Hover { Over: true } || item.FocusState != FocusState.Unfocused;
+		if (item.ContentTemplateRoot is FrameworkElement root && root.FindName("RowActions") is UIElement actions) {
+			actions.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+		}
+	}
+
+	private static DownloadRowViewModel? RowOf(object sender) => (sender as FrameworkElement)?.DataContext as DownloadRowViewModel;
+
+	/// <summary>A button on a row acts on that row, so make it the selection first.</summary>
+	private void SelectOnly(DownloadRowViewModel row) {
+		if (DownloadList.SelectedItems.Count != 1 || !ReferenceEquals(DownloadList.SelectedItem, row)) {
+			DownloadList.SelectedItems.Clear();
+			DownloadList.SelectedItems.Add(row);
+		}
+		ViewModel.SetSelection(new[] { row });
+	}
+
+	private async void RowPrimary_Click(object sender, RoutedEventArgs e) {
+		if (RowOf(sender) is not { } row) {
+			return;
+		}
+		SelectOnly(row);
+		switch (row.Item.Status) {
+			case DownloadStatus.Active or DownloadStatus.Waiting or DownloadStatus.Seeding:
+				await ViewModel.PauseSelectedAsync();
+				break;
+			case DownloadStatus.Paused:
+				await ViewModel.ResumeSelectedAsync();
+				break;
+			default:
+				await ViewModel.RetrySelectedAsync();
+				break;
+		}
+	}
+
+	private void RowFolder_Click(object sender, RoutedEventArgs e) {
+		if (RowOf(sender) is { } row) {
+			SelectOnly(row);
+			ViewModel.OpenFolder();
+		}
+	}
+
+	private async void RowRemove_Click(object sender, RoutedEventArgs e) {
+		if (RowOf(sender) is { } row) {
+			SelectOnly(row);
+			await RemoveAsync(deleteFiles: false); // deleting files stays a deliberate choice in the menu
+		}
+	}
+
+	// Narrow window: the Speed and Time left columns go and their text moves to the second line under the name.
+	private bool _narrow;
+
+	private void UpdateNarrow() {
+		var width = ListArea.ActualWidth;
+		Toolbar.DefaultLabelPosition = width >= 900 ? CommandBarDefaultLabelPosition.Right : CommandBarDefaultLabelPosition.Collapsed;
+		var narrow = width > 0 && width < 860;
+		if (narrow == _narrow) {
+			return;
+		}
+		_narrow = narrow;
+		ApplyColumns(ColumnHeader);
+		for (var i = 0; i < DownloadList.Items.Count; i++) {
+			if (DownloadList.ContainerFromIndex(i) is ListViewItem { ContentTemplateRoot: Grid row }) {
+				ApplyColumns(row);
+			}
+		}
+	}
+
+	private void ApplyColumns(Grid grid) {
+		if (grid.ColumnDefinitions.Count != 6) {
+			return;
+		}
+		grid.ColumnDefinitions[3].Width = new GridLength(_narrow ? 0 : 100);
+		grid.ColumnDefinitions[4].Width = new GridLength(_narrow ? 0 : 80);
+		foreach (var child in grid.Children.OfType<FrameworkElement>()) {
+			if (Grid.GetColumn(child) is 3 or 4) {
+				child.Visibility = _narrow ? Visibility.Collapsed : Visibility.Visible;
+			}
+		}
+		if (grid.FindName("CompactInfo") is UIElement info) {
+			info.Visibility = _narrow ? Visibility.Visible : Visibility.Collapsed;
+		}
+	}
 
 	// Moving a row (e.g. a paused download dropping below the active ones) makes ListView forget its selection; put it back.
 	private void OnSelectionRestoreNeeded(object? sender, IReadOnlyList<DownloadRowViewModel> rows) =>
@@ -294,8 +417,14 @@ public sealed partial class DownloadsPage : Page {
 
 	// ---------------------------------------------------------------- list events
 
-	private void List_SelectionChanged(object sender, SelectionChangedEventArgs e) =>
+	private void List_SelectionChanged(object sender, SelectionChangedEventArgs e) {
 		ViewModel.SetSelection(DownloadList.SelectedItems.OfType<DownloadRowViewModel>());
+		foreach (var changed in e.AddedItems.Concat(e.RemovedItems)) {
+			if (DownloadList.ContainerFromItem(changed) is ListViewItem container) {
+				ShowActions(container);
+			}
+		}
+	}
 
 	private void List_ContextRequested(UIElement sender, ContextRequestedEventArgs args) {
 		args.Handled = true;

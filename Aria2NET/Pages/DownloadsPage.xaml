@@ -21,7 +21,7 @@
         </Style>
     </Page.Resources>
 
-    <Grid Padding="24,8,24,16" RowSpacing="8">
+    <Grid Padding="24,8,24,16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -31,7 +31,7 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <CommandBar Grid.Row="0" DefaultLabelPosition="Right" HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
+        <CommandBar x:Name="Toolbar" Grid.Row="0" Margin="0,0,0,8" DefaultLabelPosition="Right" HorizontalAlignment="Left" Background="Transparent" IsDynamicOverflowEnabled="True">
             <AppBarButton x:Uid="DownloadsPage_AddButton" x:Name="AddButton" Label="Add URL" Click="Add_Click" IsEnabled="{x:Bind ViewModel.IsEngineUp, Mode=OneWay}"
                           ToolTipService.ToolTip="Add downloads (Ctrl+V pastes links)">
                 <AppBarButton.Icon><FontIcon Glyph="&#xE710;" /></AppBarButton.Icon>
@@ -80,7 +80,8 @@
             </CommandBar.SecondaryCommands>
         </CommandBar>
 
-            <SelectorBar x:Name="FilterBar" Grid.Row="1" SelectionChanged="Filter_SelectionChanged" HorizontalAlignment="Left">
+            <ScrollViewer Grid.Row="1" Margin="0,0,0,8" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" HorizontalScrollMode="Auto" VerticalScrollMode="Disabled" HorizontalAlignment="Left">
+            <SelectorBar x:Name="FilterBar" SelectionChanged="Filter_SelectionChanged">
                 <SelectorBarItem Tag="All" Text="{x:Bind ViewModel.AllLabel, Mode=OneWay}" />
                 <SelectorBarItem Tag="Downloading" Text="{x:Bind ViewModel.DownloadingLabel, Mode=OneWay}" />
                 <SelectorBarItem Tag="Waiting" Text="{x:Bind ViewModel.WaitingLabel, Mode=OneWay}" />
@@ -90,12 +91,13 @@
                 <SelectorBarItem Tag="Seeding" Text="{x:Bind ViewModel.SeedingLabel, Mode=OneWay}" />
                 <SelectorBarItem Tag="Torrents" Text="{x:Bind ViewModel.TorrentsLabel, Mode=OneWay}" />
             </SelectorBar>
+            </ScrollViewer>
 
-        <InfoBar x:Uid="DownloadsPage_InfoBar1" Grid.Row="2" IsOpen="{x:Bind ViewModel.IsEngineDown, Mode=OneWay}" IsClosable="False" Severity="Warning"
+        <InfoBar x:Uid="DownloadsPage_InfoBar1" Grid.Row="2" IsOpen="{x:Bind ViewModel.IsEngineDown, Mode=OneWay}" Visibility="{x:Bind ViewModel.IsEngineDown, Mode=OneWay}" Margin="0,0,0,8" IsClosable="False" Severity="Warning"
                  Title="Download engine is not running"
                  Message="Adding downloads is disabled until aria2 is running. Use the status bar message or Restart engine."/>
 
-        <InfoBar x:Uid="DownloadsPage_InfoBar2" Grid.Row="3" IsOpen="{x:Bind ViewModel.HasActionMessage, Mode=OneWay}" Severity="Error" Title="That did not work"
+        <InfoBar x:Uid="DownloadsPage_InfoBar2" Grid.Row="3" IsOpen="{x:Bind ViewModel.HasActionMessage, Mode=OneWay}" Visibility="{x:Bind ViewModel.HasActionMessage, Mode=OneWay}" Margin="0,0,0,8" Severity="Error" Title="That did not work"
                  Message="{x:Bind ViewModel.ActionMessage, Mode=OneWay}" CloseButtonClick="ActionMessage_Closed"/>
 
         <Grid x:Name="ListArea" Grid.Row="4" SizeChanged="ListArea_SizeChanged">
@@ -179,12 +181,13 @@
                 <ListView.ItemContainerStyle>
                     <Style TargetType="ListViewItem" BasedOn="{StaticResource DefaultListViewItemStyle}">
                         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                        <Setter Property="MinHeight" Value="44" />
+                        <Setter Property="MinHeight" Value="56" />
                     </Style>
                 </ListView.ItemContainerStyle>
                 <ListView.ItemTemplate>
                     <DataTemplate x:DataType="vm:DownloadRowViewModel">
-                        <Grid ColumnSpacing="12" AutomationProperties.Name="{x:Bind AccessibleName, Mode=OneWay}">
+                        <Grid ColumnSpacing="12" Padding="0,4" AutomationProperties.Name="{x:Bind AccessibleName, Mode=OneWay}"
+                              ToolTipService.ToolTip="{x:Bind ToolTipText, Mode=OneWay}">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="170" />
@@ -193,8 +196,31 @@
                                 <ColumnDefinition Width="80" />
                                 <ColumnDefinition Width="100" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{x:Bind Name, Mode=OneWay}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                                       ToolTipService.ToolTip="{x:Bind Name, Mode=OneWay}" />
+                            <Grid>
+                                <StackPanel VerticalAlignment="Center" Spacing="1">
+                                    <TextBlock Text="{x:Bind Name, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock Text="{x:Bind SubText, Mode=OneWay}" FontSize="12" Opacity="0.65" TextTrimming="CharacterEllipsis" MaxLines="1" />
+                                        <TextBlock x:Name="CompactInfo" Text="{x:Bind CompactText, Mode=OneWay}" FontSize="12" Opacity="0.65" Visibility="Collapsed" />
+                                    </StackPanel>
+                                </StackPanel>
+                                <StackPanel x:Name="RowActions" Orientation="Horizontal" Spacing="2" Padding="4" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                            CornerRadius="6" Visibility="Collapsed" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                            BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <Button Padding="8,6" Background="Transparent" BorderThickness="0" Click="RowPrimary_Click" Visibility="{x:Bind HasPrimary, Mode=OneWay}"
+                                            ToolTipService.ToolTip="{x:Bind PrimaryTip, Mode=OneWay}" AutomationProperties.Name="{x:Bind PrimaryTip, Mode=OneWay}">
+                                        <FontIcon Glyph="{x:Bind PrimaryGlyph, Mode=OneWay}" FontSize="14" />
+                                    </Button>
+                                    <Button x:Uid="DownloadsPage_RowFolder" Padding="8,6" Background="Transparent" BorderThickness="0" Click="RowFolder_Click" Visibility="{x:Bind HasFolder, Mode=OneWay}"
+                                            ToolTipService.ToolTip="Open folder" AutomationProperties.Name="Open folder">
+                                        <FontIcon Glyph="&#xE838;" FontSize="14" />
+                                    </Button>
+                                    <Button x:Uid="DownloadsPage_RowRemove" Padding="8,6" Background="Transparent" BorderThickness="0" Click="RowRemove_Click"
+                                            ToolTipService.ToolTip="Remove from list" AutomationProperties.Name="Remove from list">
+                                        <FontIcon Glyph="&#xE74D;" FontSize="14" />
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
                             <TextBlock Grid.Column="1" Text="{x:Bind SizeText, Mode=OneWay}" VerticalAlignment="Center" />
                             <ProgressBar Grid.Column="2" Minimum="0" Maximum="100" Value="{x:Bind Progress, Mode=OneWay}"
                                          Foreground="{x:Bind ProgressBrush, Mode=OneWay}"
@@ -226,7 +252,7 @@
             <controls:DownloadDetailPane x:Name="DetailPane" Grid.Row="3" Height="240" Visibility="Collapsed" CloseRequested="DetailPane_CloseRequested" />
         </Grid>
 
-        <InfoBar Grid.Row="5" IsOpen="{x:Bind ViewModel.IsUndoVisible, Mode=OneWay}" IsClosable="False" Severity="Informational"
+        <InfoBar Grid.Row="5" IsOpen="{x:Bind ViewModel.IsUndoVisible, Mode=OneWay}" Visibility="{x:Bind ViewModel.IsUndoVisible, Mode=OneWay}" Margin="0,8,0,0" IsClosable="False" Severity="Informational"
                  Title="{x:Bind ViewModel.UndoText, Mode=OneWay}">
             <InfoBar.ActionButton>
                 <Button x:Uid="DownloadsPage_Button2" Content="Undo" Click="Undo_Click"/>

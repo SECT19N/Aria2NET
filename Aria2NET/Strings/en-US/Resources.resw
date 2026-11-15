@@ -1823,4 +1823,52 @@ Keep both files (the new one gets a number), or replace the existing file?</valu
   <data name="SettingsPage_RetryDiskNote.Text" xml:space="preserve">
     <value>When a download fails because it cannot open or write its file, Aria2NET wakes the disk and tries again after 5 seconds, then after longer pauses, for about ten minutes in all.</value>
   </data>
+  <data name="DownloadsPage_RowFolder.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Open folder</value>
+  </data>
+  <data name="DownloadsPage_RowFolder.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Open folder</value>
+  </data>
+  <data name="DownloadsPage_RowRemove.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Remove from list</value>
+  </data>
+  <data name="DownloadsPage_RowRemove.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Remove from list</value>
+  </data>
+  <data name="Row_Added" xml:space="preserve">
+    <value>Added {0}</value>
+  </data>
+  <data name="Row_Finished" xml:space="preserve">
+    <value>Finished {0}</value>
+  </data>
+  <data name="Row_Pause" xml:space="preserve">
+    <value>Pause</value>
+  </data>
+  <data name="Row_Resume" xml:space="preserve">
+    <value>Resume</value>
+  </data>
+  <data name="Row_Retry" xml:space="preserve">
+    <value>Retry</value>
+  </data>
+  <data name="Row_TipLocation" xml:space="preserve">
+    <value>Location: {0}</value>
+  </data>
+  <data name="Row_TipAdded" xml:space="preserve">
+    <value>Added: {0}</value>
+  </data>
+  <data name="Row_TipFinished" xml:space="preserve">
+    <value>Finished: {0}</value>
+  </data>
+  <data name="Row_TipSize" xml:space="preserve">
+    <value>Size: {0}</value>
+  </data>
+  <data name="Row_TipHash" xml:space="preserve">
+    <value>Info hash: {0}</value>
+  </data>
+  <data name="Row_TipSource" xml:space="preserve">
+    <value>Source: {0}</value>
+  </data>
+  <data name="Row_TipConnections" xml:space="preserve">
+    <value>Connections: {0}</value>
+  </data>
 </root>
